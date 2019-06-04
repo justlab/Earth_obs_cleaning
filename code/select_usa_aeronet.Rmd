@@ -1,0 +1,141 @@
+---
+title: "Select Aeronet in USA"
+author: "Johnathan Rush"
+date: "11/1/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(results = 'hold')
+```
+
+```{r message=FALSE}
+library(data.table)
+library(rgdal)
+library(sp)
+library(rgeos)
+library(raster)
+library(rnaturalearth)
+```
+
+# Open Aeronet
+
+This is using the updated AERONET sites.  
+*Change the `aeronet_dir` to where you have the AERONET data downloaded to*  
+
+```{r aeronet2017}
+aeronet_dir = "~/Jdrive/PM/Just_Lab/projects/ECHO_PM/data/aeronet/"
+aeronetsites <- fread(paste0(aeronet_dir, "aeronet_locations_v3.txt"))
+# rename columns to shorter names
+setnames(aeronetsites, c("Site_Name", "lon", "lat", "elevm"))
+rmarkdown::paged_table(aeronetsites)
+```
+
+Make the AERONET data a Spatial Points object
+```{r aeronet_spatial}
+aeronetData = aeronetsites[, .(Site_Name, elevm)]
+#aeronetPoints = SpatialPoints(cbind(aeronetsites$lon, aeronetsites$lat))
+aeronetPoints = SpatialPoints(aeronetsites[, .(lon, lat)])
+aeronetSP = SpatialPointsDataFrame(aeronetPoints, aeronetData)
+aeronetSP
+```
+
+Notice that we haven't set a Coordinate Reference System for the AERONET sites, yet.  
+They're probably using WGS84 (the standard for GPS) datum lat/longs, so we'll set the CRS accordingly:  
+
+```{r aeronet_crs}
+proj4string(aeronetSP) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+```
+
+# Get a shape for the USA and for CONUS
+
+First, download the Natural Earth data. This only has to be run once.  
+*Change the `naturalEarthDir` to where you'd like to download this data.*  
+
+```{r set_ne_dir}
+naturalEarthDir = "/data-belle/naturalearth/"
+```
+```{r dl_NE, eval=FALSE}
+ne_download(scale = 10, type = "countries", category = "cultural", destdir = naturalEarthDir, load = FALSE)
+```
+
+Then load the countries file in as a Spatial Polygons object.  
+```{r load_countries}
+countriesSP = ne_load(scale = 10, type = "countries", category = "cultural", destdir = naturalEarthDir)
+```
+
+Plot all the aeronet stations worldwide
+```{r plot_worldwide}
+plot(countriesSP)
+plot(aeronetSP, col = "red", add = TRUE)
+```
+
+Subset the countries to just the USA
+```{r subset_usa}
+usaSP = countriesSP[countriesSP$NAME == 'United States of America', "NAME"]
+rm(countriesSP)
+plot(usaSP)
+```
+
+Clip the USA down to just the CONUS - removing Alaska, Hawaii, PR, etc.  
+```{r subset_conus}
+clipmatrix = as.matrix(extent(usaSP))      # quick way to get a matrix with the right row/col names and dimensions
+clipmatrix[] <- c(-126, 24.4, -66.7, 49.4) # change to actual coordinates of the CONUS bbox
+clip_poly <- as(extent(as.vector(t(clipmatrix))), "SpatialPolygons") # CRS isn't set, but that's OK in this case
+conusSP = gIntersection(usaSP, clip_poly, byid = TRUE)               # ignore the warning about different CRS
+plot(conusSP)
+```
+
+# Select the AERONET stations in the USA
+
+```{r aeronet_usa}
+aeronet_USA = aeronetSP[usaSP, ]
+aeronet_USA
+plot(usaSP)
+plot(aeronet_USA, col = "red", add = TRUE)
+```
+
+# Select the AERONET stations in the CONUS
+```{r aeronet_conus}
+aeronet_conus = aeronetSP[conusSP, ]
+aeronet_conus
+plot(conusSP)
+plot(aeronet_conus, col = "red", add = TRUE)
+```
+
+# Export the AERONET selections
+
+*All of these are set to export to the current working directory*. Change the `output_path` as needed.  
+
+After this are three different export verions. You may not need all of them.  
+
+```{r output_path}
+output_path = getwd()
+```
+
+```{r hidden_path, echo=FALSE}
+# this is just for the purpose of rendering the file to send to Meytar
+output_path = "~/test"
+```
+
+First by ESRI Shapefile:  
+```{r export_shapefile}
+writeOGR(aeronet_USA, layer = "aeronet_usa", dsn = output_path, driver="ESRI Shapefile", overwrite_layer = TRUE)
+writeOGR(aeronet_conus, layer = "aeronet_conus", dsn = output_path, driver="ESRI Shapefile", overwrite_layer = TRUE)
+```
+
+Then by Rds files for the SP objects:  
+```{r export_rds}
+saveRDS(aeronet_USA, file = paste0(output_path, "/aeronet_usa.Rds"))
+saveRDS(aeronet_conus, file = paste0(output_path, "/aeronet_conus.Rds"))
+```
+
+Finally, by CSV files with the coordinates in the table:  
+```{r export_csv}
+aeronet_usa_DT = as.data.table(aeronet_USA)
+aeronet_conus_DT = as.data.table(aeronet_conus)
+fwrite(aeronet_usa_DT, file = paste0(output_path, "/aeronet_usa.csv"))
+fwrite(aeronet_conus_DT, file = paste0(output_path, "/aeronet_conus.csv"))
+```
+
