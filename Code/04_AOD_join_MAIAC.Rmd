@@ -1,0 +1,209 @@
+---
+title: "AOD collocated with MAIAC"
+author: "Yang Liu"
+date: "07/16/2019"
+output:
+  html_document:
+    toc: true
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = F, message=FALSE, warning=FALSE,
+                      error = F, fig.width = 7, fig.height = 4.5)
+```
+
+# Derive spatial variables within buffers
+  st_buffer() to create circles around the aeronet stations (radius of 300km)
+  Keep track of the AERONET ID, long/lat of station
+  Intersect with base grid; but note that areas off the grid (e.g. ocean) can lead to very different numbers of cells within a buffer
+  Long data.table with all pairLSTid within buffer per aeronet station
+  Calculate distance from each grid centroid back to station
+  Calculate variables at four buffer distances of 10km, 30km, 90km, and 270km
+  - % non-missing
+  -   Mean AOD
+  -   AOD - Mean AOD
+
+
+```{r}
+source(here::here("Code", "funcs_for_plots.R"))
+source("~/liuyanguu/CWV/Code/cwv_funcs.R")
+```
+
+```{r}
+# Terra sites in 2018
+aod_lst_terra <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$aod_lst_terra
+site_sub <- unique(aod_lst_terra$Site_Name)
+aod_site_NE <- readRDS(here("Intermediate", "aod_site_NE"))
+# reproject to US atlas projection, so now the unit is meter 
+aod_site_km <- st_transform(aod_site_NE[aod_site_NE$Site_Name%in%site_sub,], crs = 2163) 
+st_crs(aod_site_km)
+
+# Define radius (meter): 
+radius0 = 300000
+reference_lst_fst ="/data-belle/LST/MODIS.LST.C6/derived/conus_grid_201906.fst"
+refDT = read_fst(reference_lst_fst, as.data.table = TRUE)[inNEMIA ==TRUE]
+refDT_sf <- st_as_sf(refDT, coords = c("x_wgs84", "y_wgs84"), crs = 4326)
+refDT_sf <-  st_transform(refDT_sf, crs = 2163) 
+
+# take each row (sf, df, geometry point) as the argument, create multi-point buffer 
+# `aod_buffer` is a multi-buffer:
+aod_buffers <- st_buffer(aod_site_km, radius0)
+# mapview(aod_buffers) # if you plot this, you will see lots of circles (polygons)
+# but of course, after intersect with the base grid, they won't be circles anymore. 
+```
+
+## Method  
+
+Note 7/22, for sure not the best way here, but it can work. 
+1. Get geometry for buffers as a list: aod_buffers_list  
+2. `st_intersects` buffers to reference grid, get a binary geometry list: join_list
+3. get list of dataset of grid within each buffer: ref_list
+4. Get geometry for points (site location) as a list: site_list2
+5. Within each ref_list (a pie of points), Use `mapply` or a for loop to calculate distance from each grid point to the center (station)
+
+@output: refDT_sub, AERONET sites matched to all the grid ids around it within the 300KM round buffer
+
+```{r}
+# 1. 
+aod_buffers_list <- st_geometry(aod_buffers)
+# 2. 
+# join_list is a sparse geometry binary predicate lists, made of (empty) or 0L https://r-spatial.github.io/sf/reference/sgbp.html
+join_list <- lapply(aod_buffers_list, function(x)st_intersects(refDT_sf, x))
+# 3. 
+# list of joined I (ID) for each Aeronet station in the grid `refDT_sf`
+join_list_I <- lapply(join_list, function(x) sapply(x, function(z) if (length(z)==0) NA_integer_ else z[1]))
+# ref_list is the grid points within each circle (NA removed)
+ref_list <- lapply(join_list_I, function(x) refDT_sf[!is.na(x),])
+# dist_list <- st_distance(ref_list, site_list[1:2])
+# 4.   
+site_list <- st_geometry(aod_site_km)  # for calculating distance 
+# get level 1 list [i], level2 [[i]] is just a point pair
+site_list2 <- lapply(1 : length(site_list), function(i) (site_list[i])) 
+name_list <- as.list(aod_site_km$Site_Name) # for recording site names 
+# 5. 
+# select ref.grid subset by Index for each station
+select.refDT.subset <- function(ref_list0, point0, name0){
+  # ref_list0 = ref_list[[1]]
+  # point0 = site_list2[[1]]; name0 = name_list[[1]]
+  # cat(paste0("crs of ref grid is ", st_crs(ref_list0)$epsg,"; ",
+  #            "crs of point is ", st_crs(point0)$epsg,"\n"))
+  ref_list0$dist <- st_distance(ref_list0, point0)
+  ref_list0$Site_Name <- name0
+  return(as.data.table(ref_list0))
+}
+
+# # not sure why mapply doesn't work 
+# refDT_sub_list <- mapply(select.refDT.subset, ref_list0 = ref_list[1], point0 = site_list2[1], name0 = name_list[1])
+
+refDT_sub_list <- list()
+for (i in 1:length(ref_list)){
+  ref_list0 = ref_list[[i]];  point0 = site_list2[[i]]; name0 = name_list[[i]]
+  ref_list0$dist <- st_distance(ref_list0, point0)
+  ref_list0$Site_Name <- name0
+  refDT_sub_list[[i]] <- ref_list0
+}
+refDT_sub <- rbindlist(refDT_sub_list)
+refDT_sub[, dist_km:=as.numeric(dist)/1000] # change distance to km 
+refDT_sub <- setDT(refDT_sub)[,.(Site_Name, idLSTpair0, dist_km)]
+setnames(refDT_sub, "idLSTpair0", "idLSTpair0_in_buffer")
+setkey(refDT_sub, Site_Name)
+# save the dataset that links station to all the idLST in the round buffer
+# refDT_sub: 3545991 x 3
+saveRDS(refDT_sub, "~/Intermediate/AOD_data/190724_refDT_Site_idinBuffer.rds")
+
+# view a circle
+refDT_Wallop <- refDT_sub_list[[2]]
+mapview::mapview(refDT_Wallop[sample(1:nrow(refDT_Wallop), nrow(refDT_Wallop)/100),])
+
+```
+
+## Calculation
+
+@output new aod_lst_terra and aod_lst_aqua 
+The collocated Aeronet with MODIS sites, plus the new variables
+
+```{r}
+refDT_sub <- readRDS("~/Intermediate/AOD_data/190724_refDT_Site_idinBuffer.rds")
+# load the aeronet join MCD19
+aod_lst_terra <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$aod_lst_terra
+# the original MCD19 
+lst_terra <- read.lst(sat = "terra", columns0 = c("idLSTpair0", "overpass_time", "Optical_Depth_047"))
+
+# remove some variables 
+aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
+  aod_join_MODIS <- aod_join_MODIS[!is.na(Optical_Depth_047),]
+  aod_join_MODIS[, day:=format(stn_time, "%Y-%m-%d")]
+  var_time <- grep("time", names(aod_join_MODIS), value = T)
+  aod_join_MODIS <- aod_join_MODIS[, -..var_time]
+
+  setkey(aod_join_MODIS, Site_Name)
+  aod_join_buffer <- aod_join_MODIS[refDT_sub, allow.cartesian = T]
+  cat("The cartesian joined dataset between collocated Aeronet with MODIS sites data and base grid in each circles, dim is: ", paste(dim(aod_join_buffer),collapse = " x "))
+
+  # join back to the MODIS file 
+  MODIS_all[, day:=format(join_time, "%Y-%m-%d")]
+  setnames(MODIS_all, c("idLSTpair0", "Optical_Depth_047"), c("idLSTpair0_in_buffer", "AOD_470_buffer"),
+           skip_absent = T)
+  setkey(MODIS_all, idLSTpair0_in_buffer, day)
+  setkey(aod_join_buffer, idLSTpair0_in_buffer, day)
+  # aod_join_buffer2 get AOD for all the buffer grid cells
+  aod_join_buffer2 <- MODIS_all[,.(idLSTpair0_in_buffer, day, AOD_470_buffer)][aod_join_buffer]
+  
+  dist0 <- c(10, 30, 90, 270)
+    calculate.vars.in.buffer <- function(distx){
+      aod_join_buffer_new <- aod_join_buffer2[dist_km < distx, .(nonmissing = mean(!is.na(AOD_470_buffer)), AOD_buffer_mean = mean(AOD_470_buffer, na.rm = T)),
+                              by =.(idLSTpair0, day)]
+      setnames(aod_join_buffer_new, c("nonmissing", "AOD_buffer_mean"), 
+               paste0(c("pNonNAAOD", "Mean_AOD"),distx, "km"))
+      setkey(aod_join_buffer_new, idLSTpair0, day)
+      return(aod_join_buffer_new)
+    }
+  new_varlist <- invisible(lapply(dist0, calculate.vars.in.buffer))
+  new_vars <- Reduce(merge, new_varlist)
+  setkey(new_vars, idLSTpair0, day)
+  setkey(aod_join_MODIS, idLSTpair0, day)
+  aod_join_MODIS <- new_vars[aod_join_MODIS]
+  return(aod_join_MODIS)
+}
+aod_lst_terra <- aod.MODIS.newVars(aod_lst_terra, lst_terra)
+head(aod_lst_terra)
+# AOD - AOD mean, do later 
+saveRDS(aod_lst_terra, "~/Intermediate/AOD_data/190724_LSTjoinMCD19_terra_newVars.rds")
+
+
+aod_lst_aqua <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$aod_lst_aqua
+aod_lst_aqua <- aod.MODIS.newVars(aod_lst_aqua, lst_aqua)
+head(aod_lst_aqua)
+saveRDS(aod_lst_aqua, "~/Intermediate/AOD_data/190724_LSTjoinMCD19_aqua_newVars.rds")
+
+```
+
+
+```{r}
+# some summary
+library(ggplot2)
+plot.scatter.diagonal(aod_lst_terra, "Mean_AOD10km", "AOD_470nm")
+cor(as.matrix(aod_lst_terra[,c(grep("Mean_AOD", names(aod_lst_terra), value = T), "AOD_470nm"), with = F]))
+pmissing <- grep("pNon", names(aod_lst_terra), value = T)
+summary(aod_lst_terra[,..pmissing])
+```
+
+
+```{r, eval = F}
+# backup
+# view the circle (buffer)
+library(mapview)
+mapview(st_buffer(aod_site_km[2,], radius0))
+
+# distance is calculated differently under different project
+st_distance(refDT_sf3[10,], aod_site_km[1,])
+st_distance(st_transform(refDT_sf3[10,], crs= 4326), st_transform(aod_site_km[1,], crs= 4326))
+geosphere::distm(as_Spatial(st_transform(refDT_sf3[10,], crs= 4326)), as_Spatial(aod_site_NE[1,]))
+
+
+# An alternative way to join:
+# refDT_sp <- as_Spatial(refDT_sf2)
+# buf_poly <- as_Spatial(aod_buffer)
+# sp_grid <- over(refDT_sp, buf_poly)
+
+```
+

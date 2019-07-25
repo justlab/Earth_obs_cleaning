@@ -9,10 +9,9 @@ output:
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = F, message=FALSE, warning=FALSE,
                       error = F, fig.width = 7, fig.height = 4.5)
-# error=TRUE allows error 
 ```
 
-Borrowed code from `03_import_aeronet.R` on Jdrive  
+Borrowed some code from `03_import_aeronet.R` on Jdrive  
 Import and process the AOD20 V3 level 2 global Aeronet stations  
 Interpolating to wavelength AOD 470nm   
 
@@ -22,14 +21,8 @@ Interpolating to wavelength AOD 470nm
 ```
 
 ```{r}
-suppressPackageStartupMessages({
-library(fst); library(data.table); library(ggplot2)
-library(sf)
-library(ggmap)
-})
-
-source("~/Jdrive/PM/Just_Lab/projects/ECHO_PM/code/liuy29/funcs_for_plots.R")
-source("~/liuyanguu/ECHO_PM/code/cwv_funcs.R")
+source("~/liuyanguu/CWV/Code/cwv_funcs.R")
+source(here::here("Code", "funcs_for_plots.R"))
 
 ```
 
@@ -54,8 +47,8 @@ setnames(site_locations_2019, c("Site_Name", "lon", "lat", "elev"))
 aod_site_sf <- st_as_sf(site_locations_2019, coords = c("lon", "lat"), crs = 4326)
 nemia_buff_aea <- readRDS("~/Jdrive/PM/Just_Lab/projects/ECHO_PM/data/intermediate/nemia_buff_aea.rds")
 nemia_buff = st_transform(nemia_buff_aea, crs = 4326) 
-aod_site_NE <- aod_site_sf[nemia_buff,] 
-
+aod_site_NE <- aod_site_sf[nemia_buff,]  # a sf object for NEMIA
+saveRDS(aod_site_NE, here("Intermediate", "aod_site_NE"))
 # NEMIA site list
 # site_list_NE <- c(aod_site_NE$Site_Name, "MVCO", "LISCO")
 site_list_NE <- c(aod_site_NE$Site_Name)
@@ -151,7 +144,11 @@ obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-470)*(min(exact_wv)-470)>0)][
 saveRDS(obs_os, "~/Intermediate/AOD_data/190621_obs_same_side")
 length(obs_os)/aod20_data_global[,.N] # about 0.4% have points on one side of the 470 nm 
 
-### fit the model 
+```
+
+## project to 470 nm
+
+```{r, eval = F}
 time0 <- Sys.time()
 system.time(d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(log(aod) ~  log(exact_wv) + I((log(exact_wv))^2)), newdata = data.frame(exact_wv = 470))))])
 Sys.time() - time0 # 6.3 hours 6/19
@@ -233,22 +230,23 @@ aod20_NEMIA_idLST <- read.fst("~/Intermediate/AOD_data/190628_aod20_wPred_NEMIA_
 aod20_NEMIA_idLST[, stn_time:=as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")]
 aod20_NEMIA_idLST[, c("date", "time"):=NULL]
 
+## this part obtain the binded NEMIA MCD19 data 
 lst_files <- list.files(path = "/data-coco/mcd19/fst/nemia/2018", pattern = "mcd19_T", full.names = T)
-terra0 <- read.fst(lst_files[1], as.data.table = T)
-# load lst data for 2018
+terra0 <- read.fst(lst_files[1], as.data.table = T, columns = NULL)
 
-read.lst <- function(sat = "terra"){
+# load lst data for 2018
+read.lst <- function(sat = "terra", columns0 = NULL){
   if (sat != "terra") choose = "mcd19_T" else choose = "mcd19_A" # load terra by default
   lst_files <- list.files(path = "/data-coco/mcd19/fst/nemia/2018", pattern = choose, full.names = T)
-  dt = rbindlist(lapply(lst_files, function(x)read.fst(x,as.data.table = T)))
-  dt[,c("x","y", "inNEMIA"):=NULL]
+  dt = rbindlist(lapply(lst_files, function(x)read.fst(x, as.data.table = T, columns  = columns0)))
+  if(is.null(columns0)) dt[,c("x", "y", "inNEMIA"):=NULL]
   
   dt[, join_time:=overpass_time]
   setkey(dt, idLSTpair0, join_time)
   return(dt)
 }
 lst_terra <- read.lst()
-
+print(object.size(lst_terra), unit = "GB") # 18 GB all the lst terra in 2018 (NEMIA, one year)
 # make sure both are UTC time 
 # attr(aod20_NEMIA_idLST$stn_time, "tzone")
 # attr(lst_terra$overpass_time, "tzone")
@@ -268,11 +266,11 @@ table(aod_lst_terra$within30min_t)
 hist(aod_lst_terra[within30min_t==1, diff_time_min])
 mean(aod_lst_terra$within30min_t)
 
-vars0 <- c("overpass_index", "Optical_Depth_047", "AOD_Uncertainty", "Column_WV", "AOD_QA",  "RelAZ")
-vars_new <- paste0(vars0,"_t")
-setnames(aod_lst_terra, vars0, vars_new)
+# vars0 <- c("overpass_index", "Optical_Depth_047", "AOD_Uncertainty", "Column_WV", "AOD_QA",  "RelAZ")
+# vars_new <- paste0(vars0,"_t")
+# setnames(aod_lst_terra, vars0, vars_new)
 # set NA 
-aod_lst_terra[within30min_t==0, c(vars_new):= NA]
+aod_lst_terra <- aod_lst_terra[within30min_t!=0,]
 
 # Aqua  ~~~~ #### 
 lst_aqua <- read.lst("aqua")
@@ -282,18 +280,19 @@ aod_lst_aqua[,.N]
 
 # time difference
 aod_lst_aqua[, diff_time_min:= as.numeric(overpass_time - stn_time)/60]
-vars_new <- paste0(vars0,"_a")
-setnames(aod_lst_aqua, vars0, vars_new)
-aod_lst_aqua[abs(diff_time_min)>30, c(vars_new):= NA]
+# vars_new <- paste0(vars0,"_a")
+# setnames(aod_lst_aqua, vars0, vars_new)
+aod_lst_aqua <- aod_lst_aqua[abs(diff_time_min)<=30,]
 
 # save
-saveRDS(list(aod_lst_terra = aod_lst_terra, aod_lst_aqua=aod_lst_aqua), "~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")
+saveRDS(list(aod_lst_terra = aod_lst_terra, aod_lst_aqua = aod_lst_aqua), "~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")
 
 ```
 
 ## Examine the collocated dataset  
 
 * Terra  
+
 ```{r}
 # report
 aod_lst_terra <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$aod_lst_terra
