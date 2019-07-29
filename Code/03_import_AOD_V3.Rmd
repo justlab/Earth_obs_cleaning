@@ -47,13 +47,17 @@ setnames(site_locations_2019, c("Site_Name", "lon", "lat", "elev"))
 aod_site_sf <- st_as_sf(site_locations_2019, coords = c("lon", "lat"), crs = 4326)
 nemia_buff_aea <- readRDS("~/Jdrive/PM/Just_Lab/projects/ECHO_PM/data/intermediate/nemia_buff_aea.rds")
 nemia_buff = st_transform(nemia_buff_aea, crs = 4326) 
+
+
 aod_site_NE <- aod_site_sf[nemia_buff,]  # a sf object for NEMIA
 saveRDS(aod_site_NE, here("Intermediate", "aod_site_NE"))
 # NEMIA site list
 # site_list_NE <- c(aod_site_NE$Site_Name, "MVCO", "LISCO")
 site_list_NE <- c(aod_site_NE$Site_Name)
+
+
 # US site list
-# to be done
+aeronet_conus_dt <- readRDS("~/Jdrive/PM/Just_Lab/projects/ECHO_PM/data/intermediate/aeronet_conus_dt.rds")
 
 ```
 
@@ -178,7 +182,7 @@ write.fst(aod20_data_pred470,          paste0("/data-coco/ECHO_PM/AeronetAODV3Le
 
 ```
 
-AOD is projected to 470nm, as expected it correlates with neighbouring AOD 440nm
+AOD is projected to 470nm globally, as expected it correlates with neighbouring AOD 440nm
 
 ```{r}
 # view correlation 
