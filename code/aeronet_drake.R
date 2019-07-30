@@ -38,6 +38,7 @@ aer_columns = c("AERONET_Site", "Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Ye
                 #"Site_Latitude(Degrees)", "Site_Longitude(Degrees)", # confirmed stations do not move!
                 "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 
+mcd19path = "/data-coco/mcd19/fst/nemia" 
 ssd_cache = new_cache(path = "/scratch/cache/aeronet_drake") # currently on Belle
 
 # Functions ~~~~~~~~~~~~~~~~~~~~ 
@@ -67,7 +68,7 @@ nemia_plan <- drake_plan(
   
   # selected measurements, transform by same date range if not automatic in name
   nemia_data = target(sel_data_bystation(aer_btw, nemia_aer),
-                      transform = map(date_start = !!date_start, date_end = !!date_end)),
+                      transform = map(aer_btw)),
   
   # joined mcd19 MAIAC values. transform by same date range if not automatic in name
   
@@ -91,8 +92,16 @@ loadd(candidate_refpts, cache = ssd_cache)
 loadd(nemia_aer, cache = ssd_cache)
 mapview(candidate_refpts, col.regions = "blue") + mapview(nemia_aer, col.regions = "red")
 loadd(aer_nearest, cache = ssd_cache)
+nemia_aer = readd("nemia_data_aer_btw_2018.01.01_2018.12.31", cache = ssd_cache)
 
-
+nemia_aer
+nemia_aer[, uniqueN(AERONET_Site)] # 19
+nemia_aer[, tdiff := day - shift(day), by = AERONET_Site] 
+nemia_tdiff = nemia_aer[, .(obscount = .N, mean_tdiff = mean(tdiff, na.rm = T), 
+              med_tdiff = median(tdiff, na.rm = T)), by = AERONET_Site]
+library(ggplot2)
+ggplot(nemia_tdiff) + geom_density(aes(mean_tdiff))
+ggplot(nemia_tdiff[mean_tdiff<1000]) + geom_density(aes(mean_tdiff))
 
 
 # notes ####
