@@ -1,5 +1,5 @@
 ---
-title: "AOD collocated with MAIAC"
+title: "AOD Collocated with MAIAC: New Variables"
 author: "Yang Liu"
 date: "07/16/2019"
 output:
@@ -28,6 +28,8 @@ source(here::here("Code", "funcs_for_plots.R"))
 source("~/liuyanguu/CWV/Code/cwv_funcs.R")
 ```
 
+## Load the collocated dataset
+
 ```{r}
 # Terra sites in 2018
 aod_lst_terra <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$aod_lst_terra
@@ -42,7 +44,7 @@ radius0 = 300000
 reference_lst_fst ="/data-belle/LST/MODIS.LST.C6/derived/conus_grid_201906.fst"
 refDT = read_fst(reference_lst_fst, as.data.table = TRUE)[inNEMIA ==TRUE]
 refDT_sf <- st_as_sf(refDT, coords = c("x_wgs84", "y_wgs84"), crs = 4326)
-refDT_sf <-  st_transform(refDT_sf, crs = 2163) 
+refDT_sf <- st_transform(refDT_sf, crs = 2163) 
 
 # take each row (sf, df, geometry point) as the argument, create multi-point buffer 
 # `aod_buffer` is a multi-buffer:
@@ -53,7 +55,7 @@ aod_buffers <- st_buffer(aod_site_km, radius0)
 
 ## Method  
 
-Note 7/22, for sure not the best way here, but it can work. 
+Note 7/22, for sure could be better ways, but it can work. 
 1. Get geometry for buffers as a list: aod_buffers_list  
 2. `st_intersects` buffers to reference grid, get a binary geometry list: join_list
 3. get list of dataset of grid within each buffer: ref_list
@@ -164,12 +166,14 @@ aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
   aod_join_MODIS <- new_vars[aod_join_MODIS]
   return(aod_join_MODIS)
 }
+
+## Terra
 aod_lst_terra <- aod.MODIS.newVars(aod_lst_terra, lst_terra)
 head(aod_lst_terra)
 # AOD - AOD mean, do later 
 saveRDS(aod_lst_terra, "~/Intermediate/AOD_data/190724_LSTjoinMCD19_terra_newVars.rds")
 
-
+## Aqua
 aod_lst_aqua <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$aod_lst_aqua
 aod_lst_aqua <- aod.MODIS.newVars(aod_lst_aqua, lst_aqua)
 head(aod_lst_aqua)
