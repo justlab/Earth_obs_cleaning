@@ -12,20 +12,6 @@ sel_data_bytime <- function(aer_data, date_start = NULL, date_end = NULL){
   if(!is.null(date_end)){   aer_data = aer_data[day <= as.POSIXct(date_end, tz = "UTC"),   ] }
   return(aer_data)
 }
-# get_conus_buff <- function(ne_path = "/data-belle/naturalearth/"){
-#   # assumes ne_download already run for the ne_path directory
-#   # does not clip out Great Lakes; not needed for selecting stations
-#   countriesSP = ne_load(scale = 10, type = "countries", category = "cultural", destdir = ne_path)
-#   usaSP = countriesSP[countriesSP$NAME == 'United States of America', "NAME"]
-#   clip_poly = as(raster::extent(-126, -66.7, 24.4, 49.4), "SpatialPolygons")
-#   proj4string(clip_poly) <- proj4string(usaSP)
-#   conusSP = gIntersection(usaSP, clip_poly, byid = TRUE)
-#   # do 2km buffer while in National Atlas CRS
-#   conus_naea = spTransform(conusSP, "+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs")
-#   conus_naea_buff = buffer(conus_naea, width = 2000, dissolve = TRUE)
-#   # return in WGS84
-#   conus_buff = spTransform(conus_naea_buff, proj4string(conusSP)) 
-# }
 get_ref_grid <- function(ref_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_grid_201906.fst"){
   refDT = read_fst(ref_file, as.data.table = TRUE, columns = c("idLSTpair0", "x_wgs84", "y_wgs84"))
   st_as_sf(refDT, coords = c("x_wgs84", "y_wgs84"), crs = 4326)
@@ -74,3 +60,26 @@ sel_data_bystation <- function(aer_data, aer_stns){
   # aer_stns expected to be sf points, but coule be a data.table as long as it has column Site_Name
   aer_data[AERONET_Site %in% aer_stns$Site_Name]
 }
+
+# mcd19 processing ####
+
+# open matching years of mcd19 data, Aqua and Terra if 2002+, extracting data for the closest cells to AERONET stations
+
+
+# join_mcd19(mcd19path, date_start, date_end, aer_nearest, aer_data){
+#   # get years in the date range
+#   
+#   # loop over years (xxx append year to path)
+#   
+#   # do Terra
+#     # matching files, get matching cells for all
+#     # do the join - check times
+#   
+#   # if 2002+, do Aqua (adding columns to Terra table)
+#     # do in parallel with Terra? Make this loop an expanded set of targets by year?
+#   
+#    
+# }
+# get_mcd19_day(path, cells){
+#   
+# }
