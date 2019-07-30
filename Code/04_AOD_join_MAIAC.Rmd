@@ -167,7 +167,7 @@ aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
   return(aod_join_MODIS)
 }
 
-## Terra
+## Terra 
 aod_lst_terra <- aod.MODIS.newVars(aod_lst_terra, lst_terra)
 head(aod_lst_terra)
 # AOD - AOD mean, do later 

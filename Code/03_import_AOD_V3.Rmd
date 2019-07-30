@@ -326,7 +326,8 @@ plot.scatter.diagonal(data = aod_lst_terra[abs(diff_time_min)<=30], x = "AOD_470
 ```
 
 Plot AERONET AOD by time    
-Plot the difference by time   
+Plot the difference by time  
+
 ```{r}
 plotly::ggplotly(
 ggplot(data = aod_lst_terra, aes(x = stn_time, y = AOD_470nm, color = Site_Name)) + 
