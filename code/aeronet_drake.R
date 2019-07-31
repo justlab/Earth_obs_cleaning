@@ -19,11 +19,8 @@ library(data.table)
 library(fst)
 library(future)
 #install.packages("/home/rushj03/dev/nngeo", repos = NULL, type = "source")
-library(nngeo, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6")
-#library(sp)
-#library(rgdal)
-#library(rnaturalearth) # REPLACE WITH CONUS FILE USED IN GRID XXX
-#library(rgeos)
+library(nngeo)
+#library(nngeo, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6")
 
 # Parameters ~~~~~~~~~~~~~~~~~~~~~~ ####
 
@@ -92,12 +89,12 @@ loadd(candidate_refpts, cache = ssd_cache)
 loadd(nemia_aer, cache = ssd_cache)
 mapview(candidate_refpts, col.regions = "blue") + mapview(nemia_aer, col.regions = "red")
 loadd(aer_nearest, cache = ssd_cache)
-nemia_aer = readd("nemia_data_aer_btw_2018.01.01_2018.12.31", cache = ssd_cache)
+nemia_data = readd("nemia_data_aer_btw_2018.01.01_2018.12.31", cache = ssd_cache)
 
-nemia_aer
-nemia_aer[, uniqueN(AERONET_Site)] # 19
-nemia_aer[, tdiff := day - shift(day), by = AERONET_Site] 
-nemia_tdiff = nemia_aer[, .(obscount = .N, mean_tdiff = mean(tdiff, na.rm = T), 
+nemia_data
+nemia_data[, uniqueN(AERONET_Site)] # 19
+nemia_data[, tdiff := day - shift(day), by = AERONET_Site] 
+nemia_tdiff = nemia_data[, .(obscount = .N, mean_tdiff = mean(tdiff, na.rm = T), 
               med_tdiff = median(tdiff, na.rm = T)), by = AERONET_Site]
 library(ggplot2)
 ggplot(nemia_tdiff) + geom_density(aes(mean_tdiff))
