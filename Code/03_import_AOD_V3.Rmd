@@ -13,16 +13,14 @@ knitr::opts_chunk$set(echo = F, message=FALSE, warning=FALSE,
 
 Borrowed some code from `03_import_aeronet.R` on Jdrive  
 Import and process the AOD20 V3 level 2 global Aeronet stations  
-Interpolating to wavelength AOD 470nm   
+* Interpolating to wavelength AOD 470nm, the result is: 
+`aod20_data_pred470 <- read.fst("/data-coco/ECHO_PM/AeronetAODV3Level2/AOD_Level20_All_Points_V3_wPredAOD_470nm_190618.fst", as.data.table = T)`
 
-```{r, eval = F, include = F}
-## About this script ## 
-
-```
+* Collocate with MCD19A2
 
 ```{r}
 source("~/liuyanguu/CWV/Code/cwv_funcs.R")
-source(here::here("Code", "funcs_for_plots.R"))
+source("~/liuyanguu/AOD_CONUS/Code/funcs_for_plots.R")
 
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: "AODV3 Level2 AOD2.0 from Aeronet Day Variation"
+title: "AODV3 Level2 AOD2.0 Aeronet: investigate within-day Variation"
 author: "Yang Liu"
 date: "7/24/2019"
 output:
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = F, message=FALSE, warning=FALSE,
 ```{r}
 source("~/liuyanguu/CWV/Code/cwv_funcs.R")
 source(here::here("Code", "funcs_for_plots.R"))
-# 
+
 
 ```
 
@@ -44,7 +44,6 @@ aod_conus[,date:=as.Date(date, "%Y-%m-%d")]
 aod_conus[,dailyN:=.N, by = .(site, date)] # obs in a day by site,day
 aod_conus <- aod_conus[dailyN>=20,]
 summary(aod_conus[,.N,by = .(site, date)][,N])
-aod_conus[,daysN:= uniqueN(date), by = site] # lasting days by site 
 
 aod_conus[, month := factor(months(date, abbr = T),
                             levels = month.abb)]
@@ -78,9 +77,10 @@ Within year 2000 - 2019 (97% of the total AOD data in CONUS), I calculated sd(AO
 
 ```{r,  fig.width=12, fig.height=5}
 # summary1: aod1 calculates the mean and sd (SD) by day 
-aod1 <- unique(aod_conus[,.(lat, lon, dailyN, daysN, month, season, 
+aod1 <- unique(aod_conus[,.(lat, lon, dailyN, month, season, 
                             mean_aod = mean(AOD_470nm), sd_aod = sd(AOD_470nm),
                             year = year(date)), by = .(site, date)])
+aod1[,daysN:= uniqueN(date), by = site] # lasting days by site 
 # 290 sites: aod2 [290 * 6]
 aod2 <- unique(aod1[,.(mediansd = median(sd_aod), Nobs = sum(dailyN),
                        yearmax = max(year), daysN, lon, lat),by = .(site)])[yearmax>=2018]
@@ -104,61 +104,56 @@ Among 290 stations, 87 have data from 2018 and 2019 (Figure Left).
 # print results with daysN > 500 
 setorder(aod2, -mediansd)
 rmarkdown::paged_table(aod2[daysN>1500])
-
-plotAODscatter <- function(aod_data, bySeason = F){
-  g1  <-  ggplot(data = aod_data[daysN>=500], aes(x = daysN, y = mediansd))+
+library(ggrepel)
+plotAODscatter <- function(aod_data, bySeason = F, daysN0 = 500){
+  g1  <-  ggplot(data = aod_data[daysN>=daysN0], aes(x = daysN, y = mediansd))+
       geom_point(size = 1, alpha = 1) + 
       theme_classic() + 
-      ggrepel::geom_label_repel(data = aod_data[(daysN>1000&mediansd>0.013)|daysN>1500], aes(x = daysN, y = mediansd, label = site)) + 
+      # ggrepel::geom_label_repel(data = aod_data[(daysN>daysN0*1.5 & mediansd> median(aod_data$mediansd))|daysN>daysN0*1.5], aes(x = daysN, y = mediansd, label = site)) + 
       ggtitle("Median daily SD(AOD) vs. Total days by Station", subtitle = ("Stations with latest year >=2018")) + 
       labs(x = "Number of Observations", y = "Daily SD(AOD)")
   if(bySeason) {g1 <- g1 + facet_wrap(~season)}
   g1
 }
 
-plotAODmap <- function(aod_data, bySeason = F){
+plotAODmap <- function(aod_data, bySeason = F, daysN0 = 500){
   g2 <- ggplot() +
           geom_polygon(data = map_data("state"), 
                        aes(x = long, y = lat, group = group), 
                        fill = 'NA', color = "grey") + 
-          geom_point(data = aod_data[daysN>=500],
+          geom_point(data = aod_data[daysN >= daysN0],
                      aes(x=lon, y=lat, color = mediansd, size = daysN),
                      alpha = 0.8) + 
           # coord_map("albers", parameters = list(at0 = 45.5, lat1 = 29.5), expand = T) + 
-          scale_size_area(max_size = 12) + 
-          scale_colour_viridis_c() + 
+          scale_size_area(max_size = 10) + 
+          scale_colour_viridis_c() +
           labs(x = "Longitude", y = "Latitude", color= "Daily\nSD(AOD)", 
                size = "Number of\nDays") +
-          ggrepel::geom_label_repel(data = aod_data[daysN>1000&mediansd>0.013], 
-                                    aes(x = lon, y = lat, label = site)) + 
+          # ggrepel::geom_text_repel(data = aod_data[daysN>daysN0*1.5 & mediansd>median(aod_data$mediansd)],
+          #                           aes(x = lon, y = lat, label = site),
+          #                           size =2.5, inherit.aes = F) +
           theme_minimal() +
           ggtitle("SD by AERONET stations") +
           theme(legend.position ='right') 
   if(bySeason) g2 <- g2 + facet_wrap(~season)
   return(g2)
 }
+plotAODmap(aod2,daysN0 = 300)
 p1 <- plotAODscatter(aod2)
 p2 <- plotAODmap(aod2)
 gridExtra::grid.arrange(grobs = list(p1, p2), ncol = 2)
 
 ```
 
-By season 
-
-```{r, fig.width = 12, fig.height = 10}
-plotAODscatter(aod3, bySeason = T)
-plotAODmap(aod3, bySeason = T)
-```
-
-
-### Calculating using past 3 years: 2016 - 2019
+### Calculating using past 3 years: 2015 - 2018
 
 ```{r}
 # summary2: limiting the years! aod1 calculates the mean and sd (SD) by day 
-aod1 <- unique(aod_conus[year>=2016,.(lat, lon, dailyN, daysN, month, season, 
+aod1 <- unique(aod_conus[year>=2015,.(lat, lon, dailyN, month, season, 
                             mean_aod = mean(AOD_470nm), sd_aod = sd(AOD_470nm),
                             year = year(date)), by = .(site, date)])
 # 290 sites: aod2 [290 * 6]
+aod1[, daysN := uniqueN(date), by = site]
 aod2 <- unique(aod1[,.(mediansd = median(sd_aod), Nobs = sum(dailyN),
                        yearmax = max(year), daysN, lon, lat),by = .(site)])[yearmax>=2018]
 
@@ -170,13 +165,30 @@ aod3 <- unique(aod1[,.(mediansd = median(sd_aod), Nobs = sum(dailyN),
 
 ```
 
+## make and save plot 
+
 ```{r, fig.width=12, fig.height=5}
 # print results with daysN > 500 
 setorder(aod2, -mediansd)
 rmarkdown::paged_table(aod2)
-p1 <- plotAODscatter(aod2)
-p2 <- plotAODmap(aod2)
-gridExtra::grid.arrange(grobs = list(p1, p2), ncol = 2)
+p_aer <- plotAODmap(aod2, daysN0 = 300) + 
+  ggtitle("Median Daily SD (AERONET AOD)", 
+                   subtitle = "2015 - 2018")
+
+# gridExtra::grid.arrange(grobs = list(p1, p_aer), ncol = 2)
+
+D2 <- readRDS(here("Intermediate/DSCOVR_DailySD_AOD_bySite.rds"))
+g_DS <- plotAODmap(D2, daysN0 = 5) + ggtitle("Median Daily SD (DSCOVR EPIC MAIAC AOD)", subtitle = "By AERONET Station, 2015 - 2018")
+
+ggsave(p_aer, file = here("Figure","190731_DailySD_AER.png"),
+      width = 6, height = 4)
+
+ggsave(g_DS, file = here("Figure","190731_DailySD_DSCOVR.png"),
+      width = 6, height = 4)
+
+ggsave(grid.arrange(p_aer, g_DS, ncol = 2), file = here("Figure","190731_DailySD_DS_AERONET.png"),
+      width = 12, height = 4)
+
 ```
 
 By season 
