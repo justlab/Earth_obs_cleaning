@@ -37,29 +37,23 @@ aer_data_path = '/scratch/temp/All_Sites_Times_All_Points_AOD20_20180603.dat' # 
 # the aer data with AOD470nm
 aer_data_path_new = "~/Intermediate/AOD_data/190628_aod20_wPred_NEMIA_idLST.fst"
   
+aer_files_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/"
 #date_start = "2000-01-01" # do not include in sel_data_bytime if don't want to limit
 date_start = "2018-01-01" # do not include in sel_data_bytime if don't want to limit
 date_end   = "2018-12-31" # do not include in sel_data_bytime if don't want to limit
 geo_region = "NEMIA"
-aer_columns = c("AERONET_Site", "Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year", "AOD_440nm", 
-                #"Site_Latitude(Degrees)", "Site_Longitude(Degrees)", # confirmed stations do not move!
-                "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 
 mcd19path = "/data-coco/mcd19/fst/nemia" 
 # point to cache: 
 ssd_cache = new_cache(path = "/scratch/cache/aeronet_drake") 
 
-# Functions ####
-
-source("code/aeronet_processing.R")
-
-
 # Drake Plans  ------------------------------------------------------------
-
+# load functions for drake: 
+source("code/aeronet_processing.R")
+# new plan Yang Liu
 nemia_plan <- drake_plan(
-
-# 1.  Aeroent ---------------------------------------------------------------------
-
+  # 1.  Aeroent ---------------------------------------------------------------------
+  
   # AERONET station locations file: 
   aer_stns = fread(file = file_in(aer_stn_path), col.names = c("Site_Name", "lon", "lat", "elevm")),
   conus_buff = get_conus_buff(),
@@ -76,7 +70,7 @@ nemia_plan <- drake_plan(
   
   # measurements. Editing values of date_start and date_end should make use of the cache
   # if range was previously calc'd
-  aer_data = get_stn_data(file_in(aer_data_path), aer_columns),  # 26171178x6
+  aer_data = get_stn_data(aod_dir = file_in(aer_files_path)),  # 26171206x56, 11G
   aer_btw = target(sel_data_bytime(aer_data, date_start, date_end),
                    transform = map(date_start = !!date_start, date_end = !!date_end)),
   
@@ -87,9 +81,6 @@ nemia_plan <- drake_plan(
   # joined mcd19 MAIAC values. transform by same date range if not automatic in name
   
 )
-
-
-
 nemia_plan
 #drake_plan_source(nemia_plan)
 nemia_config <- drake_config(nemia_plan, cache = ssd_cache) # show the dependency
@@ -101,10 +92,11 @@ future::plan("multicore")
 make(nemia_plan, cache = ssd_cache)
 cached(cache = ssd_cache)
 
+
 # testing ####
 loadd(cache = ssd_cache) # load all object 
-loadd(candidate_refpts, cache = ssd_cache) # load specific object 
-loadd(nemia_aer, cache = ssd_cache)
+# loadd(candidate_refpts, cache = ssd_cache) # load specific object 
+# loadd(nemia_aer, cache = ssd_cache)
 library(mapview)
 mapview(candidate_refpts, col.regions = "blue") + mapview(nemia_aer, col.regions = "red")
 loadd(aer_nearest, cache = ssd_cache)

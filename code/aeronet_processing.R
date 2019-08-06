@@ -1,7 +1,9 @@
-# Functions for aeronet_drake.R ~~~~~~~~~~~~~~~~~~~~~~ ####
+# Functions for aeronet_drake.R 
+# Part I
+# 
 
 
-# 1. Prepare subset of Aeronet stations ------------------------------------------
+# 1. Prepare Aeronet stations ------------------------------------------
 
 #' modify_aer_stns: Modify AERONET sites (dt) to remove sites on water
 #' @param aer_stns0 df of AERONET stations 
@@ -68,14 +70,6 @@ get_ref_grid <- function(ref_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_
   st_as_sf(refDT, coords = c("x_wgs84", "y_wgs84"), crs = 4326)
 }
 
-#' read in the Aeronet AOD measurement data from `data_path`
-get_stn_data <- function(data_path, keep_columns){
-  dt = fread(data_path, select = keep_columns, fill = TRUE, skip = 6)
-  dt[, day := as.POSIXct(paste(`Date(dd:mm:yyyy)`, `Time(hh:mm:ss)`), 
-                         format = "%d:%m:%Y %H:%M:%S", tz = "UTC")]
-  dt[, c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)") := NULL]
-  return(dt)
-}
 
 
 #' find points in buffer within dist
@@ -106,16 +100,55 @@ remove_site_on_water <- function(aer_nearest){
 }
 
 
-# 2. prepare AOD measurement data -------------------------------------------------
-# select AOD data by station and date 
+# 2. prepare AOD data -------------------------------------------------
+#' read in the Aeronet AOD measurement data from `aod20_file_dir` files.   
+#' @param aod_dir where the files located on coco.   
+#' 
+#' 
+get_stn_data <- function(aod_dir){
+  
+  aer_files_dir  <-  list.files(aod_dir, pattern = "*.lev20", full.names = TRUE)
+  t0 <- fread(aer_files_dir[1])
+  
+  vars_aod <- intersect(grep("AOD_", names(t0), value = T), grep("nm", names(t0), value = T))
+  # sort the wave lengths varnames from low to high, and update the vars_aod
+  x_nm <- sort(readr::parse_number(vars_aod)) # 340, 380, ... , 1640
+  vars_aod <- paste0("AOD_", x_nm,"nm") # the AOD_...nm variables
+  vars_wv <- paste0("Exact_Wavelengths_of_AOD(um)_", x_nm,"nm") # the Exact wv length
+  # some other variables 
+  vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Name",
+             "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
+             "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
+  vars0_new <- c("date", "time", "dayofYear", "site",
+                 "elev", "ozone", "NO2", 
+                 "Solar_Zenith_Angle", "Precipitable_Water")
+  
+  # data_path is a single file path
+  read.aod <- function(data_path){
+    dt <- fread(data_path, select =  c(vars0,vars_aod,vars_wv))
+    dt[, stn_time := as.POSIXct(paste(`Date(dd:mm:yyyy)`, `Time(hh:mm:ss)`), 
+                           format = "%d:%m:%Y %H:%M:%S", tz = "UTC")]
+    dt[, c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)") := NULL]
+    for (i in names(dt)) dt[get(i) == -999, (i):= NA] # set NA 
+    dt
+  }
+  
+  file_list <- lapply(aer_files_dir, read.aod) # 440s
+  aer_data <- rbindlist(file_list) 
+  return(aer_data)
+}
+# system.time(
+# aer_data <-  get_stn_data(aer_files_path)
+# )
+#' select AOD data by station
 sel_data_bystation <- function(aer_data, aer_stns){
   # aer_stns expected to be sf points, but could be a data.table as long as it has column Site_Name
-  aer_data[AERONET_Site %in% aer_stns$Site_Name]
+  aer_data[AERONET_Site_Name %in% aer_stns$Site_Name]
 }
 
-
+#' select AOD data by date 
 sel_data_bytime <- function(aer_data, date_start = NULL, date_end = NULL){
-  if(!is.null(date_start)){ aer_data = aer_data[day >= as.POSIXct(date_start, tz = "UTC"), ] }
-  if(!is.null(date_end)) {aer_data = aer_data[day <= as.POSIXct(date_end, tz = "UTC"),   ] }
+  if(!is.null(date_start)){ aer_data = aer_data[stn_time >= as.POSIXct(date_start, tz = "UTC"), ] }
+  if(!is.null(date_end)) {aer_data = aer_data[stn_time <= as.POSIXct(date_end, tz = "UTC"),   ] }
   return(aer_data)
 }
