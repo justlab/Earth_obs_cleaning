@@ -49,7 +49,8 @@ ssd_cache = new_cache(path = "/scratch/cache/aeronet_drake")
 
 # Drake Plans  ------------------------------------------------------------
 # load functions for drake: 
-source("code/aeronet_processing.R")
+source("code/drake_funcs.R")
+library("plotthis")
 # new plan Yang Liu
 nemia_plan <- drake_plan(
   # 1.  Aeroent ---------------------------------------------------------------------
@@ -75,11 +76,12 @@ nemia_plan <- drake_plan(
                    transform = map(date_start = !!date_start, date_end = !!date_end)),
   
   # selected measurements, transform by same date range if not automatic in name
-  nemia_data = target(sel_data_bystation(aer_btw, nemia_aer),
+  nemia = target(sel_data_bystation(aer_btw, nemia_aer),
                       transform = map(aer_btw)), # use map to map to aer_btw
   
-  # joined mcd19 MAIAC values. transform by same date range if not automatic in name
-  
+  # 2. Interpolation -----------------------------------------------------------
+  # so instead of running in all the Aeronet data,
+  wPred = target(interpolate_aod(nemia),transform = map(nemia))
 )
 nemia_plan
 #drake_plan_source(nemia_plan)
@@ -89,12 +91,14 @@ vis_drake_graph(nemia_config)
 
 outdated(nemia_config)
 future::plan("multicore")
-make(nemia_plan, cache = ssd_cache)
+make(nemia_plan, cache = ssd_cache) # write update into the cache 
 cached(cache = ssd_cache)
-
-
-# testing ####
 loadd(cache = ssd_cache) # load all object 
+
+
+
+# testing -----------------------------------------------------------------
+
 # loadd(candidate_refpts, cache = ssd_cache) # load specific object 
 # loadd(nemia_aer, cache = ssd_cache)
 library(mapview)

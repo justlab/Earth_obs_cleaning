@@ -1,11 +1,11 @@
-# Functions for aeronet_drake.R 
-# Part I
-# 
+# Functions for Aeronet's drake_plan.R 
+# Part I 
 
 
 # 1. Prepare Aeronet stations ------------------------------------------
 
 #' modify_aer_stns: Modify AERONET sites (dt) to remove sites on water
+#' ** Since it is a manually removal, might need to incl. more sites later **
 #' @param aer_stns0 df of AERONET stations 
 #' @return a new df
 modify_aer_stns <- function(aer_stns0){
@@ -101,12 +101,20 @@ remove_site_on_water <- function(aer_nearest){
 
 
 # 2. prepare AOD data -------------------------------------------------
+
+# most basic variables to read
+vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Name",
+           "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
+           "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
+# vars0_new <- c("date", "time", "dayofYear", "site",
+               # "elev", "ozone", "NO2", 
+               # "Solar_Zenith_Angle", "Precipitable_Water")
+
 #' read in the Aeronet AOD measurement data from `aod20_file_dir` files.   
 #' @param aod_dir where the files located on coco.   
 #' 
 #' 
 get_stn_data <- function(aod_dir){
-  
   aer_files_dir  <-  list.files(aod_dir, pattern = "*.lev20", full.names = TRUE)
   t0 <- fread(aer_files_dir[1])
   
@@ -116,13 +124,6 @@ get_stn_data <- function(aod_dir){
   vars_aod <- paste0("AOD_", x_nm,"nm") # the AOD_...nm variables
   vars_wv <- paste0("Exact_Wavelengths_of_AOD(um)_", x_nm,"nm") # the Exact wv length
   # some other variables 
-  vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Name",
-             "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
-             "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
-  vars0_new <- c("date", "time", "dayofYear", "site",
-                 "elev", "ozone", "NO2", 
-                 "Solar_Zenith_Angle", "Precipitable_Water")
-  
   # data_path is a single file path
   read.aod <- function(data_path){
     dt <- fread(data_path, select =  c(vars0,vars_aod,vars_wv))
@@ -137,9 +138,7 @@ get_stn_data <- function(aod_dir){
   aer_data <- rbindlist(file_list) 
   return(aer_data)
 }
-# system.time(
-# aer_data <-  get_stn_data(aer_files_path)
-# )
+
 #' select AOD data by station
 sel_data_bystation <- function(aer_data, aer_stns){
   # aer_stns expected to be sf points, but could be a data.table as long as it has column Site_Name
@@ -151,4 +150,35 @@ sel_data_bytime <- function(aer_data, date_start = NULL, date_end = NULL){
   if(!is.null(date_start)){ aer_data = aer_data[stn_time >= as.POSIXct(date_start, tz = "UTC"), ] }
   if(!is.null(date_end)) {aer_data = aer_data[stn_time <= as.POSIXct(date_end, tz = "UTC"),   ] }
   return(aer_data)
+}
+
+
+# 3. Interpolating to AOD470nm --------------------------------------------
+#' prepare aer_date for interpolation of AOD470nm 
+#' interpolating to wavelength 470 nm, input as 0.47 
+#' @param aer_data the dataset contains all the AOD measurements and exact wavelengths
+#' @return dataset of aer_data with pred
+#' 
+interpolate_aod <- function(aer_data){
+  aer_data <- aer_data[, -c("AOD_1020nm", "AOD_1640nm"), with = F]
+  aer_data[,obs:=.I]
+  setkey(aer_data, obs)
+  vars_wv <- grep("Exact_Wavelengths_of_AOD", names(aer_data), value = T)
+  vars_aod_sub <- grep("AOD_", names(aer_data), value = T)
+  aer_data$N_NAAOD <- rowSums(!is.na(aer_data[,..vars_aod_sub]))
+  # create long-format data 
+  d <- melt(aer_data[, c(vars_aod_sub,vars_wv[1:22], "obs"), with = F], 
+            measure = list(vars_aod_sub, vars_wv[1:22]),value.name = c("aod", "exact_wv"))
+  obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside ==T, obs]
+  # choose non-NA and >0 AOD
+  d <- d[!is.na(aod)]
+  # the predict part: 
+  d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(log(aod) ~  log(exact_wv) + I((log(exact_wv))^2)), newdata = data.frame(exact_wv = 0.47))))] # notice to put 0.47 not 470
+  setkey(d2, obs)
+  aer_data_wPred <- d2[aer_data]
+  # set NA: 
+  aer_data_wPred[N_NAAOD<=4 & obs%in%obs_os, AOD_470nm:=NA]
+  # remove unncessary variables: 
+  aer_data_wPred <- aer_data_wPred[,-c(vars_aod_sub, vars_wv), with = F]
+  aer_data_wPred
 }
