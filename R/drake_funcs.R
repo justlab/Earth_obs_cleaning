@@ -182,3 +182,9 @@ interpolate_aod <- function(aer_data){
   aer_data_wPred <- aer_data_wPred[,-c(vars_aod_sub, vars_wv), with = F]
   aer_data_wPred
 }
+
+
+setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
+setkey(aer_data_wPred, Site_Name)
+setkey(aer_nearest_NEMIA, Site_Name)
+aer_data_wPred <- aer_nearest_NEMIA[aer_data_wPred]

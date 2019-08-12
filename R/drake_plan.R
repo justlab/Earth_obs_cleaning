@@ -38,10 +38,10 @@ aer_data_path = '/scratch/temp/All_Sites_Times_All_Points_AOD20_20180603.dat' # 
 aer_data_path_new = "~/Intermediate/AOD_data/190628_aod20_wPred_NEMIA_idLST.fst"
   
 aer_files_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/"
-#date_start = "2000-01-01" # do not include in sel_data_bytime if don't want to limit
 date_start = "2018-01-01" # do not include in sel_data_bytime if don't want to limit
 date_end   = "2018-12-31" # do not include in sel_data_bytime if don't want to limit
 geo_region = "NEMIA"
+year_MCD19 = "2018"
 
 mcd19path = "/data-coco/mcd19/fst/nemia" 
 # point to cache: 
