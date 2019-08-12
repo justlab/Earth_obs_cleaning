@@ -1,0 +1,240 @@
+---
+title: "AODV3 Level2 AOD2.0 Aeronet: investigate within-day Variation"
+author: "Yang Liu"
+date: "7/24/2019"
+output:
+  html_document:
+    toc: true
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = F, message=FALSE, warning=FALSE,
+                      error = F, fig.width = 8, fig.height = 4)
+```
+
+
+```{r}
+source("~/liuyanguu/CWV/Code/cwv_funcs.R")
+source(here::here("Code", "funcs_for_plots.R"))
+
+
+```
+
+compares to figures in https://docs.google.com/document/d/1a1QlET1nDEPf7Sm68iTLgjI3-Quky-Flkib54AaUzpg/edit
+
+# Comparing within day variation of AERONET sites AOD measurements
+
+@output dataset has dailyN: observations with in a day (at least 20)
+@sd_mean and sd_rmse are daily mean and sd 
+
+```{r}
+# US site list
+aeronet_conus_dt <- readRDS("~/Jdrive/PM/Just_Lab/projects/ECHO_PM/data/intermediate/aeronet_conus_dt.rds")
+aod20_data_pred470 <- read.fst("/data-coco/ECHO_PM/AeronetAODV3Level2/AOD_Level20_All_Points_V3_wPredAOD_470nm_190618.fst", as.data.table = T)
+
+# year > 2000
+aod_conus <- aod20_data_pred470[year(date)>=2000][site%in%aeronet_conus_dt$Site_Name][!is.na(AOD_470nm)]
+aod_conus[, year := year(date)]
+# move the hours 0, 1, 2, attach the earlier date
+aod_conus[, hour := as.numeric(hour)]
+aod_conus[hour%in%c(0,1,2), `:=`(hour =hour+24, date = date - 1)]
+
+# aod_conus <- aod_conus[year(date)>2000]
+aod_conus[,datetime:=date]
+aod_conus[,date:=as.Date(date, "%Y-%m-%d")]
+aod_conus[,dailyN:=.N, by = .(site, date)] # obs in a day by site,day
+aod_conus <- aod_conus[dailyN>=20,]
+summary(aod_conus[,.N,by = .(site, date)][,N])
+
+aod_conus[, month := factor(months(date, abbr = T),
+                            levels = month.abb)]
+  aod_conus[month%in%c("Dec","Jan","Feb"), season:="Winter"]
+  aod_conus[month%in%c("Mar","Apr","May"), season:="Spring"]
+  aod_conus[month%in%c("Jun","Jul","Aug"), season:="Summer"]
+  aod_conus[month%in%c("Sep","Oct","Nov"), season:="Fall"]
+  aod_conus[, season:= factor(season, levels = c("Spring","Summer", "Fall", "Winter"))]
+
+
+```
+
+* July has the most observations. Ndays are similar, what hours are shorter in winter  
+
+```{r}
+# do winter have fewer observations per hour? 
+aod_conus_hour <- aod_conus[,.(Nobs = .N, Ndays = uniqueN(date)), by = .(season, hour)]  
+g1 = ggplot(aod_conus_hour, aes(x = hour, y = Ndays, color = season)) + geom_line() + theme_classic()
+g2 = ggplot(aod_conus_hour, aes(x = hour, y = Nobs, color = season)) + geom_line() + theme_classic()
+gridExtra::grid.arrange(grobs = list(g1, g2), ncol = 2, top = "By hour: similar days, fewer obs if daytime is short")
+
+
+```
+
+## Median Daily SD(AOD)
+
+### calculating using all data
+
+Within year 2000 - 2019 (97% of the total AOD data in CONUS), I calculated sd(AOD_470nm) by site and date. Then take the median.  @mediansd = median(sd_rmse)
+
+
+```{r,  fig.width=12, fig.height=5}
+# summary1: aod1 calculates the mean and sd (SD) by day 
+aod1 <- unique(aod_conus[,.(lat, lon, dailyN, month, season, 
+                            mean_aod = mean(AOD_470nm), sd_aod = sd(AOD_470nm),
+                            year = year(date)), by = .(site, date)])
+aod1[,daysN:= uniqueN(date), by = site] # lasting days by site 
+# 290 sites: aod2 [290 * 6]
+aod2 <- unique(aod1[,.(mediansd = median(sd_aod), Nobs = sum(dailyN),
+                       yearmax = max(year), daysN, lon, lat),by = .(site)])[yearmax>=2018]
+
+# by season
+
+aod3 <- unique(aod1[,.(mediansd = median(sd_aod), Nobs = sum(dailyN),
+                       yearmax = max(year), daysN, lon, lat),by = .(site, season)])[yearmax>=2018]
+
+```
+
+Among 290 stations, 87 have data from 2018 and 2019 (Figure Left).   
+@daysN: days of the station with data    
+
+* The table shows daysN > 1500 stations.  
+* `r aod2[daysN>=500,.N]` with `daysN` > 500 days are plotted  
+* `r aod2[daysN>=1000,.N]` with `daysN` > 1000 days and SD(AOD)>0.013(the median)   are labelled in the map. Some other large stations are also labelled in the scatterplot.  
+* So in the map, we label the top half of the long-lasting stations with at least 1000 days, and still on at least in 2018.   
+
+```{r, fig.width=12, fig.height=5}
+# print results with daysN > 500 
+setorder(aod2, -mediansd)
+rmarkdown::paged_table(aod2[daysN>1500])
+library(ggrepel)
+plotAODscatter <- function(aod_data, bySeason = F, daysN0 = 500){
+  g1  <-  ggplot(data = aod_data[daysN>=daysN0], aes(x = daysN, y = mediansd))+
+      geom_point(size = 1, alpha = 1) + 
+      theme_classic() + 
+      # ggrepel::geom_label_repel(data = aod_data[(daysN>daysN0*1.5 & mediansd> median(aod_data$mediansd))|daysN>daysN0*1.5], aes(x = daysN, y = mediansd, label = site)) + 
+      ggtitle("Median daily SD(AOD) vs. Total days by Station", subtitle = ("Stations with latest year >=2018")) + 
+      labs(x = "Number of Observations", y = "Daily SD(AOD)")
+  if(bySeason) {g1 <- g1 + facet_wrap(~season)}
+  g1
+}
+
+plotAODmap <- function(aod_data, bySeason = F, daysN0 = 500){
+  g2 <- ggplot() +
+          geom_polygon(data = map_data("state"), 
+                       aes(x = long, y = lat, group = group), 
+                       fill = 'NA', color = "grey") + 
+          geom_point(data = aod_data[daysN >= daysN0],
+                     aes(x=lon, y=lat, color = mediansd, size = daysN),
+                     alpha = 0.8) + 
+          # coord_map("albers", parameters = list(at0 = 45.5, lat1 = 29.5), expand = T) + 
+          scale_size_area(max_size = 10) + 
+          scale_colour_viridis_c() +
+          labs(x = "Longitude", y = "Latitude", color= "Daily\nSD(AOD)", 
+               size = "Number of\nDays") +
+          # ggrepel::geom_text_repel(data = aod_data[daysN>daysN0*1.5 & mediansd>median(aod_data$mediansd)],
+          #                           aes(x = lon, y = lat, label = site),
+          #                           size =2.5, inherit.aes = F) +
+          theme_minimal() +
+          ggtitle("SD by AERONET stations") +
+          theme(legend.position ='right') 
+  if(bySeason) g2 <- g2 + facet_wrap(~season)
+  return(g2)
+}
+plotAODmap(aod2,daysN0 = 300)
+p1 <- plotAODscatter(aod2)
+p2 <- plotAODmap(aod2)
+gridExtra::grid.arrange(grobs = list(p1, p2), ncol = 2)
+
+```
+
+### Calculating using past 3 years: 2015 - 2018
+
+```{r}
+# summary2: limiting the years! aod1 calculates the mean and sd (SD) by day 
+aod1 <- unique(aod_conus[year>=2015,.(lat, lon, dailyN, month, season, 
+                            mean_aod = mean(AOD_470nm), sd_aod = sd(AOD_470nm),
+                            year = year(date)), by = .(site, date)])
+# 290 sites: aod2 [290 * 6]
+aod1[, daysN := uniqueN(date), by = site]
+aod2 <- unique(aod1[,.(mediansd = median(sd_aod), Nobs = sum(dailyN),
+                       yearmax = max(year), daysN, lon, lat),by = .(site)])[yearmax>=2018]
+
+# by season
+
+aod3 <- unique(aod1[,.(mediansd = median(sd_aod), Nobs = sum(dailyN),
+                       yearmax = max(year), daysN, lon, lat),by = .(site, season)])[yearmax>=2018]
+
+
+```
+
+## make and save plot 
+
+```{r, fig.width=12, fig.height=5}
+# print results with daysN > 500 
+setorder(aod2, -mediansd)
+rmarkdown::paged_table(aod2)
+p_aer <- plotAODmap(aod2, daysN0 = 300) + 
+  ggtitle("Median Daily SD (AERONET AOD)", 
+                   subtitle = "2015 - 2018")
+
+# gridExtra::grid.arrange(grobs = list(p1, p_aer), ncol = 2)
+
+D2 <- readRDS(here("Intermediate/DSCOVR_DailySD_AOD_bySite.rds"))
+g_DS <- plotAODmap(D2, daysN0 = 5) + ggtitle("Median Daily SD (DSCOVR EPIC MAIAC AOD)", subtitle = "By AERONET Station, 2015 - 2018")
+
+ggsave(p_aer, file = here("Figure","190731_DailySD_AER.png"),
+      width = 6, height = 4)
+
+ggsave(g_DS, file = here("Figure","190731_DailySD_DSCOVR.png"),
+      width = 6, height = 4)
+
+ggsave(grid.arrange(p_aer, g_DS, ncol = 2), file = here("Figure","190731_DailySD_DS_AERONET.png"),
+      width = 12, height = 4)
+
+```
+
+By season 
+
+```{r, fig.width = 12, fig.height = 10}
+plotAODscatter(aod3, bySeason = T)
+plotAODmap(aod3, bySeason = T)
+```
+
+
+## Trend within day    
+
+### GSFC, Wallops (high sd) vs. "Sevilleta", "White_Sands_HELSTF" (low sd)
+  
+
+```{r, fig.width = 12, fig.height = 10}
+# substract the daily mean -> 
+aod_conus[, dailymean := mean(AOD_470nm), by = .(site, date)]
+aod_conus[, aod_new := AOD_470nm - dailymean]
+aod_conus2 <- aod_conus[site%in%c("Wallops", "GSFC",
+                                  "Sevilleta", "White_Sands_HELSTF"),]
+ # "MD_Science_Center", "SERC", 
+
+# by hour 
+ggplot(dilute.data(aod_conus2,10), aes(x = hour , y = aod_new)) + 
+  geom_point(size =1, alpha = 0.8) + 
+  geom_smooth(se= F, method = "gam", formula = y~s(x, bs = "cs")) + 
+  facet_wrap(~site, ncol = 2) +
+  theme_classic() 
+
+# by date
+ggplot(dilute.data(aod_conus2,10), aes(x = date , y = aod_new)) + 
+  geom_point(size = 1, alpha = 0.8) + 
+  geom_smooth(se= F, method = "gam", formula = y~s(x, bs = "cs")) + 
+  facet_wrap(~site, ncol = 2) +
+  theme_classic() 
+
+```
+
+
+```{r }
+# show daily trend: AOD vs date, all data
+ggplot(data = aod1, aes(x = date, y = sd_aod, color = site)) +
+  geom_point(size = 1) + 
+  theme_classic() + theme(legend.position = "none") + 
+  labs(y = "Daily SD(AOD) by station", x = "Date") + 
+  ggtitle("Daily variation by station across time", subtitle = "(# Daily obs >20)")
+
+```
