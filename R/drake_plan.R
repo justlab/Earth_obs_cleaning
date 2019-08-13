@@ -1,5 +1,6 @@
-# beginning of script where we will have a plan to:
+# See `drake_funcs.R` for functions used in drake plan #
 
+# beginning of script where we will have a plan to:
 # select Aeronet in CONUS
 # select Aeronet in NEMIA
 # calculate nearest idLSTpair0's. May need shortcut that uses buffer around stations to reduce possibility set. 
@@ -12,21 +13,23 @@
 # restrict to 2000+ (parameter so that different subsets could be taken later)
 
 # Libraries
-library(sf)
-library(magrittr)
-library(drake)
-library(data.table)
-library(fst)
-library(future)
-#install.packages("/home/rushj03/dev/nngeo", repos = NULL, type = "source")
-# library(nngeo, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6")
-#library(sp)
-#library(rgdal)
-#library(rnaturalearth) # REPLACE WITH CONUS FILE USED IN GRID XXX
-#library(rgeos)
-library(nngeo)
-#library(nngeo, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6")
-
+suppressPackageStartupMessages({
+  library(sf)
+  library(magrittr)
+  library(drake)
+  library(data.table)
+  library(fst)
+  library(future)
+  library(here)
+  #install.packages("/home/rushj03/dev/nngeo", repos = NULL, type = "source")
+  # library(nngeo, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6")
+  #library(sp)
+  #library(rgdal)
+  #library(rnaturalearth) # REPLACE WITH CONUS FILE USED IN GRID XXX
+  #library(rgeos)
+  library(nngeo)
+  #library(nngeo, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6")
+})
 
 # Parameters ####
 
@@ -41,16 +44,15 @@ aer_files_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/"
 date_start = "2018-01-01" # do not include in sel_data_bytime if don't want to limit
 date_end   = "2018-12-31" # do not include in sel_data_bytime if don't want to limit
 geo_region = "NEMIA"
-year_MCD19 = "2018"
-
-mcd19path = "/data-coco/mcd19/fst/nemia" 
+sats = c("terra", "aqua")
+# MCD19 data: 
+mcd19path = "/data-coco/mcd19/fst/nemia" # now there is only 2018 data 
 # point to cache: 
 ssd_cache = new_cache(path = "/scratch/cache/aeronet_drake") 
 
 # Drake Plans  ------------------------------------------------------------
 # load functions for drake: 
-source("code/drake_funcs.R")
-library("plotthis")
+source(here("R/drake_funcs.R"))
 # new plan Yang Liu
 nemia_plan <- drake_plan(
   # 1.  Aeroent ---------------------------------------------------------------------
@@ -80,8 +82,9 @@ nemia_plan <- drake_plan(
                       transform = map(aer_btw)), # use map to map to aer_btw
   
   # 2. Interpolation -----------------------------------------------------------
-  # so instead of running in all the Aeronet data,
-  wPred = target(interpolate_aod(nemia),transform = map(nemia))
+  # so instead of running all the Aeronet data, only run what is used
+  # it also join with the nearest grid id 
+  wPred = target(interpolate_aod(nemia, aer_nearest_NEMIA),transform = map(nemia))
 )
 nemia_plan
 #drake_plan_source(nemia_plan)
@@ -89,47 +92,32 @@ nemia_config <- drake_config(nemia_plan, cache = ssd_cache) # show the dependenc
 # vis_drake_graph(nemia_config, from = names(nemia_config$layout))
 vis_drake_graph(nemia_config)
 
-outdated(nemia_config)
+# outdated(nemia_config)
 future::plan("multicore")
 make(nemia_plan, cache = ssd_cache) # write update into the cache 
 cached(cache = ssd_cache)
 loadd(cache = ssd_cache) # load all object 
 
+# to see the updated version
+nemia_config <- drake_config(nemia_plan, cache = ssd_cache) # show the dependency
+vis_drake_graph(nemia_config)
 
 
-# testing -----------------------------------------------------------------
-
-# loadd(candidate_refpts, cache = ssd_cache) # load specific object 
-# loadd(nemia_aer, cache = ssd_cache)
-library(mapview)
-mapview(candidate_refpts, col.regions = "blue") + mapview(nemia_aer, col.regions = "red")
-loadd(aer_nearest, cache = ssd_cache)
-nemia_data = readd("nemia_data_aer_btw_2018.01.01_2018.12.31", cache = ssd_cache)
-
-nemia_data
-nemia_data[, uniqueN(AERONET_Site)] # 19
-nemia_data[, tdiff := day - shift(day), by = AERONET_Site] 
-nemia_tdiff = nemia_data[, .(obscount = .N, mean_tdiff = mean(tdiff, na.rm = T), 
-              med_tdiff = median(tdiff, na.rm = T)), by = AERONET_Site]
-library(ggplot2)
-ggplot(nemia_tdiff) + geom_density(aes(mean_tdiff))
-ggplot(nemia_tdiff[mean_tdiff<1000]) + geom_density(aes(mean_tdiff))
-
-
-# notes ####
-# 2000-2018: 174 unique NEMIA sites, 130 in the data
-
-# old notes ####
-
-## doesn't look like separate plans are possible; maybe fork and edit drake_plan() sometime
-# data_plan <- drake_plan(
-#   nemia_plan, # would need to expand this to the rows
-#   aer_data = get_stn_data(file_in(aer_data_path), aer_columns),
-#   aer_btw = target(sel_data_bytime(aer_data, date_start, date_end),
-#                    transform = map(date_start = !!date_start, date_end = !!date_end)) )
-
-
-# note: line 25564581 out of 26171185 ends early. possibly others, but that's where fread warned
-# 329 s for aer_data last time from QNAP, 108s from SSD
+# Join MCD19 --------------------------------------------------------------
+aer_data_wPred <- readd("wPred_nemia_aer_btw_2018.01.01_2018.12.31", cache = ssd_cache) # load all object 
+plan1 <- drake_plan(
+  # 3. WPred Join MCD19 -----------------------------------------------------------
+  mcd = target(read_lst(sat), transform = map(sat = c("terra", "aqua"))),
+  join = target(rolling_join(mcd_sat = mcd, aer_data_wPred),
+                transform = map(mcd))
+)
+config2 <- drake_config(plan1, cache = ssd_cache) # show the dependency
+vis_drake_graph(config2)
+time0 <- Sys.time()
+make(plan1, cache = ssd_cache) # write update into the cache 
+Sys.time() - time0
+cached(cache = ssd_cache)
+loadd(cache = ssd_cache) # load all object 
+join_mcd_aqua = readd("join_mcd_aqua", cache = ssd_cache)
 
 

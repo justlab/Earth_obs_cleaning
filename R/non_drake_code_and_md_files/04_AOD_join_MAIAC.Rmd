@@ -143,8 +143,7 @@ aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
 
   # join back to the MODIS file 
   MODIS_all[, day:=format(join_time, "%Y-%m-%d")]
-  setnames(MODIS_all, c("idLSTpair0", "Optical_Depth_047"), c("idLSTpair0_in_buffer", "AOD_470_buffer"),
-           skip_absent = T)
+  setnames(MODIS_all, c("idLSTpair0", "Optical_Depth_047"), c("idLSTpair0_in_buffer", "AOD_470_buffer"), skip_absent = T)
   setkey(MODIS_all, idLSTpair0_in_buffer, day)
   setkey(aod_join_buffer, idLSTpair0_in_buffer, day)
   # aod_join_buffer2 get AOD for all the buffer grid cells

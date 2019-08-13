@@ -157,9 +157,9 @@ sel_data_bytime <- function(aer_data, date_start = NULL, date_end = NULL){
 #' prepare aer_date for interpolation of AOD470nm 
 #' interpolating to wavelength 470 nm, input as 0.47 
 #' @param aer_data the dataset contains all the AOD measurements and exact wavelengths
-#' @return dataset of aer_data with pred
+#' @return dataset of aer_data with pred, also with `nearest_refgrid` next to Site_Name
 #' 
-interpolate_aod <- function(aer_data){
+interpolate_aod <- function(aer_data, aer_nearest_NEMIA){
   aer_data <- aer_data[, -c("AOD_1020nm", "AOD_1640nm"), with = F]
   aer_data[,obs:=.I]
   setkey(aer_data, obs)
@@ -176,15 +176,49 @@ interpolate_aod <- function(aer_data){
   d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(log(aod) ~  log(exact_wv) + I((log(exact_wv))^2)), newdata = data.frame(exact_wv = 0.47))))] # notice to put 0.47 not 470
   setkey(d2, obs)
   aer_data_wPred <- d2[aer_data]
-  # set NA: 
-  aer_data_wPred[N_NAAOD<=4 & obs%in%obs_os, AOD_470nm:=NA]
+  # set NA: At least 4 observations wanted for exterpolation 
+  aer_data_wPred[N_NAAOD<4 & obs%in%obs_os, AOD_470nm:=NA]
   # remove unncessary variables: 
   aer_data_wPred <- aer_data_wPred[,-c(vars_aod_sub, vars_wv), with = F]
+  
+  # attach nearest_refgrid (also called idLSTpair0 in many our script) to Aer Site_Name
+  setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
+  setkey(aer_data_wPred, Site_Name)
+  aer_sites <- as.data.table(aer_nearest_NEMIA)[,c("Site_Name", "nearest_refgrid"), with = F]
+  setkey(aer_sites, Site_Name)
+  aer_data_wPred <- aer_sites[aer_data_wPred]
+  aer_data_wPred[, join_time:=stn_time]
+  setkey(aer_data_wPred, nearest_refgrid, join_time)
   aer_data_wPred
 }
 
 
-setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
-setkey(aer_data_wPred, Site_Name)
-setkey(aer_nearest_NEMIA, Site_Name)
-aer_data_wPred <- aer_nearest_NEMIA[aer_data_wPred]
+# 4. join MCD19 (Terra, Aqua) -----------------------------------------------------------
+#' read MCD19
+#' this function need to be replaced in the future, as for now 
+#' we only read one-year data
+#' @param sat input "terra" or "aqua", if sat !="terra", load aqua
+read_lst <- function(sat = "terra"){
+  if (sat != "terra") choose = "mcd19_A" else choose = "mcd19_T" # load terra by default
+  lst_files <- list.files(path = "/data-coco/mcd19/fst/nemia/2018", pattern = choose, full.names = T)
+  ### 
+  lst_files <- lst_files[1]
+  dt = rbindlist(lapply(lst_files, function(x)read.fst(x, as.data.table = T)))
+  dt[,c("x", "y", "inNEMIA"):=NULL]
+  dt[, join_time:=overpass_time] # join later using `overpass_time`
+  dt[, sat := sat]
+  setnames(dt, "idLSTpair0", "nearest_refgrid") # rename for join later 
+  setkey(dt, nearest_refgrid, join_time)
+  return(dt)
+}
+
+#' rolling join aer with MCD19
+#' @return MCD19 rolling join Aernet 
+rolling_join <- function(mcd_sat, aer_data_wPred){
+  mcd19 <- aer_data_wPred[mcd_sat, roll = 'nearest', nomatch = 0]
+  # time difference
+  mcd19[, diff_time_min:= as.numeric(overpass_time - stn_time)/60]
+  mcd19 <- mcd19[abs(diff_time_min)<=30,]
+  mcd19[, join_time:=NULL]
+  return(mcd19)
+}

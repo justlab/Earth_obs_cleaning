@@ -16,12 +16,11 @@ Import and process the AOD20 V3 level 2 global Aeronet stations
 * Interpolating to wavelength AOD 470nm, the result is: 
 `aod20_data_pred470 <- read.fst("/data-coco/ECHO_PM/AeronetAODV3Level2/AOD_Level20_All_Points_V3_wPredAOD_470nm_190618.fst", as.data.table = T)`
 
-* Collocate with MCD19A2
+* Collocate with MCD19A2 
 
 ```{r}
 source("~/liuyanguu/CWV/Code/cwv_funcs.R")
 source("~/liuyanguu/AOD_CONUS/Code/funcs_for_plots.R")
-
 ```
 
 # AERONET
@@ -31,13 +30,13 @@ Get list of stations, and NEMIA stations
 ```{r, eval = T}
 # https://aeronet.gsfc.nasa.gov/data_push/V3/AOD/AOD_Level20_All_Points_V3.tar.gz
 # load aod data
-# aod20_daily_dir <- "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/DAILY/"
-aod20_daily_dir <- "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/"
-aod20_file_dir  <-  list.files(aod20_daily_dir, pattern = "*.lev20", full.names = TRUE)
+aod20_file_dir  <-  list.files("/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/", pattern = "*.lev20", full.names = TRUE)
 
 # load site location file, only for limiting sites' locations to the US or to NEMIA
 site_locations_2019 <- fread("/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt")
+
 aod_file_name <- gsub("^[0-9]{5,}_[0-9]{5,}_|\\.lev20", "", list.files(aod20_daily_dir, pattern = "*.lev20"))
+
 aod_file_name[!aod_file_name%in%site_locations_2019$Site_Name]
 # Among the 4 sites, Kitt-Peak_MP (Kitt Peak National Observatory) and UMBC_temp are in US.
 setnames(site_locations_2019, c("Site_Name", "lon", "lat", "elev"))
@@ -53,6 +52,7 @@ saveRDS(aod_site_NE, here("Intermediate", "aod_site_NE"))
 # site_list_NE <- c(aod_site_NE$Site_Name, "MVCO", "LISCO")
 site_list_NE <- c(aod_site_NE$Site_Name)
 
+# aod_file_name[aod_file_name%in%site_list_NE]
 
 # US site list
 aeronet_conus_dt <- readRDS("~/Jdrive/PM/Just_Lab/projects/ECHO_PM/data/intermediate/aeronet_conus_dt.rds")
@@ -63,7 +63,7 @@ create the 6.6GB global file
 
 ```{r, eval = F}
 # open one file and take a look at the data
-t0 <- fread(aod20_file_dir[3])
+t0 <- fread(aod20_file_dir[1])
 t0[1,]  
 
 grep("Angstrom_Exponent", names(t0), value = T)
@@ -81,6 +81,7 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
 vars0_new <- c("date", "time", "dayofYear", "site",
                 "instrumentNumber", "lat", "lon", 
                  "elev", "ozone", "NO2")
+
 read.aod <- function(site_dir, vars_read, vars_newname){
   t1 <- fread(site_dir, select = vars_read, col.names = vars_newname)
   t1[, date := as.Date(date, format = "%d:%m:%Y")]
@@ -88,7 +89,6 @@ read.aod <- function(site_dir, vars_read, vars_newname){
   for (i in names(t1)) t1[get(i) == -999, (i):= NA] # set NA 
   t1
 }
-
 system.time(
 file_list <- lapply(aod20_file_dir, read.aod, vars_read = c(vars0,vars_aod,vars_wv),  vars_newname = c(vars0_new,vars_aod,vars_wv)) # 440s
 )
@@ -108,12 +108,12 @@ aod20_data_global <- read.fst("/data-coco/ECHO_PM/AeronetAODV3Level2/AOD_Level20
 # overview: what percentage of wach wavelength is non-NA?
 sapply(aod20_data_global[,..vars_aod], function(x)mean(!is.na(x)))
 
-vars_aod <- grep("AOD_", names(aod20_data_global), value = T)
-vars_wv <- grep("Exact_Wavelengths_of_AOD", names(aod20_data_global), value = T)
 # The 5 main wavelengths
-aod_main <- c("AOD_340nm", "AOD_380nm", "AOD_440nm", "AOD_500nm", "AOD_675nm")
+# aod_main <- c("AOD_340nm", "AOD_380nm", "AOD_440nm", "AOD_500nm", "AOD_675nm")
+vars_wv <- grep("Exact_Wavelengths_of_AOD", names(aod20_data_global), value = T)
+vars_aod <- grep("AOD_", names(aod20_data_global), value = T)
 vars_aod_sub <- vars_aod[1:22]
-aod_num <- readr::parse_number(vars_aod_sub)
+# aod_num <- readr::parse_number(vars_aod_sub)
 # Drop the last two wavelengths because they are frequently off the main trend lines
 aod20_data_global <- aod20_data_global[, -c("AOD_1020nm", "AOD_1640nm"), with = F]
 
@@ -142,7 +142,7 @@ d <- melt(aod20_data_global[, c(vars_aod_sub,vars_wv[1:22], "obs"), with = F], m
 d <- d[!is.na(aod)]
 # d[, variable := readr::parse_number(levels(variable))[as.integer(variable)]]
 # should have points on both sides, otherwise pick out the id
-obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-470)*(min(exact_wv)-470)>0)][oneside ==T, obs]
+obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside ==T, obs]
 saveRDS(obs_os, "~/Intermediate/AOD_data/190621_obs_same_side")
 length(obs_os)/aod20_data_global[,.N] # about 0.4% have points on one side of the 470 nm 
 
@@ -152,28 +152,25 @@ length(obs_os)/aod20_data_global[,.N] # about 0.4% have points on one side of th
 
 ```{r, eval = F}
 time0 <- Sys.time()
-system.time(d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(log(aod) ~  log(exact_wv) + I((log(exact_wv))^2)), newdata = data.frame(exact_wv = 470))))])
-Sys.time() - time0 # 6.3 hours 6/19
+system.time(d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(log(aod) ~  log(exact_wv) + I((log(exact_wv))^2)), newdata = data.frame(exact_wv = 0.47))))])
+Sys.time() - time0 # 6.3 hours 6/19 for the world. 
 
 setkey(d2, obs)
 aod20_data_pred470 <- d2[aod20_data_global]
-
+ 
 # If there are at least 4 non-NA, even on one side of the 470, I consider it fine,
 # If there are 2 or 3 points, one side is not fine
-# 1 points are set to NA, all of them are in obs_os as well, since there is only one point
+# If there is only 1 point, set to NA, all of them are in obs_os anyway, since there is only one point
 length(obs_os) # 91911 
-aod20_data_global[N_NAAOD <=4 & obs%in%obs_os,.N] # 91553, so most <=3 are on the same side of 470 nm anyway 
-aod20_data_global[N_NAAOD ==3 & obs%in%obs_os,.N]
 
 # because for those on the one side and requires long range extrapolating: need 5 or 6 points to be valid. For those with at least 5 points, most have close points within the allowed range: "AOD_440nm" "AOD_443nm" "AOD_490nm" "AOD_500nm"
-allowed_range <- paste0("AOD_", aod_num[440<=aod_num & aod_num<=500],"nm")
-aod20_data_global[obs%in%obs_os &is.na(AOD_440nm)&is.na(AOD_443nm)&is.na(AOD_490nm) &is.na(AOD_500nm), table(N_NAAOD)]
- # exterpolating with 5 or 6 might be fine 
+
+ # exterpolating with 4, 5 or 6 might be fine 
  #    1     2     3     4     5     6 
  # 3332 37551   183    54     4     8 
 aod20_data_pred470[N_NAAOD<=4 & obs%in%obs_os, AOD_470nm:=NA]
 aod20_data_pred470 <- aod20_data_pred470[,.(date, time, hour, dayofYear, site, 
-                                            lat, lon, N_NAAOD, AOD_470nm, AOD_440nm, AOD_500nm)]
+                           lat, lon, N_NAAOD, AOD_470nm, AOD_440nm, AOD_500nm)]
 date0 <- format(Sys.Date(), "%y%m%d")
 # save results 
 write.fst(aod20_data_pred470,          paste0("/data-coco/ECHO_PM/AeronetAODV3Level2/AOD_Level20_All_Points_V3_wPredAODat470nm_",date0, ".fst"), compress = 100)
@@ -192,9 +189,9 @@ plot.scatter.diagonal(aod20small, "AOD_440nm", "AOD_470nm")
 
 ```
 
-# create aod20_NEMIA_idLST, link Aeronet AOT to MAIAC grid (MCD19A2)
+# Rolling join AOT to MAIAC (MCD19A2)
 
-* created aod20_NEMIA_idLST that has AERONET Site_Name, idLSTpair0   
+1. created aod20_NEMIA_idLST that has AERONET Site_Name matched with idLSTpair0   
 
 ```{r, eval = F}
 # NEMIA with prediction in 2018
@@ -221,9 +218,7 @@ write.fst(aod20_NEMIA_idLST, "~/Intermediate/AOD_data/190628_aod20_wPred_NEMIA_i
 aod20_NEMIA_idLST[,unique(Site_Name)]
 ```
 
-# Join AOT to MAIAC (MCD19A2)
-
-* rolling join with nearest time (join_time) and by (idLSTpair0)
+2. rolling join with nearest time (join_time) and by (idLSTpair0)
 
 ```{r, eval = F}
 aod20_NEMIA_idLST <- read.fst("~/Intermediate/AOD_data/190628_aod20_wPred_NEMIA_idLST.fst",as.data.table = T)
@@ -236,22 +231,21 @@ aod20_NEMIA_idLST[, c("date", "time"):=NULL]
 lst_files <- list.files(path = "/data-coco/mcd19/fst/nemia/2018", pattern = "mcd19_T", full.names = T)
 terra0 <- read.fst(lst_files[1], as.data.table = T, columns = NULL)
 
-# load lst data for 2018
-read.lst <- function(sat = "terra", columns0 = NULL){
-  if (sat != "terra") choose = "mcd19_T" else choose = "mcd19_A" # load terra by default
+read_lst <- function(sat = "terra"){
+  lst_files <- list.files(path = "/data-coco/mcd19/fst/nemia/2018", pattern = "mcd19_T", full.names = T)
+  if (sat != "terra") choose = "mcd19_A" else choose = "mcd19_T" # load terra by default
   lst_files <- list.files(path = "/data-coco/mcd19/fst/nemia/2018", pattern = choose, full.names = T)
-  dt = rbindlist(lapply(lst_files, function(x)read.fst(x, as.data.table = T, columns  = columns0)))
-  if(is.null(columns0)) dt[,c("x", "y", "inNEMIA"):=NULL]
-  
+  dt = rbindlist(lapply(lst_files, function(x)read.fst(x, as.data.table = T)))
   dt[, join_time:=overpass_time]
   setkey(dt, idLSTpair0, join_time)
   return(dt)
 }
-lst_terra <- read.lst()
-print(object.size(lst_terra), unit = "GB") # 18 GB all the lst terra in 2018 (NEMIA, one year)
+lst_terra <- read_lst()
+# 18 GB all the lst terra in 2018 (NEMIA, one year)
+print(object.size(lst_terra), unit = "GB") 
 # make sure both are UTC time 
-# attr(aod20_NEMIA_idLST$stn_time, "tzone")
-# attr(lst_terra$overpass_time, "tzone")
+attr(aod20_NEMIA_idLST$stn_time, "tzone")
+attr(lst_terra$overpass_time, "tzone")
 
 aod20_NEMIA_idLST[, join_time:=stn_time]
 setkey(aod20_NEMIA_idLST, idLSTpair0, join_time)
@@ -267,15 +261,12 @@ table(aod_lst_terra$within30min_t)
 # hist(aod_lst_terra[abs(diff_time_min)<=60, diff_time_min], 20)
 hist(aod_lst_terra[within30min_t==1, diff_time_min])
 mean(aod_lst_terra$within30min_t)
-
-# vars0 <- c("overpass_index", "Optical_Depth_047", "AOD_Uncertainty", "Column_WV", "AOD_QA",  "RelAZ")
-# vars_new <- paste0(vars0,"_t")
-# setnames(aod_lst_terra, vars0, vars_new)
-# set NA 
 aod_lst_terra <- aod_lst_terra[within30min_t!=0,]
 
+
+
 # Aqua  ~~~~ #### 
-lst_aqua <- read.lst("aqua")
+lst_aqua <- read_lst("aqua")
 # rolling join
 aod_lst_aqua <- aod20_NEMIA_idLST[lst_aqua, roll = 'nearest', nomatch = 0]
 aod_lst_aqua[,.N]
@@ -285,6 +276,10 @@ aod_lst_aqua[, diff_time_min:= as.numeric(overpass_time - stn_time)/60]
 # vars_new <- paste0(vars0,"_a")
 # setnames(aod_lst_aqua, vars0, vars_new)
 aod_lst_aqua <- aod_lst_aqua[abs(diff_time_min)<=30,]
+
+
+
+
 
 # save
 saveRDS(list(aod_lst_terra = aod_lst_terra, aod_lst_aqua = aod_lst_aqua), "~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")
