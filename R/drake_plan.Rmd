@@ -1,3 +1,17 @@
+---
+title: "Drake Plan"
+author: "Johnathan Rush, Yang Liu"
+date: "08/14/2019"
+output:
+  html_document:
+    toc: true
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = T, message=FALSE, warning=FALSE)
+```
+
+
+```{r}
 # See `drake_funcs.R` for functions used in drake plan #
 
 # beginning of script where we will have a plan to:
@@ -84,27 +98,70 @@ nemia_plan <- drake_plan(
   # 2. Interpolation -----------------------------------------------------------
   # so instead of running all the Aeronet data, only run what is used
   # it also join with the nearest grid id 
-  wPred = target(interpolate_aod(nemia, aer_nearest_NEMIA),transform = map(nemia))
+  wPred = target(interpolate_aod(nemia, aer_nearest_NEMIA),transform = map(nemia)),
+  
+  # 3. WPred Join MCD19 -----------------------------------------------------------
+  # mcd is the large MCD19 dataset 
+  mcd = target(read_lst(sat), transform = map(sat = c("terra", "aqua"))),
+  # join is the rolling-joined dataset with aeronet
+  join = target(rolling_join(mcd_sat = mcd, aer_data_wPred = wPred),
+                transform = cross(mcd, wPred)),
+  
+  # 4. nemia_aer_m
+  s = target(aer_in_mcd19(nemia_aer, mcd19 = join),
+             transform = map(join)),
+  # buffers 
+  ref = target(ref_in_buffer(nemia_aer_m = s, refgrid),
+             transform = map(s)),
+  # sites
+  p = target(get_site_list(nemia_aer_m = s), transform = map(s)),
+  n = target(get_site_name(nemia_aer_m = s), transform = map(s)),
+ 
+  # mapping
+  # this way doesn't work:
+  # sub = target(select_refgrid_subset(ref_list0 = ref, point0 = p, name0 = n),
+  #              transform = map(ref, p, n))
+  sub = target(purrr_map(ref = ref, p = p, n = n),
+               transform = map(ref, p, n)),
+  # calculate new vars 
+  # for terra and aqua, using join, mcd, sub 
+  new = target(aod_MODIS_newVars(aod_join_MODIS = join, 
+                                 MODIS_all = mcd, refDT_sub = sub),
+               transform = map(join, mcd, sub))
 )
 nemia_plan
 #drake_plan_source(nemia_plan)
 nemia_config <- drake_config(nemia_plan, cache = ssd_cache) # show the dependency
 # vis_drake_graph(nemia_config, from = names(nemia_config$layout))
-vis_drake_graph(nemia_config)
+vis_drake_graph(nemia_config, ncol_legend = 0)
 
+loadd(cache = ssd_cache)
+
+message("To see one of the aer station with grid around it: ")
+knitr::kable(sub_ref_s_join_mcd_aqua_wPred_nemia_aer_btw_2018.01.01_2018.12.31_p_s_join_mcd_aqua_wPred_nemia_aer_btw_2018.01.01_2018.12.31_n_s_join_mcd_aqua_wPred_nemia_aer_btw_2018.01.01_2018.12.31[1:3,])
+
+message("The colocated dataset with new vars")
+rmarkdown::paged_table(new_join_mcd_aqua_wPred_nemia_aer_btw_2018.01.01_2018.12.31_mcd_aqua_sub_ref_s_join_mcd_aqua_wPred_nemia_aer_btw_2018.01.01_2018.12.31_p_s_join_mcd_aqua_wPred_nemia_aer_btw_2018.01.01_2018.12.31_n_s_join_mcd_aqua_wPred_nemia_aer_btw_2018.01.01_2018.12.31[1:3,])
+```
+
+
+```{r, eval = F}
 # outdated(nemia_config)
 future::plan("multicore")
 make(nemia_plan, cache = ssd_cache) # write update into the cache 
 cached(cache = ssd_cache)
 loadd(cache = ssd_cache) # load all object 
 
-# to see the updated version
+# to see the updated result, run config again
 nemia_config <- drake_config(nemia_plan, cache = ssd_cache) # show the dependency
 vis_drake_graph(nemia_config)
 
 
 # Join MCD19 --------------------------------------------------------------
 aer_data_wPred <- readd("wPred_nemia_aer_btw_2018.01.01_2018.12.31", cache = ssd_cache) # load all object 
+nemia_aer <- readd("nemia_aer", cache = ssd_cache)
+refgrid <- readd("refgrid", cache = ssd_cache)
+
 plan1 <- drake_plan(
   # 3. WPred Join MCD19 -----------------------------------------------------------
   mcd = target(read_lst(sat), transform = map(sat = c("terra", "aqua"))),
@@ -120,4 +177,4 @@ cached(cache = ssd_cache)
 loadd(cache = ssd_cache) # load all object 
 join_mcd_aqua = readd("join_mcd_aqua", cache = ssd_cache)
 
-
+```

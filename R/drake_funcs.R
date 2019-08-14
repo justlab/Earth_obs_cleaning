@@ -112,12 +112,11 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
 
 #' read in the Aeronet AOD measurement data from `aod20_file_dir` files.   
 #' @param aod_dir where the files located on coco.   
-#' 
+#' @return 
 #' 
 get_stn_data <- function(aod_dir){
   aer_files_dir  <-  list.files(aod_dir, pattern = "*.lev20", full.names = TRUE)
-  t0 <- fread(aer_files_dir[1])
-  
+  t0 <- fread(aer_files_dir[1]) # to get variable names: 
   vars_aod <- intersect(grep("AOD_", names(t0), value = T), grep("nm", names(t0), value = T))
   # sort the wave lengths varnames from low to high, and update the vars_aod
   x_nm <- sort(readr::parse_number(vars_aod)) # 340, 380, ... , 1640
@@ -193,7 +192,7 @@ interpolate_aod <- function(aer_data, aer_nearest_NEMIA){
 }
 
 
-# 4. join MCD19 (Terra, Aqua) -----------------------------------------------------------
+# 4. rolling join MCD19 (Terra, Aqua) -----------------------------------------------------------
 #' read MCD19
 #' this function need to be replaced in the future, as for now 
 #' we only read one-year data
@@ -213,7 +212,7 @@ read_lst <- function(sat = "terra"){
 }
 
 #' rolling join aer with MCD19
-#' @return MCD19 rolling join Aernet 
+#' @return MCD19 rolling join Aeronet 
 rolling_join <- function(mcd_sat, aer_data_wPred){
   mcd19 <- aer_data_wPred[mcd_sat, roll = 'nearest', nomatch = 0]
   # time difference
@@ -222,3 +221,125 @@ rolling_join <- function(mcd_sat, aer_data_wPred){
   mcd19[, join_time:=NULL]
   return(mcd19)
 }
+
+
+
+# 5. Calculate distance ------------------------------------------------------
+#' select aer sites in mcd19
+#' return colocated/limited aer sites, on crs 2163
+aer_in_mcd19 <- function(nemia_aer, mcd19){
+  nemia_aer_m = st_transform(nemia_aer[nemia_aer$Site_Name%in%unique(mcd19$Site_Name),], crs = 2163)   
+  return(nemia_aer_m)
+}
+
+
+ref_in_buffer <- function(nemia_aer_m, refgrid){
+  # not all aer sites are needed 
+  radius0 <-  300000
+  aod_buffers <- st_buffer(nemia_aer_m, radius0)
+  aod_buffers_list <- st_geometry(aod_buffers)
+  refgrid_m <- st_transform(refgrid, crs = 2163) 
+  join_list <- lapply(aod_buffers_list, function(x)st_intersects(refgrid_m, x))
+  # list of joined I (ID) for each Aeronet station in the grid `refgrid_m`
+  join_list_I <- lapply(join_list, function(x) sapply(x, function(z) if (length(z)==0) NA_integer_ else z[1]))
+  # ref_list is the grid points within each circle (NA removed)
+  ref_list <- lapply(join_list_I, function(x) refgrid_m[!is.na(x),])
+  return(ref_list)
+}
+
+get_site_list <- function(nemia_aer_m){
+  site_list <- st_geometry(nemia_aer_m)  # for calculating distance 
+  # get level 1 list [i], level2 [[i]] is just a point pair
+  site_list2 <- lapply(1 : length(site_list), function(i) (site_list[i])) 
+  site_list2
+}
+
+get_site_name <- function(nemia_aer_m){
+  n = as.list(nemia_aer_m$Site_Name)
+  n
+}
+
+# select ref.grid subset by Index for each station
+select_refgrid_subset <- function(ref, p, n){
+  ref$dist <- st_distance(ref, p)
+  ref$Site_Name <- n
+  return(as.data.table(ref))
+}
+
+#'
+#' calculate distance in buffer to each aer stn point
+#' @return dt: a long datatable with 3 variables:
+#' Site_Name, nearest_refgrid, dist_km
+#' 
+purrr_map <- function(ref, p, n){
+  refDT_sub_list <- list()
+  refDT_sub_list <- purrr::pmap(list(ref, p, n), select_refgrid_subset)
+  # bind into one data.frame
+  refDT_sub <- rbindlist(refDT_sub_list)
+  refDT_sub[, dist_km:=as.numeric(dist)/1000] # change distance to km 
+  # returns dt with three variables: 
+  refDT_sub <- setDT(refDT_sub)[,.(Site_Name, idLSTpair0, dist_km)]
+  setnames(refDT_sub, "idLSTpair0", "nearest_refgrid")
+  setkey(refDT_sub, Site_Name)
+  return(refDT_sub)
+}
+
+
+# 6. Calculate new variables ----------------------------------------------
+#' Calculate new variables, For each station-day observation, we created a
+#' circular buffer with a radius of 10km, 30km, 90km, and 270km around each
+#' AERONET station. Then within each circular buffer, we calculated the mean MAIAC
+#' AOD, the difference between MAIAC AOD and mean MAIAC AOD and the percentage of
+#' non-missing MAIAC. 
+#' @param aod_join_MODIS join, the rolling-joined Aeronet-MODIS
+#' @param MODIS_all mcd, the original (big) MODIS
+#' @param refDT_sub sub, the `purrr_map` results
+#' 
+#' @return aod_join_MODIS with the 4x3 new variables
+#' 
+#' 
+aod_MODIS_newVars <- function(aod_join_MODIS, MODIS_all, refDT_sub){
+  aod_join_MODIS <- aod_join_MODIS[!is.na(Optical_Depth_047),]
+  aod_join_MODIS[, day:=format(stn_time, "%Y-%m-%d")]
+  setkey(aod_join_MODIS, Site_Name)
+  # join by site_name 
+  setnames(refDT_sub, "nearest_refgrid", "buf_refgrid", skip_absent=TRUE)
+  aod_join_buffer <- aod_join_MODIS[refDT_sub, allow.cartesian = T]
+  message("The cartesian joined dataset between collocated Aeronet with MODIS sites data and base grid in each circles, dim is: ", 
+        paste(dim(aod_join_buffer), collapse = " x "))
+  
+  # join back to the MODIS file using buf_refgrid
+  MODIS_all[, day:=format(join_time, "%Y-%m-%d")]
+  setkey(MODIS_all, nearest_refgrid, day)
+  setkey(aod_join_buffer, buf_refgrid, day)
+  # buffer_AOD_470 is the AOD in the buffer grid cells
+  setnames(MODIS_all, "Optical_Depth_047", "buffer_AOD_470", skip_absent = T)
+  # aod_join_buffer2 get AOD for all the buffer grid cells
+  aod_join_buffer2 <- MODIS_all[,.(nearest_refgrid, day, buffer_AOD_470)][aod_join_buffer]
+  
+  dist0 <- c(10, 30, 90, 270)
+  calculate.vars.in.buffer <- function(distx){
+    aod_join_buffer_new <- aod_join_buffer2[dist_km < distx, 
+                                            .(nonmissing = mean(!is.na(buffer_AOD_470)), 
+                                              AOD_buffer_mean = mean(buffer_AOD_470, na.rm = T)),
+                                            by =.(nearest_refgrid, day)]
+    setnames(aod_join_buffer_new, c("nonmissing", "AOD_buffer_mean"), 
+             paste0(c("pNonNAAOD", "Mean_AOD"),distx, "km"))
+    setkey(aod_join_buffer_new, nearest_refgrid, day)
+    return(aod_join_buffer_new)
+  }
+  new_varlist <- invisible(lapply(dist0, calculate.vars.in.buffer))
+  # joined by column 
+  new_vars <- Reduce(merge, new_varlist)
+  setkey(new_vars, nearest_refgrid, day)
+  setkey(aod_join_MODIS, nearest_refgrid, day)
+  aod_join_MODIS <- new_vars[aod_join_MODIS]
+  # calculate AOD - mean AOD
+  cal.diff <- function(distx){
+    aod_join_MODIS[,diff_AOD:= get(paste0("Mean_AOD",distx,"km")) - AOD_Uncertainty]
+    setnames(aod_join_MODIS, "diff_AOD", paste0("diff_AOD",distx,"km"))
+  }
+  invisible(lapply(dist0, cal.diff))
+  return(aod_join_MODIS)
+}
+

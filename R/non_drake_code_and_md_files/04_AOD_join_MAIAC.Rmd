@@ -51,6 +51,10 @@ refDT_sf <- st_transform(refDT_sf, crs = 2163)
 aod_buffers <- st_buffer(aod_site_km, radius0)
 # mapview(aod_buffers) # if you plot this, you will see lots of circles (polygons)
 # but of course, after intersect with the base grid, they won't be circles anymore. 
+
+  site_list <- st_geometry(nemia_aer_m)
+  name_list <- as.list(nemia_aer_m$Site_Name) # for recording site names 
+
 ```
 
 ## Method  
@@ -94,19 +98,21 @@ select.refDT.subset <- function(ref_list0, point0, name0){
 }
 
 # # not sure why mapply doesn't work 
-# refDT_sub_list <- mapply(select.refDT.subset, ref_list0 = ref_list[1], point0 = site_list2[1], name0 = name_list[1])
+refDT_sub_list <- mapply(select.refDT.subset, ref_list, site_list2, name_list)
+# # but pmap can work. 
+refDT_sub_list <- purrr::pmap(list(ref_list, site_list2, name_list), select.refDT.subset)
 
-refDT_sub_list <- list()
+# # a loop can work 
 for (i in 1:length(ref_list)){
   ref_list0 = ref_list[[i]];  point0 = site_list2[[i]]; name0 = name_list[[i]]
-  ref_list0$dist <- st_distance(ref_list0, point0)
+  ref_list0$dist <- sf::st_distance(ref_list0, point0)
   ref_list0$Site_Name <- name0
   refDT_sub_list[[i]] <- ref_list0
 }
 refDT_sub <- rbindlist(refDT_sub_list)
 refDT_sub[, dist_km:=as.numeric(dist)/1000] # change distance to km 
 refDT_sub <- setDT(refDT_sub)[,.(Site_Name, idLSTpair0, dist_km)]
-setnames(refDT_sub, "idLSTpair0", "idLSTpair0_in_buffer")
+setnames(refDT_sub, "idLSTpair0", "nearest_refgrid")
 setkey(refDT_sub, Site_Name)
 # save the dataset that links station to all the idLST in the round buffer
 # refDT_sub: 3545991 x 3
@@ -130,7 +136,7 @@ aod_lst_terra <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$
 # the original MCD19 
 lst_terra <- read.lst(sat = "terra", columns0 = c("idLSTpair0", "overpass_time", "Optical_Depth_047"))
 
-# remove some variables 
+# aod_join_MODIS is the rolling-joined file, MODIS_all is like lst_terra
 aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
   aod_join_MODIS <- aod_join_MODIS[!is.na(Optical_Depth_047),]
   aod_join_MODIS[, day:=format(stn_time, "%Y-%m-%d")]
@@ -139,7 +145,7 @@ aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
 
   setkey(aod_join_MODIS, Site_Name)
   aod_join_buffer <- aod_join_MODIS[refDT_sub, allow.cartesian = T]
-  cat("The cartesian joined dataset between collocated Aeronet with MODIS sites data and base grid in each circles, dim is: ", paste(dim(aod_join_buffer),collapse = " x "))
+  cat("The cartesian joined dataset between collocated Aeronet with MODIS sites data and base grid in each circles, dim is: ", paste(dim(aod_join_buffer), collapse = " x "))
 
   # join back to the MODIS file 
   MODIS_all[, day:=format(join_time, "%Y-%m-%d")]
