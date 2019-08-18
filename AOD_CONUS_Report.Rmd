@@ -1,0 +1,57 @@
+---
+title: "AOD CONUS Modeling Results"
+author: "Yang Liu"
+date: "08/17/2019"
+output: html_document
+---
+
+
+```{r}
+library(drake) 
+
+```
+
+# Terra 
+
+```{r}
+readd(print1, cache = ssd_cache)
+readd(plot1, cache = ssd_cache)
+```
+
+* Top features RFE
+
+```{r}
+# top features
+loadd("cv_results_new_var_join_mcd_terra", cache = ssd_cache)
+# rferesults = cv_results_new_var_join_mcd_terra
+cv_results_new_var_join_mcd_terra$features_rank_rfe
+```
+
+```{r}
+
+readd(plotSHAP1_2, cache = ssd_cache)
+
+```
+
+# Aqua
+
+```{r}
+readd(print1_2, cache = ssd_cache)
+readd(plot1_2, cache = ssd_cache)
+
+```
+
+
+* Top features RFE
+
+```{r}
+# top features
+loadd("cv_results_new_var_join_mcd_aqua", cache = ssd_cache)
+cv_results_new_var_join_mcd_aqua$features_rank_rfe
+```
+
+```{r}
+readd(plotSHAP1_2, cache = ssd_cache)
+
+```
+

@@ -63,6 +63,7 @@ select_points <- function(aerpts, reg_polygon){
 
 #' read in reference grid, and turn into geometry points
 #' @param ref_file file dir of the grid file in .fst
+#' 
 #' @return sf object of grid in WGS84
 #' 
 get_ref_grid <- function(ref_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_grid_201906.fst"){
@@ -72,29 +73,42 @@ get_ref_grid <- function(ref_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_
 
 
 
-#' find points in buffer within dist
-#' @param aerpts The NEMIA Aeronet sites points 
-#' @param refpts The loaded referecen grid points by \code{\function{get_ref_grid}}  
-#' @return candidate_refpts
+#' find points in a broad buffer, and match the nearest grid point to Aeronet sites.
 #' 
-points_in_buffer <- function(aerpts, refpts, dist = 1500){
+#' @param aerpts The NEMIA Aeronet sites points 
+#' @param refpts The loaded refereence grid points by \code{\function{get_ref_grid}}  
+#' 
+#' @return aer_nearest: aeronets sites with cloest grid point (idLSTpair0)
+#' find near cells: find grid idLSTpair0 around 
+get_nearest_cell <- function(aerpts, refpts){
   aerptsNA <- st_transform(aerpts, crs = 2163) # US National Atlas
-  aer_regions <- aerptsNA %>% st_buffer(dist = dist) %>% st_union
+  # limit a 1500m buffer, I agree this part duplicates a little bit with `ref_in_buffer`
+  aer_regions <- aerptsNA %>% st_buffer(dist = 1500) %>% st_union
   refptsNA <- st_transform(refpts, crs = 2163) # US National Atlas
   refsub <- refpts[st_intersects(refptsNA, aer_regions, sparse = FALSE), ]
-  st_transform(refsub, crs = 4326) # return in wgs84
-}
-
-
-#' match the nearest grid point to Aeronet sites  
-#' @param aerpts The NEMIA Aeronet sites points 
-#' @param candidate_refpts all the points_in_buffer
-get_nearest_cell <- function(aerpts, candidate_refpts){
+  # `candidate_refpts` is just an intermediate to speed up the process
+  # to find nearby points 
+  candidate_refpts <- st_transform(refsub, crs = 4326) # return in wgs84
+  # match the nearest grid point to Aeronet sites
   nn_aer_ref <- st_nn(aerpts, candidate_refpts, k = 1, returnDist = FALSE)
-  # join LSTids to stations
+  # join LSTids to stations, named it as `nearest_refgrid`
   aerpts$nearest_refgrid <- candidate_refpts[unlist(nn_aer_ref), ]$idLSTpair0
-  aerpts
+  return(aerpts)
 }
+
+#' get nearby id names within 300 km 
+#' 
+#' @return geom points,df,dt, varnames: "idLSTpair0" "geometry"
+get_near_cellsid <- function(aerpts, refpts){
+  aerptsNA <- st_transform(aerpts, crs = 2163) # US National Atlas
+  # limit a 1500m buffer, I agree this part duplicates a little bit with `ref_in_buffer`
+  aer_regions <- aerptsNA %>% st_buffer(dist = 300000) %>% st_union
+  refptsNA <- st_transform(refpts, crs = 2163) # US National Atlas
+  refsub <- refpts[st_intersects(refptsNA, aer_regions, sparse = FALSE), ]
+  return(refsub)
+}
+
+
 remove_site_on_water <- function(aer_nearest){
   aer_nearest[!aer_nearest$Site_Name%in%c("MVCO", "LISCO"),]
 }
@@ -138,10 +152,14 @@ get_stn_data <- function(aod_dir){
   return(aer_data)
 }
 
-#' select AOD data by station
+#' select AOD data by station.
+#' @param aer_data the aer data, limited by time, `aer_btw`
+#' @param aer_stns expected to be sf points, but could be a data.table as long as it has column Site_Name
+#' 
+#' @return df with limited aer sites
+#' 
 sel_data_bystation <- function(aer_data, aer_stns){
-  # aer_stns expected to be sf points, but could be a data.table as long as it has column Site_Name
-  aer_data[AERONET_Site_Name %in% aer_stns$Site_Name]
+  return(aer_data[AERONET_Site_Name %in% aer_stns$Site_Name])
 }
 
 #' select AOD data by date 
@@ -158,7 +176,7 @@ sel_data_bytime <- function(aer_data, date_start = NULL, date_end = NULL){
 #' @param aer_data the dataset contains all the AOD measurements and exact wavelengths
 #' @return dataset of aer_data with pred, also with `nearest_refgrid` next to Site_Name
 #' 
-interpolate_aod <- function(aer_data, aer_nearest_NEMIA){
+interpolate_aod <- function(aer_data, aer_nearest_2){
   aer_data <- aer_data[, -c("AOD_1020nm", "AOD_1640nm"), with = F]
   aer_data[,obs:=.I]
   setkey(aer_data, obs)
@@ -183,7 +201,7 @@ interpolate_aod <- function(aer_data, aer_nearest_NEMIA){
   # attach nearest_refgrid (also called idLSTpair0 in many our script) to Aer Site_Name
   setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
   setkey(aer_data_wPred, Site_Name)
-  aer_sites <- as.data.table(aer_nearest_NEMIA)[,c("Site_Name", "nearest_refgrid"), with = F]
+  aer_sites <- as.data.table(aer_nearest_2)[,c("Site_Name", "nearest_refgrid"), with = F]
   setkey(aer_sites, Site_Name)
   aer_data_wPred <- aer_sites[aer_data_wPred]
   aer_data_wPred[, join_time:=stn_time]
@@ -193,19 +211,26 @@ interpolate_aod <- function(aer_data, aer_nearest_NEMIA){
 
 
 # 4. rolling join MCD19 (Terra, Aqua) -----------------------------------------------------------
-#' read MCD19
+#' read MCD19 for NEMIA
 #' this function need to be replaced in the future, as for now 
 #' we only read one-year data
 #' @param sat input "terra" or "aqua", if sat !="terra", load aqua
-read_lst <- function(sat = "terra"){
-  if (sat != "terra") choose = "mcd19_A" else choose = "mcd19_T" # load terra by default
-  lst_files <- list.files(path = "/data-coco/mcd19/fst/nemia/2018", pattern = choose, full.names = T)
-  ### 
+read_mcd19 <- function(sat = "terra", filepath, refsub){
+  if (sat != "terra") choose = "A" else choose = "T" # load terra by default
+  lst_files <- list.files(path = filepath, pattern = choose, full.names = T)
+  lst_files <- list.files(path = mcd19path_CONUS, pattern = "T", full.names = T)
+  ### for testing:
   lst_files <- lst_files[1]
-  dt = rbindlist(lapply(lst_files, function(x)read.fst(x, as.data.table = T)))
+  ### 
+  readfile <- function(x){
+    t = read.fst(x, as.data.table = T)
+    return(t[idLSTpair0%in%refsub$idLSTpair0])
+  }
+  
+  dt = rbindlist(lapply(lst_files, readfile))
   dt[,c("x", "y", "inNEMIA"):=NULL]
   dt[, join_time:=overpass_time] # join later using `overpass_time`
-  dt[, sat := sat]
+  dt[, sat := choose]
   setnames(dt, "idLSTpair0", "nearest_refgrid") # rename for join later 
   setkey(dt, nearest_refgrid, join_time)
   return(dt)
@@ -225,18 +250,25 @@ rolling_join <- function(mcd_sat, aer_data_wPred){
 
 
 # 5. Calculate distance ------------------------------------------------------
-#' select aer sites in mcd19
-#' return colocated/limited aer sites, on crs 2163
-aer_in_mcd19 <- function(nemia_aer, mcd19){
-  nemia_aer_m = st_transform(nemia_aer[nemia_aer$Site_Name%in%unique(mcd19$Site_Name),], crs = 2163)   
-  return(nemia_aer_m)
+#' select aer sites in mcd19. further limit the stations.
+#' @param region_aer all the aeronet stations
+#' @param mcd19 mcd19
+#' 
+#' @return colocated/limited aer sites, on crs 2163
+#' 
+aer_in_mcd19 <- function(region_aer, mcd19){
+  region_aer_m = st_transform(region_aer[region_aer$Site_Name%in%unique(mcd19$Site_Name),], crs = 2163)   
+  return(region_aer_m)
 }
 
 
-ref_in_buffer <- function(nemia_aer_m, refgrid){
+#' use `st_intersects` to find grid cells in a 300km buffer.
+#' This is a slow step, could be imporved in the future
+#' 
+ref_in_buffer <- function(region_aer_m, refgrid){
   # not all aer sites are needed 
   radius0 <-  300000
-  aod_buffers <- st_buffer(nemia_aer_m, radius0)
+  aod_buffers <- st_buffer(region_aer_m, radius0)
   aod_buffers_list <- st_geometry(aod_buffers)
   refgrid_m <- st_transform(refgrid, crs = 2163) 
   join_list <- lapply(aod_buffers_list, function(x)st_intersects(refgrid_m, x))
@@ -247,18 +279,18 @@ ref_in_buffer <- function(nemia_aer_m, refgrid){
   return(ref_list)
 }
 
-get_site_list <- function(nemia_aer_m){
-  site_list <- st_geometry(nemia_aer_m)  # for calculating distance 
+# get aer sites as a list
+get_site_list <- function(region_aer_m){
+  site_list <- st_geometry(region_aer_m)  # for calculating distance 
   # get level 1 list [i], level2 [[i]] is just a point pair
   site_list2 <- lapply(1 : length(site_list), function(i) (site_list[i])) 
   site_list2
 }
-
-get_site_name <- function(nemia_aer_m){
-  n = as.list(nemia_aer_m$Site_Name)
+# get aer site names
+get_site_name <- function(region_aer_m){
+  n = as.list(region_aer_m$Site_Name)
   n
 }
-
 # select ref.grid subset by Index for each station
 select_refgrid_subset <- function(ref, p, n){
   ref$dist <- st_distance(ref, p)
@@ -266,12 +298,13 @@ select_refgrid_subset <- function(ref, p, n){
   return(as.data.table(ref))
 }
 
-#'
-#' calculate distance in buffer to each aer stn point
+#' calculate distance in buffer to each aer stn point.
+#' wrap the `select_refgrid_subset` function by pmap. 
+#' 
 #' @return dt: a long datatable with 3 variables:
 #' Site_Name, nearest_refgrid, dist_km
 #' 
-purrr_map <- function(ref, p, n){
+purrr_pmap <- function(ref, p, n){
   refDT_sub_list <- list()
   refDT_sub_list <- purrr::pmap(list(ref, p, n), select_refgrid_subset)
   # bind into one data.frame
@@ -292,7 +325,7 @@ purrr_map <- function(ref, p, n){
 #' AOD, the difference between MAIAC AOD and mean MAIAC AOD and the percentage of
 #' non-missing MAIAC. 
 #' @param aod_join_MODIS join, the rolling-joined Aeronet-MODIS
-#' @param MODIS_all mcd, the original (big) MODIS
+#' @param MODIS_all mcd, the original (big) MODIS dataset
 #' @param refDT_sub sub, the `purrr_map` results
 #' 
 #' @return aod_join_MODIS with the 4x3 new variables
@@ -308,15 +341,18 @@ aod_MODIS_newVars <- function(aod_join_MODIS, MODIS_all, refDT_sub){
   message("The cartesian joined dataset between collocated Aeronet with MODIS sites data and base grid in each circles, dim is: ", 
         paste(dim(aod_join_buffer), collapse = " x "))
   
-  # join back to the MODIS file using buf_refgrid
+  # join back to the MODIS file using `buf_refgrid` in the joined dataset
   MODIS_all[, day:=format(join_time, "%Y-%m-%d")]
-  setkey(MODIS_all, nearest_refgrid, day)
+  setnames(MODIS_all, c("nearest_refgrid", "Optical_Depth_047"), 
+           c("buf_refgrid", "buffer_AOD_470"), skip_absent = T)
   setkey(aod_join_buffer, buf_refgrid, day)
+  setkey(MODIS_all, buf_refgrid, day)
   # buffer_AOD_470 is the AOD in the buffer grid cells
-  setnames(MODIS_all, "Optical_Depth_047", "buffer_AOD_470", skip_absent = T)
   # aod_join_buffer2 get AOD for all the buffer grid cells
-  aod_join_buffer2 <- MODIS_all[,.(nearest_refgrid, day, buffer_AOD_470)][aod_join_buffer]
+  aod_join_buffer2 <- MODIS_all[,.(buf_refgrid, day, buffer_AOD_470)][aod_join_buffer]
   
+  # calculate variables for 4 different distances 
+  # for each nearest_refgrid (which associates with Site_Name) in the joined dataset
   dist0 <- c(10, 30, 90, 270)
   calculate.vars.in.buffer <- function(distx){
     aod_join_buffer_new <- aod_join_buffer2[dist_km < distx, 
@@ -334,12 +370,86 @@ aod_MODIS_newVars <- function(aod_join_MODIS, MODIS_all, refDT_sub){
   setkey(new_vars, nearest_refgrid, day)
   setkey(aod_join_MODIS, nearest_refgrid, day)
   aod_join_MODIS <- new_vars[aod_join_MODIS]
-  # calculate AOD - mean AOD
-  cal.diff <- function(distx){
+  
+  # calculate `diff_AOD`: AOD - mean AOD
+  calculate.diff <- function(distx){
     aod_join_MODIS[,diff_AOD:= get(paste0("Mean_AOD",distx,"km")) - AOD_Uncertainty]
     setnames(aod_join_MODIS, "diff_AOD", paste0("diff_AOD",distx,"km"))
   }
-  invisible(lapply(dist0, cal.diff))
+  invisible(lapply(dist0, calculate.diff))
   return(aod_join_MODIS)
+}
+
+
+# 7. CV -------------------------------------------------------------------
+# to create qc variables 
+create_qc_vars <- function(dt){
+  dt[, qa_bits := bitwAnd(AOD_QA, strtoi("111100000000", base = 2))]
+  dt[, qa_best := 0]
+  dt[qa_bits == 0 , qa_best := 1]
+  
+  dt[, qa_bits := bitwAnd(AOD_QA, strtoi("11000", base = 2))]
+  dt[qa_bits==0, qa_lwsi := "land"]
+  dt[qa_bits==8, qa_lwsi := "water"]
+  dt[qa_bits==16, qa_lwsi := "snow"]
+  dt[qa_bits==24, qa_lwsi := "ice"]
+  dt[, qa_bits:= NULL]
+  return(dt)
+}
+
+#' run the cross-validation by station with RFE.
+#' 
+#' This function is the 4th layer wrap of Kodi's random search cv function
+#' I apologize for the confusion if anyone is planning to dig into it. 
+#' Please feel free to contact me. 
+#' 
+#' 
+run_cv <- function(dt){
+  setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm")
+  # The dependent variable: diff_AOD = MCD19 - AERONET = Optical_Depth_047 - AOD_470nm
+  dt[, diff_AOD := MCD19_AOD_470nm - AOD_470nm]
+  
+  # The predictors
+  features = c("MCD19_AOD_470nm",
+               "dayint", 
+               "AOD_Uncertainty", "Column_WV", "RelAZ",
+               "qa_best", 
+               do.call(paste0,expand.grid(
+                 c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
+                                          paste0(c(10, 30, 90, 270),"km"))))
+  
+
+  dt <- create_qc_vars(dt)
+  dt[, dayint:=as.integer(as.Date(day))]
+  
+  # cv
+  cv_results <- run.k.fold.cv.rfe.wrap(
+                modeldt1 = dt, 
+                stn_var = "Site_Name",
+                features0 = features, 
+                sat = "", y_var = "diff_AOD", 
+                run_param_cv = T, run_rfe = T)
+  return(cv_results)
+}
+
+
+# 8. Report ---------------------------------------------------------------
+report_rmse <- function(rferesults){
+  report.r.squared(dataXY = rferesults$modeldt1_wPred)
+}
+
+plot_rmse <- function(rferesults){
+  rfe.rmse.plot(rferesults$rmse_rfe)
+}
+
+plot_SHAP <- function(rferesults){
+  var_list <- rferesults$features_rank_rfe #(features)
+  
+  # plot SHAP
+  shap_long <- shap.prep(shap_contrib = rferesults$shap_score, 
+                         X_train = rferesults$modeldt1_wPred[,..var_list])
+  
+  shap.plot.summary(shap_long, scientific = T)
+  
 }
 

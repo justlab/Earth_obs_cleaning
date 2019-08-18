@@ -134,7 +134,7 @@ refDT_sub <- readRDS("~/Intermediate/AOD_data/190724_refDT_Site_idinBuffer.rds")
 # load the aeronet join MCD19
 aod_lst_terra <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$aod_lst_terra
 # the original MCD19 
-lst_terra <- read.lst(sat = "terra", columns0 = c("idLSTpair0", "overpass_time", "Optical_Depth_047"))
+lst_terra <- read_lst(sat = "terra")
 
 # aod_join_MODIS is the rolling-joined file, MODIS_all is like lst_terra
 aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
@@ -149,7 +149,7 @@ aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
 
   # join back to the MODIS file 
   MODIS_all[, day:=format(join_time, "%Y-%m-%d")]
-  setnames(MODIS_all, c("idLSTpair0", "Optical_Depth_047"), c("idLSTpair0_in_buffer", "AOD_470_buffer"), skip_absent = T)
+  setnames(MODIS_all, c("nearest_refgrid", "Optical_Depth_047"), c("idLSTpair0_in_buffer", "AOD_470_buffer"), skip_absent = T)
   setkey(MODIS_all, idLSTpair0_in_buffer, day)
   setkey(aod_join_buffer, idLSTpair0_in_buffer, day)
   # aod_join_buffer2 get AOD for all the buffer grid cells
@@ -175,14 +175,15 @@ aod.MODIS.newVars <- function(aod_join_MODIS, MODIS_all){
 ## Terra 
 aod_lst_terra <- aod.MODIS.newVars(aod_lst_terra, lst_terra)
 head(aod_lst_terra)
+dim(aod_lst_terra)
 # AOD - AOD mean, do later 
-saveRDS(aod_lst_terra, "~/Intermediate/AOD_data/190724_LSTjoinMCD19_terra_newVars.rds")
+# saveRDS(aod_lst_terra, "~/Intermediate/AOD_data/190724_LSTjoinMCD19_terra_newVars.rds")
 
 ## Aqua
 aod_lst_aqua <- readRDS("~/Intermediate/AOD_data/190629_LSTjoinMCD19_t_a.rds")$aod_lst_aqua
 aod_lst_aqua <- aod.MODIS.newVars(aod_lst_aqua, lst_aqua)
 head(aod_lst_aqua)
-saveRDS(aod_lst_aqua, "~/Intermediate/AOD_data/190724_LSTjoinMCD19_aqua_newVars.rds")
+# saveRDS(aod_lst_aqua, "~/Intermediate/AOD_data/190724_LSTjoinMCD19_aqua_newVars.rds")
 
 ```
 
@@ -190,7 +191,9 @@ saveRDS(aod_lst_aqua, "~/Intermediate/AOD_data/190724_LSTjoinMCD19_aqua_newVars.
 ```{r}
 # some summary
 library(ggplot2)
-plot.scatter.diagonal(aod_lst_terra, "Mean_AOD10km", "AOD_470nm")
+library(SHAPforxgboost)
+aod_lst_terra <- readRDS("~/Intermediate/AOD_data/190724_LSTjoinMCD19_terra_newVars.rds")
+scatter.plot.diagonal(aod_lst_terra, x = "Mean_AOD10km", y = "AOD_470nm")
 cor(as.matrix(aod_lst_terra[,c(grep("Mean_AOD", names(aod_lst_terra), value = T), "AOD_470nm"), with = F]))
 pmissing <- grep("pNon", names(aod_lst_terra), value = T)
 summary(aod_lst_terra[,..pmissing])

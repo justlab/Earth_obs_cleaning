@@ -20,7 +20,6 @@ Import and process the AOD20 V3 level 2 global Aeronet stations
 
 ```{r}
 source("~/liuyanguu/CWV/Code/cwv_funcs.R")
-source("~/liuyanguu/AOD_CONUS/Code/funcs_for_plots.R")
 ```
 
 # AERONET
