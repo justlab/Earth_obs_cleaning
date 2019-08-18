@@ -218,7 +218,7 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
 read_mcd19 <- function(sat = "terra", filepath, refsub){
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
   lst_files <- list.files(path = filepath, pattern = choose, full.names = T)
-  lst_files <- list.files(path = mcd19path_CONUS, pattern = "T", full.names = T)
+  # lst_files <- list.files(path = mcd19path_CONUS, pattern = "T", full.names = T)
   ### for testing:
   lst_files <- lst_files[1]
   ### 
