@@ -84,8 +84,7 @@ nemia_plan <- drake_plan(
   
   # get nearest MODIS cells 
   refgrid = get_ref_grid(),
-  # near MODIS cells within 300km
-  refsub = get_near_cellsid(conus_aer, refgrid),
+
   # aeronet sites with cloest MODIS grid
   aer_nearest = get_nearest_cell(conus_aer, refgrid), # Aeronet matched to grid, 174x4
   aer_nearest_2 = remove_site_on_water(aer_nearest), # remove 2 sites on water
@@ -98,7 +97,12 @@ nemia_plan <- drake_plan(
                                    .id = FALSE)),
   # limit aeronet data by station, could be NEMIA or CONUS 
   sel_aer_region = target(sel_data_bystation(aer_btw, aer_nearest_2),
-                      transform = map(aer_btw), .id = FALSE),
+                      transform = map(aer_btw, .id = FALSE)),
+  
+  
+  # near MODIS cells within 300km
+  refsub = target(get_near_cellsid(conus_aer, sel_aer_region, refgrid),
+                  transform = map(sel_aer_region, .id = FALSE)),
   
   # 2. Interpolation -----------------------------------------------------------
   # so instead of running all the Aeronet data, only run what is used
@@ -108,7 +112,7 @@ nemia_plan <- drake_plan(
   # 3. WPred Join MCD19 -----------------------------------------------------------
   # mcd is the large MCD19 dataset, limit to `refsub`:nearby(300km) when readin to 
   # control total lines, unable to read in all data together, too many rows
-  mcd = target(read_mcd19(sat, file_in(mcd19path_CONUS), refsub), transform = map(sat = c("terra", "aqua"))),
+  mcd = target(read_mcd19(sat, file_in(mcd19path_CONUS)), transform = map(sat = c("terra", "aqua"))),
   # join is the rolling-joined dataset with aeronet
   join = target(rolling_join(mcd_sat = mcd, aer_data_wPred = wPred),
                 transform = cross(mcd, wPred, .id = mcd)),
@@ -159,11 +163,13 @@ vis_drake_graph(nemia_config, ncol_legend = 0)
 # Run the plan 
 
 ```{r, eval = F}
+make(nemia_plan, cache = ssd_cache)
+
 
 future::plan(future::multiprocess)
 options(future.globals.maxSize= 100*1024^3) 
 make(nemia_plan, cache = ssd_cache,
-     parallelism = "future", jobs = 20, memory_strategy = "speed")
+     parallelism = "future", jobs = 20, cache_log_file = TRUE)
 
 ## Some simple analysis 
 loadd("new_var_join_mcd_terra", cache = ssd_cache)

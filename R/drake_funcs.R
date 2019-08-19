@@ -16,9 +16,10 @@ modify_aer_stns <- function(aer_stns0){
 #' get_conus_buff
 #' @param conus_file location of the sf CONUS file no Great Lake -- rds file
 #' @return sf object of CONUS shapfile
-get_conus_buff <- function(conus_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_sf_noGLakes.rds"){
+get_conus_buff <- function(conus_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_GLakes_buff_sf_poly_201906.rds"){
   readRDS(conus_file)
 }
+# "/data-belle/LST/MODIS.LST.C6/derived/conus_sf_noGLakes.rds"
 
 #' get_nemia_buff
 #' @param states_file US states shp file
@@ -99,10 +100,12 @@ get_nearest_cell <- function(aerpts, refpts){
 #' get nearby id names within 300 km 
 #' 
 #' @return geom points,df,dt, varnames: "idLSTpair0" "geometry"
-get_near_cellsid <- function(aerpts, refpts){
+get_near_cellsid <- function(aerpts, sel_aer_region, refpts){
+  # limit the gridcell by useful aeronet sites in the first place:
+  aerpts = aerpts[aerpts$Site_Name%in%unique(sel_aer_region$AERONET_Site_Name),]
   aerptsNA <- st_transform(aerpts, crs = 2163) # US National Atlas
-  # limit a 1500m buffer, I agree this part duplicates a little bit with `ref_in_buffer`
-  aer_regions <- aerptsNA %>% st_buffer(dist = 300000) %>% st_union
+  # limit to useful buffer, I agree this part duplicates a little bit with `ref_in_buffer`
+  aer_regions <- aerptsNA %>% st_buffer(dist = 270000) %>% st_union
   refptsNA <- st_transform(refpts, crs = 2163) # US National Atlas
   refsub <- refpts[st_intersects(refptsNA, aer_regions, sparse = FALSE), ]
   return(refsub)
@@ -215,16 +218,17 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
 #' this function need to be replaced in the future, as for now 
 #' we only read one-year data
 #' @param sat input "terra" or "aqua", if sat !="terra", load aqua
-read_mcd19 <- function(sat = "terra", filepath, refsub){
+read_mcd19 <- function(sat = "terra", filepath){
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
   lst_files <- list.files(path = filepath, pattern = choose, full.names = T)
   # lst_files <- list.files(path = mcd19path_CONUS, pattern = "T", full.names = T)
   ### for testing:
-  lst_files <- lst_files[1]
+  lst_files <- lst_files[1:90]
   ### 
   readfile <- function(x){
     t = read.fst(x, as.data.table = T)
-    return(t[idLSTpair0%in%refsub$idLSTpair0])
+    # return(t[idLSTpair0%in%refsub$idLSTpair0])
+    t
   }
   
   dt = rbindlist(lapply(lst_files, readfile))
@@ -263,11 +267,11 @@ aer_in_mcd19 <- function(region_aer, mcd19){
 
 
 #' use `st_intersects` to find grid cells in a 300km buffer.
-#' This is a slow step, could be imporved in the future
+#' This is a **slow** step, could be imporved in the future
 #' 
 ref_in_buffer <- function(region_aer_m, refgrid){
   # not all aer sites are needed 
-  radius0 <-  300000
+  radius0 <-  270000
   aod_buffers <- st_buffer(region_aer_m, radius0)
   aod_buffers_list <- st_geometry(aod_buffers)
   refgrid_m <- st_transform(refgrid, crs = 2163) 
