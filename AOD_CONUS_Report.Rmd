@@ -8,10 +8,21 @@ output: html_document
 
 ```{r}
 library(drake) 
+loadd(plotAOD, cache = ssd_cache)
+n_vars = length(plotAOD)
+fig_height = ceiling(n_vars/2)*3.5
+```
 
+# AOD Scatterplot
+
+```{r, fig.width = 10, fig.height = fig_height}
+loadd(plotAOD, cache = ssd_cache)
+gridExtra::grid.arrange(grobs = plotAOD, ncol = 2)
 ```
 
 # Terra 
+
+## RMSE
 
 ```{r}
 readd(print1, cache = ssd_cache)
@@ -27,20 +38,34 @@ loadd("cv_results_new_var_join_mcd_terra", cache = ssd_cache)
 cv_results_new_var_join_mcd_terra$features_rank_rfe
 ```
 
-```{r}
+## Scatterplot
 
-readd(plotSHAP1_2, cache = ssd_cache)
-
+```{r, fig.width = 10, fig.height = fig_height}
+loadd(plotscatter, cache = ssd_cache)
+gridExtra::grid.arrange(grobs = plotscatter, ncol = 2)
 ```
 
+
+## SHAP
+
+```{r}
+readd(plotSHAP1, cache = ssd_cache)
+```
+
+```{r, fig.width = 10, fig.height = fig_height}
+loadd(plotSHAP2, cache = ssd_cache)
+gridExtra::grid.arrange(grobs = plotSHAP2, ncol = 2)
+```
+
+
 # Aqua
+
+## RMSE
 
 ```{r}
 readd(print1_2, cache = ssd_cache)
 readd(plot1_2, cache = ssd_cache)
-
 ```
-
 
 * Top features RFE
 
@@ -50,8 +75,22 @@ loadd("cv_results_new_var_join_mcd_aqua", cache = ssd_cache)
 cv_results_new_var_join_mcd_aqua$features_rank_rfe
 ```
 
-```{r}
-readd(plotSHAP1_2, cache = ssd_cache)
+## Scatterplot
+
+```{r, fig.width = 10, fig.height = fig_height}
+loadd(plotscatter_2, cache = ssd_cache)
+gridExtra::grid.arrange(grobs = plotscatter_2, ncol = 2)
 
 ```
 
+## SHAP
+
+```{r}
+readd(plotSHAP1_2, cache = ssd_cache)
+```
+
+```{r, fig.width = 10, fig.height = fig_height}
+loadd(plotSHAP2_2, cache = ssd_cache)
+gridExtra::grid.arrange(grobs = plotSHAP2_2, ncol = 2)
+
+```

@@ -16,7 +16,8 @@ modify_aer_stns <- function(aer_stns0){
 #' get_conus_buff
 #' @param conus_file location of the sf CONUS file no Great Lake -- rds file
 #' @return sf object of CONUS shapfile
-get_conus_buff <- function(conus_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_GLakes_buff_sf_poly_201906.rds"){
+get_conus_buff <- function(conus_file = 
+  "/data-belle/LST/MODIS.LST.C6/derived/conus_GLakes_buff_sf_poly_201906.rds"){
   readRDS(conus_file)
 }
 # "/data-belle/LST/MODIS.LST.C6/derived/conus_sf_noGLakes.rds"
@@ -76,38 +77,40 @@ get_ref_grid <- function(ref_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_
 
 #' find points in a broad buffer, and match the nearest grid point to Aeronet sites.
 #' 
-#' @param aerpts The NEMIA Aeronet sites points 
-#' @param refpts The loaded refereence grid points by \code{\function{get_ref_grid}}  
+#' @param conus_aer The NEMIA Aeronet sites points 
+#' @param refgrid The loaded refereence grid points by \code{\function{get_ref_grid}}  
 #' 
-#' @return aer_nearest: aeronets sites with cloest grid point (idLSTpair0)
+#' @return conus_aer: aer_nearest, aeronets sites with cloest grid point (idLSTpair0)
 #' find near cells: find grid idLSTpair0 around 
-get_nearest_cell <- function(aerpts, refpts){
-  aerptsNA <- st_transform(aerpts, crs = 2163) # US National Atlas
-  # limit a 1500m buffer, I agree this part duplicates a little bit with `ref_in_buffer`
-  aer_regions <- aerptsNA %>% st_buffer(dist = 1500) %>% st_union
-  refptsNA <- st_transform(refpts, crs = 2163) # US National Atlas
-  refsub <- refpts[st_intersects(refptsNA, aer_regions, sparse = FALSE), ]
-  # `candidate_refpts` is just an intermediate to speed up the process
+get_nearest_cell <- function(conus_aer, refgrid){
+  conus_aerNA <- st_transform(conus_aer, crs = 2163) # US National Atlas
+  # limit a 1500m buffer, I agree this part is a little bit similar to `ref_in_buffer`
+  aer_regions <- conus_aerNA %>% st_buffer(dist = 1500) %>% st_union
+  # both the next two steps are slow:
+  refgridNA <- st_transform(refgrid, crs = 2163) # US National Atlas
+  int <- st_intersects(refgridNA, aer_regions, sparse = FALSE)
+  refsub <- refgrid[int, ]
+  
+  # `refsub` is just an intermediate to speed up the process
   # to find nearby points 
-  candidate_refpts <- st_transform(refsub, crs = 4326) # return in wgs84
+  refsub <- st_transform(refsub, crs = 4326) # return in wgs84
   # match the nearest grid point to Aeronet sites
-  nn_aer_ref <- st_nn(aerpts, candidate_refpts, k = 1, returnDist = FALSE)
+  nn_aer_ref <- st_nn(conus_aer, refsub, k = 1, returnDist = FALSE)
   # join LSTids to stations, named it as `nearest_refgrid`
-  aerpts$nearest_refgrid <- candidate_refpts[unlist(nn_aer_ref), ]$idLSTpair0
-  return(aerpts)
+  conus_aer$nearest_refgrid <- refsub[unlist(nn_aer_ref), ]$idLSTpair0
+  return(conus_aer)
 }
 
 #' get nearby id names within 300 km 
 #' 
 #' @return geom points,df,dt, varnames: "idLSTpair0" "geometry"
-get_near_cellsid <- function(aerpts, sel_aer_region, refpts){
+get_near_cellsid <- function(conus_aer, sel_aer_region, refgrid){
   # limit the gridcell by useful aeronet sites in the first place:
-  aerpts = aerpts[aerpts$Site_Name%in%unique(sel_aer_region$AERONET_Site_Name),]
-  aerptsNA <- st_transform(aerpts, crs = 2163) # US National Atlas
-  # limit to useful buffer, I agree this part duplicates a little bit with `ref_in_buffer`
-  aer_regions <- aerptsNA %>% st_buffer(dist = 270000) %>% st_union
-  refptsNA <- st_transform(refpts, crs = 2163) # US National Atlas
-  refsub <- refpts[st_intersects(refptsNA, aer_regions, sparse = FALSE), ]
+  conus_aer = conus_aer[conus_aer$Site_Name%in%unique(sel_aer_region$AERONET_Site_Name),]
+  conus_aerNA <- st_transform(conus_aer, crs = 2163) # US National Atlas
+  aer_regions <- conus_aerNA %>% st_buffer(dist = 270000) %>% st_union
+  refgridNA <- st_transform(refgrid, crs = 2163) # US National Atlas
+  refsub <- refgrid[st_intersects(refgridNA, aer_regions, sparse = FALSE), ]
   return(refsub)
 }
 
@@ -261,20 +264,23 @@ rolling_join <- function(mcd_sat, aer_data_wPred){
 #' @return colocated/limited aer sites, on crs 2163
 #' 
 aer_in_mcd19 <- function(region_aer, mcd19){
-  region_aer_m = st_transform(region_aer[region_aer$Site_Name%in%unique(mcd19$Site_Name),], crs = 2163)   
-  return(region_aer_m)
+  sel_aer = st_transform(region_aer[region_aer$Site_Name%in%unique(mcd19$Site_Name),], 
+                         crs = 2163)   
+  return(sel_aer)
 }
 
 
 #' use `st_intersects` to find grid cells in a 300km buffer.
 #' This is a **slow** step, could be imporved in the future
 #' 
-ref_in_buffer <- function(region_aer_m, refgrid){
+ref_in_buffer <- function(sel_aer, refgrid){
   # not all aer sites are needed 
   radius0 <-  270000
-  aod_buffers <- st_buffer(region_aer_m, radius0)
+  aod_buffers <- st_buffer(sel_aer, radius0)
   aod_buffers_list <- st_geometry(aod_buffers)
-  refgrid_m <- st_transform(refgrid, crs = 2163) 
+  refgrid_m <- st_transform(refgrid, crs = 2163) #sel_aer is already on crs 2163
+  # # you cannot do this directly: since it will join all the buffer and produce one 
+  # refsub <- refgrid_m[st_intersects(refgrid_m, aod_buffers, sparse = FALSE), ]
   join_list <- lapply(aod_buffers_list, function(x)st_intersects(refgrid_m, x))
   # list of joined I (ID) for each Aeronet station in the grid `refgrid_m`
   join_list_I <- lapply(join_list, function(x) sapply(x, function(z) if (length(z)==0) NA_integer_ else z[1]))
@@ -284,15 +290,15 @@ ref_in_buffer <- function(region_aer_m, refgrid){
 }
 
 # get aer sites as a list
-get_site_list <- function(region_aer_m){
-  site_list <- st_geometry(region_aer_m)  # for calculating distance 
+get_site_list <- function(sel_aer){
+  site_list <- st_geometry(sel_aer)  # for calculating distance 
   # get level 1 list [i], level2 [[i]] is just a point pair
   site_list2 <- lapply(1 : length(site_list), function(i) (site_list[i])) 
   site_list2
 }
 # get aer site names
-get_site_name <- function(region_aer_m){
-  n = as.list(region_aer_m$Site_Name)
+get_site_name <- function(sel_aer){
+  n = as.list(sel_aer$Site_Name)
   n
 }
 # select ref.grid subset by Index for each station
@@ -409,7 +415,7 @@ create_qc_vars <- function(dt){
 #' 
 #' 
 run_cv <- function(dt){
-  setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm")
+  setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm", skip_absent=TRUE)
   # The dependent variable: diff_AOD = MCD19 - AERONET = Optical_Depth_047 - AOD_470nm
   dt[, diff_AOD := MCD19_AOD_470nm - AOD_470nm]
   
@@ -446,14 +452,37 @@ plot_rmse <- function(rferesults){
   rfe.rmse.plot(rferesults$rmse_rfe)
 }
 
-plot_SHAP <- function(rferesults){
+plot_AOD <- function(rferesults){
+  dt = rferesults$modeldt1_wPred
+  p1 = scatter.plot.diagonal(dt, x = "MCD19_AOD_470nm", y = "AOD_470nm")
+  p2 = scatter.plot.diagonal(dt, x = "MCD19_AOD_470nm", y = "diff_AOD")
+  p3 = scatter.plot.diagonal(dt, x = "AOD_470nm", y = "diff_AOD")
+  p4 = scatter.plot.diagonal(dt, x = "MCD19_AOD_470nm", y = "diff_AOD_pred")
+  list(p1,p2,p3,p4)
+}
+
+plot_scatter <- function(rferesults){
+  dt = rferesults$modeldt1_wPred
+  var_list <- rferesults$features_rank_rfe[1:n_vars] #(features)
+  fig_list <- lapply(var_list, scatter.plot.simple, y = "diff_AOD", data = dt)
+  fig_list
+}
+
+get_SHAP_long <- function(rferesults){
   var_list <- rferesults$features_rank_rfe #(features)
-  
   # plot SHAP
   shap_long <- shap.prep(shap_contrib = rferesults$shap_score, 
                          X_train = rferesults$modeldt1_wPred[,..var_list])
-  
-  shap.plot.summary(shap_long, scientific = T)
-  
+  return(shap_long)
 }
 
+plot_SHAP <- function(shap_long){
+  shap.plot.summary(shap_long, scientific = T)
+}
+
+plot_SHAP_scatter <- function(rferesults, shap_long){
+  var_list <- rferesults$features_rank_rfe[1:n_vars]
+  fig_list <- lapply(var_list, function(x)shap.plot.dependence.color(shap_long, x = x, y = x, 
+                                                                     color_feature = "MCD19_AOD_470nm"))
+  fig_list
+}

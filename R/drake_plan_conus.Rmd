@@ -67,7 +67,8 @@ ssd_cache = new_cache(path = "/scratch/cache/aeronet_drake")
 # for reporting purpose
 y_var = "diff_AOD"
 y_var_pred = "diff_AOD_pred"
-
+# how many features to print in scatterplot
+n_vars = 4
 
 # CONUS Drake Plans  ------------------------------------------------------------
 source(here("R/drake_funcs.R"))
@@ -121,7 +122,7 @@ nemia_plan <- drake_plan(
   sel_aer = target(aer_in_mcd19(aer_nearest_2, mcd19 = join),
              transform = map(join)),
   # buffers 
-  ref = target(ref_in_buffer(region_aer_m = sel_aer, refgrid),
+  ref = target(ref_in_buffer(sel_aer, refgrid),
              transform = map(sel_aer)),
   # sites
   p = target(get_site_list(region_aer_m = sel_aer), transform = map(sel_aer)),
@@ -146,8 +147,18 @@ nemia_plan <- drake_plan(
                   transform = map(cv_results,.id = FALSE)),
   plot1 = target(plot_rmse(cv_results),
                  transform = map(cv_results,.id = FALSE)),
-  plotSHAP1 = target(plot_SHAP(cv_results),
+  # figures
+  plotAOD = target(plot_AOD(cv_results),
                  transform = map(cv_results,.id = FALSE)),
+  plotscatter = target(plot_scatter(cv_results),
+                 transform = map(cv_results,.id = FALSE)),
+  
+  shap_long = target(get_SHAP_long(cv_results),
+                  transform = map(cv_results,.id = FALSE)),
+  plotSHAP1 = target(plot_SHAP(shap_long),
+                 transform = map(shap_long,.id = FALSE)),
+  plotSHAP2 = target(plot_SHAP_scatter(cv_results, shap_long),
+                 transform = map(cv_results, shap_long,.id = FALSE)),
   report = rmarkdown::render(
     knitr_in("AOD_CONUS_Report.Rmd"),
     output_file = file_out("AOD_CONUS_Report.html"))
@@ -158,6 +169,7 @@ nemia_config <- drake_config(nemia_plan, cache = ssd_cache) # show the dependenc
 # vis_drake_graph(nemia_config, from = names(nemia_config$layout))
 vis_drake_graph(nemia_config, ncol_legend = 0)
 
+make(nemia_plan, cache = ssd_cache)
 ```
 
 # Run the plan 
