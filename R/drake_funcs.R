@@ -237,9 +237,22 @@ read_mcd19 <- function(sat = "terra", filepath){
   dt = rbindlist(lapply(lst_files, readfile))
   dt[,c("x", "y", "inNEMIA"):=NULL]
   dt[, join_time:=overpass_time] # join later using `overpass_time`
-  dt[, sat := choose]
   setnames(dt, "idLSTpair0", "nearest_refgrid") # rename for join later 
   setkey(dt, nearest_refgrid, join_time)
+  return(dt)
+}
+#' read one file every time 
+read_mcd19_one <- function(sat = "terra", i, filepath){
+  
+  if (sat != "terra") choose = "A" else choose = "T" # load terra by default
+  lst_files <- list.files(path = filepath, pattern = choose, full.names = T)
+    dt = read.fst(lst_files[i], as.data.table = T)
+    # return(t[idLSTpair0%in%refsub$idLSTpair0])
+    dt[,c("x", "y", "inNEMIA"):=NULL]
+    dt[, join_time:=overpass_time] # join later using `overpass_time`
+    dt[, sat := choose]
+    setnames(dt, "idLSTpair0", "nearest_refgrid") # rename for join later 
+    setkey(dt, nearest_refgrid, join_time)
   return(dt)
 }
 
