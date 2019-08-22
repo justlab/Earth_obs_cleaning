@@ -4,18 +4,21 @@ author: "Yang Liu"
 date: "08/17/2019"
 output: html_document
 ---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = T, message=FALSE, warning=FALSE)
+```
 
 
 ```{r}
 library(drake) 
-loadd(plotAOD, cache = ssd_cache)
-n_vars = length(plotAOD)
+loadd(plotscatter, cache = ssd_cache)
+n_vars = length(plotscatter)
 fig_height = ceiling(n_vars/2)*3.5
 ```
 
 # AOD Scatterplot
 
-```{r, fig.width = 10, fig.height = fig_height}
+```{r, fig.width = 10, fig.height = 7}
 loadd(plotAOD, cache = ssd_cache)
 gridExtra::grid.arrange(grobs = plotAOD, ncol = 2)
 ```
@@ -33,9 +36,9 @@ readd(plot1, cache = ssd_cache)
 
 ```{r}
 # top features
-loadd("cv_results_new_var_join_mcd_terra", cache = ssd_cache)
+loadd("cv_results_terra", cache = ssd_cache)
 # rferesults = cv_results_new_var_join_mcd_terra
-cv_results_new_var_join_mcd_terra$features_rank_rfe
+cv_results_terra$features_rank_rfe
 ```
 
 ## Scatterplot
@@ -71,8 +74,8 @@ readd(plot1_2, cache = ssd_cache)
 
 ```{r}
 # top features
-loadd("cv_results_new_var_join_mcd_aqua", cache = ssd_cache)
-cv_results_new_var_join_mcd_aqua$features_rank_rfe
+loadd("cv_results_aqua", cache = ssd_cache)
+cv_results_aqua$features_rank_rfe
 ```
 
 ## Scatterplot

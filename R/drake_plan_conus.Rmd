@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = T, message=FALSE, warning=FALSE)
 # Write the plan
 
 ```{r}
-# See `drake_funcs.R` for functions used in drake plan #
+# See `drake_funcs.R` for functions used in this drake plan #
 
 # beginning of script where we will have a plan to:
 # select Aeronet in CONUS
@@ -40,38 +40,43 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(SHAPforxgboost)
 })
-# ** need to revise accordingly the path to your local Just_universal
+# ** need to revise accordingly the path to your local clone of Just_universal **
 source("~/liuyanguu/Just_universal/code/xgboost_cvtune.R")
 source("~/liuyanguu/Just_universal/code/xgboost_cv_RFE.R")
 
 # Parameters ####
-
+# the aer site info. file:
 aer_stn_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt"
-
-aer_data_path = '~/qnap_geo/aeronet/All_Sites_Times_All_Points_AOD20_20180603.dat'
-aer_data_path = '/scratch/temp/All_Sites_Times_All_Points_AOD20_20180603.dat' # don't have time to play with Ethernet all day
-# the aer data with AOD470nm
-aer_data_path_new = "~/Intermediate/AOD_data/190628_aod20_wPred_NEMIA_idLST.fst"
-  
+# aer_data_path = '~/qnap_geo/aeronet/All_Sites_Times_All_Points_AOD20_20180603.dat'
+# aer_data_path = '/scratch/temp/All_Sites_Times_All_Points_AOD20_20180603.dat' 
+# the aer data files:
 aer_files_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/"
 date_start = "2018-01-01" # do not include in sel_data_bytime if don't want to limit
 date_end   = "2018-12-31" # do not include in sel_data_bytime if don't want to limit
-geo_region = "NEMIA"
 sats = c("terra", "aqua")
-# MCD19 data: 
+
+# MCD19 data load and save output: 
 mcd19path = "/data-coco/mcd19/fst/nemia/2018/" # now there is only 2018 data 
 mcd19path_CONUS = "/data-coco/mcd19/fst/conus/2018/"
+MCD19_T_files <- list.files(path = mcd19path_CONUS, pattern = "T", full.names = T)
+MCD19_A_files <- list.files(path = mcd19path_CONUS, pattern = "A", full.names = T)
 out_dir = "/data-coco/mcd19/fst/conus/2018_AOD_newVar/"
-# point to cache: 
-ssd_cache = new_cache(path = "/scratch/cache/aeronet_drake") 
+# how many MCD days (files) to work on:
+MCD_files_i = c(1:length(MCD19_T_files))
 
 # for reporting purpose
 y_var = "diff_AOD"
 y_var_pred = "diff_AOD_pred"
 # how many features to print in scatterplots
-n_vars = 4
-# how many MCD days (files) to work on:
-MCD_files_i = c(1:30)
+n_vars = 10
+
+# point to cache: 
+ssd_cache = new_cache(path = "/scratch/cache/aeronet_drake") 
+```
+
+# Plan part 1
+
+```{r}
 # CONUS Drake Plans  ------------------------------------------------------------
 source(here("R/drake_funcs.R"))
 conus_plan <- drake_plan(
@@ -103,10 +108,6 @@ conus_plan <- drake_plan(
                       transform = map(aer_btw, .id = FALSE)),
   
   
-  # near MODIS cells within 300km
-  refsub = target(get_near_cellsid(conus_aer, sel_aer_region, refgrid),
-                  transform = map(sel_aer_region, .id = FALSE)),
-  
   # 2. Interpolation -----------------------------------------------------------
   # so instead of running all the Aeronet data, only run what is used
   # it also join with the nearest grid id 
@@ -117,15 +118,17 @@ conus_plan <- drake_plan(
   # control total lines, unable to read in all data together, too many rows
   mcd = target(read_mcd19_one(i, sat = sat, file_in(mcd19path_CONUS)), 
                transform = cross( i = !!MCD_files_i, 
-                                  sat = c("terra", "aqua")),
+                                  sat = !!sats),
                format = "fst"),
   # join is the rolling-joined dataset with aeronet
   join = target(rolling_join(mcd_sat = mcd, aer_data_wPred = wPred),
                 transform = cross(mcd, wPred, .id = mcd)),
   
-  # select aer sites in mcd19. further limit the stations
-  sel_aer = target(aer_in_mcd19(aer_nearest_2, mcd19 = join),
-             transform = map(join)),
+  # For calculating new variables
+  # selected aeronet 
+  sel_aer = target(get_conus_aer_used(conus_aer, sel_aer_region),
+                  transform = map(sel_aer_region, .id = FALSE)),
+  
   # buffers 
   ref = target(ref_in_buffer(sel_aer, refgrid),
              transform = map(sel_aer)),
@@ -138,44 +141,21 @@ conus_plan <- drake_plan(
   # sub_grid = target(select_refgrid_subset(ref_list0 = ref, point0 = p, name0 = n),
   #              transform = map(ref, p, n))
   sub_grid = target(purrr_pmap(ref = ref, p = p, n = n),
-               transform = map(ref, p, n, .id = FALSE)),
+               transform = map(ref, p, n, .id = FALSE),
+               format = "fst"),
   # calculate new vars to obtain the dataset ready for modeling for terra and aqua, using join, mcd, sub_grid 
   new_var = target(aod_MODIS_newVars(aod_join_MODIS = join, 
                                  MODIS_all = mcd, refDT_sub = sub_grid),
-               transform = map(join, mcd, sub_grid, .id = c(join))),
+               transform = map(join, mcd, .id = c(join)),
+               format = "fst"),
   # deliver two rowbinded dataset: for terra and aqua 
+  # I am not sure what this way doesn't work: 
   # binded = target(rbindlist(new_var),
   #                 transform = combine(new_var, .by = c(i, sat))),
   # `.id_chr` let you save the file using target names:
-  out = target(write.fst(new_var, path = file.path(file_out(out_dir), .id_chr)), transform = map(new_var))
+  out = target(write_new_var(new_var, id = .id_chr), transform = map(new_var))
 )
 
-# 
-# conus_plan_cv <- drake_plan(
-#   # 5. CV -----------------------------------------------------------
-#   cv_results = target(run_cv(dt = new_var),transform = map(new_var)),
-#   
-#   # 6. Report -----------------------------------------------------------
-#   print1 = target(report_rmse(cv_results),
-#                   transform = map(cv_results,.id = FALSE)),
-#   plot1 = target(plot_rmse(cv_results),
-#                  transform = map(cv_results,.id = FALSE)),
-#   # figures
-#   plotAOD = target(plot_AOD(cv_results),
-#                  transform = map(cv_results,.id = FALSE)),
-#   plotscatter = target(plot_scatter(cv_results),
-#                  transform = map(cv_results,.id = FALSE)),
-#   
-#   shap_long = target(get_SHAP_long(cv_results),
-#                   transform = map(cv_results,.id = FALSE)),
-#   plotSHAP1 = target(plot_SHAP(shap_long),
-#                  transform = map(shap_long,.id = FALSE)),
-#   plotSHAP2 = target(plot_SHAP_scatter(cv_results, shap_long),
-#                  transform = map(cv_results, shap_long,.id = FALSE)),
-#   report = rmarkdown::render(
-#     knitr_in("AOD_CONUS_Report.Rmd"),
-#     output_file = file_out("AOD_CONUS_Report.html"))
-# )
 conus_plan
 nrow(conus_plan)
 #drake_plan_source(conus_plan)
@@ -186,7 +166,42 @@ vis_drake_graph(nemia_config, ncol_legend = 0)
 }
 ```
 
-# Run the plan 
+# Plan part 2
+
+```{r}
+# drake plan to run cv and output results 
+conus_plan_cv <- drake_plan(
+  # 5. CV -----------------------------------------------------------
+  new_var = target(read_new_var(sat), transform = map(sat = !!sats)),
+  cv_results = target(run_cv(dt = new_var), transform = map(new_var, .id = sat)),
+
+  # 6. Report -----------------------------------------------------------
+  print1 = target(report_rmse(cv_results),
+                  transform = map(cv_results,.id = FALSE)),
+  plot1 = target(plot_rmse(cv_results),
+                 transform = map(cv_results,.id = FALSE)),
+  # figures
+  plotAOD = target(plot_AOD(cv_results),
+                 transform = map(cv_results,.id = FALSE)),
+  plotscatter = target(plot_scatter(cv_results),
+                 transform = map(cv_results,.id = FALSE)),
+
+  shap_long = target(get_SHAP_long(cv_results),
+                  transform = map(cv_results,.id = FALSE)),
+  plotSHAP1 = target(plot_SHAP(shap_long),
+                 transform = map(shap_long,.id = FALSE)),
+  plotSHAP2 = target(plot_SHAP_scatter(cv_results, shap_long),
+                 transform = map(cv_results, shap_long,.id = FALSE)),
+  report = rmarkdown::render(
+    knitr_in("AOD_CONUS_Report.Rmd"),
+    output_file = file_out("AOD_CONUS_Report.html"))
+)
+nemia_config <- drake_config(conus_plan_cv, cache = ssd_cache) # show the dependency
+# vis_drake_graph(nemia_config, from = names(nemia_config$layout))
+vis_drake_graph(nemia_config)
+```
+
+# Run the two plans
 
 ```{r, eval = F}
 # make(conus_plan, cache = ssd_cache)
@@ -195,21 +210,10 @@ time0 <- Sys.time()
 future::plan(future::multiprocess)
 options(future.globals.maxSize= 100*1024^3) 
 make(conus_plan, cache = ssd_cache,
-     parallelism = "future", jobs = 5)
+     parallelism = "future", jobs = 20)
 Sys.time() - time0
 
 
-## Some simple analysis 
-loadd("new_var_join_mcd_terra", cache = ssd_cache)
-loadd("new_var_join_mcd_aqua", cache = ssd_cache)
-SHAPforxgboost::scatter.plot.diagonal(new_var_join_mcd_aqua, "Optical_Depth_047",
-                                      "Mean_AOD270km")
-cor(as.matrix(new_var_join_mcd_terra[,c(grep("Mean_AOD", names(new_var_join_mcd_terra), value = T), "AOD_470nm"), with = F]))
-## 
-loadd(cache = ssd_cache) # load all object 
-
-# to see the updated graph, run config again
-nemia_config <- drake_config(conus_plan, cache = ssd_cache) # show the dependency
-vis_drake_graph(nemia_config)
+make(conus_plan_cv, cache = ssd_cache)
 
 ```

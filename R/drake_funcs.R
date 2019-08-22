@@ -101,19 +101,6 @@ get_nearest_cell <- function(conus_aer, refgrid){
   return(conus_aer)
 }
 
-#' get nearby id names within 300 km 
-#' 
-#' @return geom points,df,dt, varnames: "idLSTpair0" "geometry"
-get_near_cellsid <- function(conus_aer, sel_aer_region, refgrid){
-  # limit the gridcell by useful aeronet sites in the first place:
-  conus_aer = conus_aer[conus_aer$Site_Name%in%unique(sel_aer_region$AERONET_Site_Name),]
-  conus_aerNA <- st_transform(conus_aer, crs = 2163) # US National Atlas
-  aer_regions <- conus_aerNA %>% st_buffer(dist = 270000) %>% st_union
-  refgridNA <- st_transform(refgrid, crs = 2163) # US National Atlas
-  refsub <- refgrid[st_intersects(refgridNA, aer_regions, sparse = FALSE), ]
-  return(refsub)
-}
-
 
 remove_site_on_water <- function(aer_nearest){
   aer_nearest[!aer_nearest$Site_Name%in%c("MVCO", "LISCO"),]
@@ -217,38 +204,18 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
 
 
 # 4. rolling join MCD19 (Terra, Aqua) -----------------------------------------------------------
-#' read MCD19 for NEMIA
-#' this function need to be replaced in the future, as for now 
-#' we only read one-year data
-#' @param sat input "terra" or "aqua", if sat !="terra", load aqua
-read_mcd19 <- function(sat = "terra", filepath){
-  if (sat != "terra") choose = "A" else choose = "T" # load terra by default
-  lst_files <- list.files(path = filepath, pattern = choose, full.names = T)
-  # lst_files <- list.files(path = mcd19path_CONUS, pattern = "T", full.names = T)
-  ### for testing:
-  lst_files <- lst_files[1:90]
-  ### 
-  readfile <- function(x){
-    t = read.fst(x, as.data.table = T)
-    # return(t[idLSTpair0%in%refsub$idLSTpair0])
-    t
-  }
-  
-  dt = rbindlist(lapply(lst_files, readfile))
-  dt[,c("x", "y", "inNEMIA"):=NULL]
-  dt[, join_time:=overpass_time] # join later using `overpass_time`
-  setnames(dt, "idLSTpair0", "nearest_refgrid") # rename for join later 
-  setkey(dt, nearest_refgrid, join_time)
-  return(dt)
-}
 #' read one file every time 
+#' @param sat input "terra" or "aqua", if sat !="terra", load aqua
+#' 
 read_mcd19_one <- function(sat = "terra", i, filepath){
   
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
   lst_files <- list.files(path = filepath, pattern = choose, full.names = T)
-    dt = read.fst(lst_files[i], as.data.table = T)
+    dt = read.fst(lst_files[i], as.data.table = T,
+                  columns = c("overpass_index", "Optical_Depth_047", 
+                              "AOD_Uncertainty", "Column_WV", "AOD_QA", "RelAZ", 
+                              "idLSTpair0", "overpass_time"))
     # return(t[idLSTpair0%in%refsub$idLSTpair0])
-    dt[,c("x", "y", "inNEMIA"):=NULL]
     dt[, join_time:=overpass_time] # join later using `overpass_time`
     dt[, sat := choose]
     setnames(dt, "idLSTpair0", "nearest_refgrid") # rename for join later 
@@ -270,18 +237,16 @@ rolling_join <- function(mcd_sat, aer_data_wPred){
 
 
 # 5. Calculate distance ------------------------------------------------------
-#' select aer sites in mcd19. further limit the stations.
-#' @param region_aer all the aeronet stations
-#' @param mcd19 mcd19
+
+#' get aernet used in this year, since I plan to cal
 #' 
-#' @return colocated/limited aer sites, on crs 2163
-#' 
-aer_in_mcd19 <- function(region_aer, mcd19){
-  sel_aer = st_transform(region_aer[region_aer$Site_Name%in%unique(mcd19$Site_Name),], 
-                         crs = 2163)   
+#' @return sel_aer, a selected conus_aer in year 2018, about 86 stations
+get_conus_aer_used <- function(conus_aer, sel_aer_region){
+  # limit the gridcell by useful aeronet sites in the first place:
+  sel_aer = conus_aer[conus_aer$Site_Name%in%unique(sel_aer_region$AERONET_Site_Name),]
+  sel_aer = st_transform(sel_aer, crs = 2163)
   return(sel_aer)
 }
-
 
 #' use `st_intersects` to find grid cells in a 300km buffer.
 #' This is a **slow** step, could be imporved in the future
@@ -291,7 +256,8 @@ ref_in_buffer <- function(sel_aer, refgrid){
   radius0 <-  270000
   aod_buffers <- st_buffer(sel_aer, radius0)
   aod_buffers_list <- st_geometry(aod_buffers)
-  refgrid_m <- st_transform(refgrid, crs = 2163) #sel_aer is already on crs 2163
+  refgrid_m <- st_transform(refgrid, crs = 2163) 
+  sel_aer <-  st_transform(sel_aer, crs = 2163)
   # # you cannot do this directly: since it will join all the buffer and produce one 
   # refsub <- refgrid_m[st_intersects(refgrid_m, aod_buffers, sparse = FALSE), ]
   join_list <- lapply(aod_buffers_list, function(x)st_intersects(refgrid_m, x))
@@ -306,13 +272,13 @@ ref_in_buffer <- function(sel_aer, refgrid){
 get_site_list <- function(sel_aer){
   site_list <- st_geometry(sel_aer)  # for calculating distance 
   # get level 1 list [i], level2 [[i]] is just a point pair
-  site_list2 <- lapply(1 : length(site_list), function(i) (site_list[i])) 
-  site_list2
+  p <- lapply(1 : length(site_list), function(i) (site_list[i])) 
+  return(p)
 }
 # get aer site names
 get_site_name <- function(sel_aer){
   n = as.list(sel_aer$Site_Name)
-  n
+  return(n)
 }
 # select ref.grid subset by Index for each station
 select_refgrid_subset <- function(ref, p, n){
@@ -402,10 +368,20 @@ aod_MODIS_newVars <- function(aod_join_MODIS, MODIS_all, refDT_sub){
   invisible(lapply(dist0, calculate.diff))
   return(aod_join_MODIS)
 }
-
+ 
+write_new_var <- function(new_var, id){
+  if (nrow(new_var)>0) write.fst(new_var, path = file.path(file_out(out_dir),id))
+}
 
 # 7. CV -------------------------------------------------------------------
 # to create qc variables 
+read_new_var <- function(sat){
+  new_files <- list.files(path = out_dir, pattern = sat, full.names = T)
+  new_var <- rbindlist(lapply(new_files, function(x)read.fst(x, as.data.table = T)))
+  message("dimentions of the new_var data is ", paste(dim(new_var), collapse = ","))
+  return(new_var)
+}
+
 create_qc_vars <- function(dt){
   dt[, qa_bits := bitwAnd(AOD_QA, strtoi("111100000000", base = 2))]
   dt[, qa_best := 0]
