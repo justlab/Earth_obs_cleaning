@@ -28,6 +28,8 @@ knitr::opts_chunk$set(echo = T, message=FALSE, warning=FALSE)
 # restrict to 2000+ (parameter so that different subsets could be taken later)
 
 # Libraries
+# if needed, update drake
+if(packageVersion("drake")<7.4) install.packages("drake")
 suppressPackageStartupMessages({
   library(sf)
   library(magrittr)
@@ -71,7 +73,7 @@ y_var_pred = "diff_AOD_pred"
 n_vars = 10
 
 # point to cache: 
-ssd_cache = new_cache(path = "/scratch/cache/aeronet_drake") 
+ssd_cache = drake_cache(path = "/scratch/cache/aeronet_drake") 
 ```
 
 # Plan part 1
