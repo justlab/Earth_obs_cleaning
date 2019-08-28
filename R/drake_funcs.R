@@ -471,7 +471,7 @@ plot_SHAP <- function(shap_long){
 
 plot_SHAP_scatter <- function(rferesults, shap_long){
   var_list <- rferesults$features_rank_rfe[1:n_vars]
-  fig_list <- lapply(var_list, function(x)shap.plot.dependence.color(shap_long, x = x, y = x, 
+  fig_list <- lapply(var_list, function(x)shap.plot.dependence(shap_long, x = x, y = x, 
                                                                      color_feature = "MCD19_AOD_470nm"))
   fig_list
 }

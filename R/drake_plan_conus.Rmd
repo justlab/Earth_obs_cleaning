@@ -29,7 +29,9 @@ knitr::opts_chunk$set(echo = T, message=FALSE, warning=FALSE)
 
 # Libraries
 # if needed, update drake
-if(packageVersion("drake")<7.4) install.packages("drake")
+if(packageVersion("drake") < "7.4") install.packages("drake")
+if(packageVersion("SHAPforxgboost") < "0.0.2") devtools::install_github("liuyanguu/SHAPforxgboost")
+
 suppressPackageStartupMessages({
   library(sf)
   library(magrittr)
