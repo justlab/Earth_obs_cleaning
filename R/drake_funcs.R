@@ -396,18 +396,22 @@ create_qc_vars <- function(dt){
   return(dt)
 }
 
+prepare_dt <- function(dt){
+  setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm", skip_absent=TRUE)
+  # The dependent variable: diff_AOD = MCD19 - AERONET = Optical_Depth_047 - AOD_470nm
+  dt[, diff_AOD := MCD19_AOD_470nm - AOD_470nm]
+  dt <- create_qc_vars(dt)
+  dt[, dayint:=as.integer(as.Date(day))]
+  return(dt)
+}
+
 #' run the cross-validation by station with RFE.
 #' 
 #' This function is the 4th layer wrap of Kodi's random search cv function
 #' I apologize for the confusion if anyone is planning to dig into it. 
 #' Please feel free to contact me. 
 #' 
-#' 
 run_cv <- function(dt){
-  setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm", skip_absent=TRUE)
-  # The dependent variable: diff_AOD = MCD19 - AERONET = Optical_Depth_047 - AOD_470nm
-  dt[, diff_AOD := MCD19_AOD_470nm - AOD_470nm]
-  
   # The predictors
   features = c("MCD19_AOD_470nm",
                "dayint", 
@@ -416,14 +420,10 @@ run_cv <- function(dt){
                do.call(paste0,expand.grid(
                  c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
                                           paste0(c(10, 30, 90, 270),"km"))))
-  
-
-  dt <- create_qc_vars(dt)
-  dt[, dayint:=as.integer(as.Date(day))]
-  
   # cv
   cv_results <- run.k.fold.cv.rfe.wrap(
-                modeldt1 = dt, 
+    # n_rounds = 5, # this is for fast testing
+                data = dt, 
                 stn_var = "Site_Name",
                 features0 = features, 
                 sat = "", y_var = "diff_AOD", 

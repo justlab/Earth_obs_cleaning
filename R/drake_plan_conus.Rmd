@@ -173,11 +173,13 @@ vis_drake_graph(nemia_config, ncol_legend = 0)
 # Plan part 2
 
 ```{r}
+source(here("R/drake_funcs.R"))
 # drake plan to run cv and output results 
 conus_plan_cv <- drake_plan(
   # 5. CV -----------------------------------------------------------
   new_var = target(read_new_var(sat), transform = map(sat = !!sats)),
-  cv_results = target(run_cv(dt = new_var), transform = map(new_var, .id = sat)),
+  new_dt = target(prepare_dt(new_var), transform = map(new_var, .id = FALSE)),
+  cv_results = target(run_cv(dt = new_dt), transform = map(new_dt, .id = sat)),
 
   # 6. Report -----------------------------------------------------------
   print1 = target(report_rmse(cv_results),
@@ -209,7 +211,6 @@ vis_drake_graph(nemia_config)
 
 ```{r, eval = F}
 # make(conus_plan, cache = ssd_cache)
-
 time0 <- Sys.time()
 future::plan(future::multiprocess)
 options(future.globals.maxSize= 100*1024^3) 
@@ -217,7 +218,7 @@ make(conus_plan, cache = ssd_cache,
      parallelism = "future", jobs = 20)
 Sys.time() - time0
 
-
-make(conus_plan_cv, cache = ssd_cache)
+# Allowing `add_hist` in `plot_scatter` (or use plotly) requires set lock_envir to FALSE:
+make(conus_plan_cv, cache = ssd_cache, lock_envir = FALSE)
 
 ```
