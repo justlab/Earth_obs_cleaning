@@ -200,7 +200,8 @@ conus_plan_cv <- drake_plan(
                  transform = map(cv_results, shap_long,.id = FALSE)),
   report = rmarkdown::render(
     knitr_in("AOD_CONUS_Report.Rmd"),
-    output_file = file_out("AOD_CONUS_Report.html"))
+    output_file = file_out("AOD_CONUS_Report.html"),
+    output_format = rmarkdown::html_document(toc = TRUE))
 )
 nemia_config <- drake_config(conus_plan_cv, cache = ssd_cache) # show the dependency
 # vis_drake_graph(nemia_config, from = names(nemia_config$layout))
