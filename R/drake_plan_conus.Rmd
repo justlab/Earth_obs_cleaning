@@ -75,7 +75,8 @@ y_var_pred = "diff_AOD_pred"
 n_vars = 10
 
 # point to cache: 
-ssd_cache = drake_cache(path = "/scratch/cache/aeronet_drake") 
+ssd_cache = drake_cache(path = "/scratch/cache/aeronet_drake")
+set.seed(1234)
 ```
 
 # Plan part 1
@@ -221,5 +222,4 @@ Sys.time() - time0
 
 # Allowing `add_hist` in `plot_scatter` (or use plotly) requires set lock_envir to FALSE:
 make(conus_plan_cv, cache = ssd_cache, lock_envir = FALSE)
-
 ```
