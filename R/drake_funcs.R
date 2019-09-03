@@ -362,7 +362,7 @@ aod_MODIS_newVars <- function(aod_join_MODIS, MODIS_all, refDT_sub){
   
   # calculate `diff_AOD`: AOD - mean AOD
   calculate.diff <- function(distx){
-    aod_join_MODIS[,diff_AOD:= get(paste0("Mean_AOD",distx,"km")) - AOD_Uncertainty]
+    aod_join_MODIS[,diff_AOD:= Optical_Depth_047 - get(paste0("Mean_AOD",distx,"km"))]
     setnames(aod_join_MODIS, "diff_AOD", paste0("diff_AOD",distx,"km"))
   }
   invisible(lapply(dist0, calculate.diff))
