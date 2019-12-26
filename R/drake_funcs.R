@@ -378,7 +378,7 @@ write_new_var <- function(new_var, id){
 read_new_var <- function(sat){
   new_files <- list.files(path = out_dir, pattern = sat, full.names = T)
   new_var <- rbindlist(lapply(new_files, function(x)read.fst(x, as.data.table = T)))
-  message("dimentions of the new_var data is ", paste(dim(new_var), collapse = ","))
+  message("dimensions of the new_var data are ", paste(dim(new_var), collapse = ","))
   return(new_var)
 }
 

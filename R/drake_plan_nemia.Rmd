@@ -41,8 +41,8 @@ suppressPackageStartupMessages({
   library(SHAPforxgboost)
 })
 # ** need to revise accordingly the path to your local Just_universal
-source("~/liuyanguu/Just_universal/code/xgboost_cvtune.R")
-source("~/liuyanguu/Just_universal/code/xgboost_cv_RFE.R")
+source(here("../Just_universal/code/xgboost_cvtune.R"))
+source(here("../Just_universal/code/xgboost_cv_RFE.R"))
 
 # Parameters ####
 

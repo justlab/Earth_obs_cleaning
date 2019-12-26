@@ -85,7 +85,7 @@ set.seed(1234)
 # CONUS Drake Plans  ------------------------------------------------------------
 source(here("R/drake_funcs.R"))
 conus_plan <- drake_plan(
-  # 1.  Aeroent ---------------------------------------------------------------------
+  # 1.  Aeronet ---------------------------------------------------------------------
   
   # AERONET station locations file: 
   aer_stns = fread(file = file_in(aer_stn_path), col.names = c("Site_Name", "lon", "lat", "elevm")),
@@ -200,8 +200,8 @@ conus_plan_cv <- drake_plan(
   plotSHAP2 = target(plot_SHAP_scatter(cv_results, shap_long),
                  transform = map(cv_results, shap_long,.id = FALSE)),
   report = rmarkdown::render(
-    knitr_in("AOD_CONUS_Report.Rmd"),
-    output_file = file_out("AOD_CONUS_Report.html"),
+    knitr_in(here("../AOD_CONUS_Report.Rmd")),
+    output_file = file_out(here("../AOD_CONUS_Report.html")),
     output_format = rmarkdown::html_document(toc = TRUE))
 )
 nemia_config <- drake_config(conus_plan_cv, cache = ssd_cache) # show the dependency
