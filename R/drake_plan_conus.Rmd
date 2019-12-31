@@ -124,7 +124,7 @@ conus_plan <- drake_plan(
   mcd = target(read_mcd19_one(i, sat = sat, file_in(mcd19path_CONUS)), 
                transform = cross( i = !!MCD_files_i, 
                                   sat = !!sats),
-               format = "fst"),
+               format = "fst_dt"),
   # join is the rolling-joined dataset with aeronet
   join = target(rolling_join(mcd_sat = mcd, aer_data_wPred = wPred),
                 transform = cross(mcd, wPred, .id = mcd)),
@@ -147,12 +147,12 @@ conus_plan <- drake_plan(
   #              transform = map(ref, p, n))
   sub_grid = target(purrr_pmap(ref = ref, p = p, n = n),
                transform = map(ref, p, n, .id = FALSE),
-               format = "fst"),
+               format = "fst_dt"),
   # calculate new vars to obtain the dataset ready for modeling for terra and aqua, using join, mcd, sub_grid 
   new_var = target(aod_MODIS_newVars(aod_join_MODIS = join, 
                                  MODIS_all = mcd, refDT_sub = sub_grid),
                transform = map(join, mcd, .id = c(join)),
-               format = "fst"),
+               format = "fst_dt"),
   # deliver two rowbinded dataset: for terra and aqua 
   # I am not sure what this way doesn't work: 
   # binded = target(rbindlist(new_var),
@@ -165,9 +165,9 @@ conus_plan
 nrow(conus_plan)
 #drake_plan_source(conus_plan)
 if(nrow(conus_plan)<100){
-nemia_config <- drake_config(conus_plan, cache = ssd_cache) # show the dependency
-# vis_drake_graph(nemia_config, from = names(nemia_config$layout))
-vis_drake_graph(nemia_config, ncol_legend = 0)
+conus_config <- drake_config(conus_plan, cache = ssd_cache) # show the dependency
+# vis_drake_graph(conus_config, from = names(conus_config$layout))
+vis_drake_graph(conus_config, ncol_legend = 0)
 }
 ```
 
@@ -200,26 +200,28 @@ conus_plan_cv <- drake_plan(
   plotSHAP2 = target(plot_SHAP_scatter(cv_results, shap_long),
                  transform = map(cv_results, shap_long,.id = FALSE)),
   report = rmarkdown::render(
-    knitr_in(here("../AOD_CONUS_Report.Rmd")),
-    output_file = file_out(here("../AOD_CONUS_Report.html")),
+    knitr_in(here("AOD_CONUS_Report.Rmd")),
+    output_file = file_out(here("AOD_CONUS_Report.html")),
     output_format = rmarkdown::html_document(toc = TRUE))
 )
-nemia_config <- drake_config(conus_plan_cv, cache = ssd_cache) # show the dependency
-# vis_drake_graph(nemia_config, from = names(nemia_config$layout))
-vis_drake_graph(nemia_config)
+conus_cv_config <- drake_config(conus_plan_cv, cache = ssd_cache) # show the dependency
+# vis_drake_graph(conus_cv_config, from = names(conus_cv_config$layout))
+vis_drake_graph(conus_cv_config)
 ```
 
 # Run the two plans
 
 ```{r, eval = F}
 # make(conus_plan, cache = ssd_cache)
-time0 <- Sys.time()
+(time0 <- Sys.time())
 future::plan(future::multiprocess)
 options(future.globals.maxSize= 100*1024^3) 
 make(conus_plan, cache = ssd_cache,
-     parallelism = "future", jobs = 20)
+     parallelism = "future", jobs = 20, garbage_collection = TRUE)
 Sys.time() - time0
 
 # Allowing `add_hist` in `plot_scatter` (or use plotly) requires set lock_envir to FALSE:
-make(conus_plan_cv, cache = ssd_cache, lock_envir = FALSE)
+system.time(
+  make(conus_plan_cv, cache = ssd_cache, lock_envir = FALSE)
+  )
 ```

@@ -226,6 +226,7 @@ read_mcd19_one <- function(sat = "terra", i, filepath){
 #' rolling join aer with MCD19
 #' @return MCD19 rolling join Aeronet 
 rolling_join <- function(mcd_sat, aer_data_wPred){
+  #setDT(mcd_sat, key = c("nearest_refgrid", "join_time"))
   mcd19 <- aer_data_wPred[mcd_sat, roll = 'nearest', nomatch = 0]
   # time difference
   mcd19[, diff_time_min:= as.numeric(overpass_time - stn_time)/60]
@@ -321,16 +322,19 @@ purrr_pmap <- function(ref, p, n){
 #' 
 #' 
 aod_MODIS_newVars <- function(aod_join_MODIS, MODIS_all, refDT_sub){
+  setDT(aod_join_MODIS)
   aod_join_MODIS <- aod_join_MODIS[!is.na(Optical_Depth_047),]
   aod_join_MODIS[, day:=format(stn_time, "%Y-%m-%d")]
   setkey(aod_join_MODIS, Site_Name)
   # join by site_name 
+  setDT(refDT_sub)
   setnames(refDT_sub, "nearest_refgrid", "buf_refgrid", skip_absent=TRUE)
   aod_join_buffer <- aod_join_MODIS[refDT_sub, allow.cartesian = T]
   message("The cartesian joined dataset between collocated Aeronet with MODIS sites data and base grid in each circles, dim is: ", 
         paste(dim(aod_join_buffer), collapse = " x "))
   
   # join back to the MODIS file using `buf_refgrid` in the joined dataset
+  setDT(MODIS_all)
   MODIS_all[, day:=format(join_time, "%Y-%m-%d")]
   setnames(MODIS_all, c("nearest_refgrid", "Optical_Depth_047"), 
            c("buf_refgrid", "buffer_AOD_470"), skip_absent = T)
@@ -366,11 +370,11 @@ aod_MODIS_newVars <- function(aod_join_MODIS, MODIS_all, refDT_sub){
     setnames(aod_join_MODIS, "diff_AOD", paste0("diff_AOD",distx,"km"))
   }
   invisible(lapply(dist0, calculate.diff))
-  return(aod_join_MODIS)
+  if(nrow(aod_join_MODIS) > 0) return(aod_join_MODIS)
 }
  
 write_new_var <- function(new_var, id){
-  if (nrow(new_var)>0) write.fst(new_var, path = file.path(file_out(out_dir),id))
+  if (!is.null(new_var)) write.fst(new_var, path = file.path(file_out(out_dir),id))
 }
 
 # 7. CV -------------------------------------------------------------------
