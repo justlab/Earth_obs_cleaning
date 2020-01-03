@@ -49,24 +49,27 @@ source(here("../Just_universal/code/xgboost_cvtune.R"))
 source(here("../Just_universal/code/xgboost_cv_RFE.R"))
 
 # Parameters ####
+this_year = 2017
 # the aer site info. file:
 aer_stn_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt"
 # aer_data_path = '~/qnap_geo/aeronet/All_Sites_Times_All_Points_AOD20_20180603.dat'
 # aer_data_path = '/scratch/temp/All_Sites_Times_All_Points_AOD20_20180603.dat' 
 # the aer data files:
 aer_files_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/"
-date_start = "2018-01-01" # do not include in sel_data_bytime if don't want to limit
-date_end   = "2018-12-31" # do not include in sel_data_bytime if don't want to limit
+date_start = "2017-01-01" # do not include in sel_data_bytime if don't want to limit
+date_end   = "2017-12-31" # do not include in sel_data_bytime if don't want to limit
 sats = c("terra", "aqua")
 
 # MCD19 data load and save output: 
-mcd19path = "/data-coco/mcd19/fst/nemia/2018/" # now there is only 2018 data 
-mcd19path_CONUS = "/data-coco/mcd19/fst/conus/2018/"
+mcd19path = paste0("/data-coco/mcd19/fst/nemia/", this_year, "/")
+mcd19path_CONUS = paste0("/data-coco/mcd19/fst/conus/", this_year, "/")
 MCD19_T_files <- list.files(path = mcd19path_CONUS, pattern = "T", full.names = T)
 MCD19_A_files <- list.files(path = mcd19path_CONUS, pattern = "A", full.names = T)
-out_dir = "/data-coco/mcd19/fst/conus/2018_AOD_newVar/"
+out_dir = paste0("/data-coco/mcd19/fst/conus/", this_year, "_AOD_newVar/")
+if(!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 # how many MCD days (files) to work on:
-MCD_files_i = c(1:length(MCD19_T_files))
+maxdays = as.integer(format(as.Date(paste0(this_year, "-12-31")), "%j"))
+MCD_files_i = c(1:maxdays)
 
 # for reporting purpose
 y_var = "diff_AOD"
