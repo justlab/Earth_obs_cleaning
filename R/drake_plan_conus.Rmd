@@ -78,7 +78,7 @@ y_var_pred = "diff_AOD_pred"
 n_vars = 10
 
 # point to cache: 
-ssd_cache = drake_cache(path = "/scratch/cache/aeronet_drake")
+ssd_cache = drake_cache(path = "/data-coco/mcd19/cache/aeronet_drake")
 set.seed(1234)
 ```
 
@@ -220,7 +220,8 @@ vis_drake_graph(conus_cv_config)
 future::plan(future::multiprocess)
 options(future.globals.maxSize= 100*1024^3) 
 make(conus_plan, cache = ssd_cache,
-     parallelism = "future", jobs = 20, garbage_collection = TRUE)
+     parallelism = "future", jobs = 5, garbage_collection = TRUE, 
+     keep_going = TRUE, memory_strategy = "preclean")
 Sys.time() - time0
 
 # Allowing `add_hist` in `plot_scatter` (or use plotly) requires set lock_envir to FALSE:
