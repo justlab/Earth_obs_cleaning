@@ -78,7 +78,7 @@ system.time(
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 today = Sys.Date()
-# rmarkdown::render(here("AOD_CONUS_Report.Rmd"), 
-#                   output_dir = report_dir, 
-#                   output_file = paste0(today, "_report"))
-
+rmarkdown::render(here("AOD_CONUS_Report.Rmd"),
+                  output_dir = report_dir,
+                  output_file = paste0(today, "_report"),
+                  output_format = rmarkdown::html_document(toc = TRUE))

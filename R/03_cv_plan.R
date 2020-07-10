@@ -21,10 +21,6 @@ conus_plan_cv <- drake_plan(
   plotSHAP1 = target(plot_SHAP(shap_long),
                      transform = map(shap_long,.id = FALSE)),
   plotSHAP2 = target(plot_SHAP_scatter(cv_results, shap_long),
-                     transform = map(cv_results, shap_long,.id = FALSE)),
-  report = rmarkdown::render(
-    knitr_in(here("AOD_CONUS_Report.Rmd")),
-    output_file = file_out(here("AOD_CONUS_Report.html")),
-    output_format = rmarkdown::html_document(toc = TRUE))
+                     transform = map(cv_results, shap_long,.id = FALSE))
 )
 conus_cv_config <- drake_config(conus_plan_cv, cache = ssd_cache)
