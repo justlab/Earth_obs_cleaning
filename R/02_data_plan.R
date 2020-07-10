@@ -1,0 +1,86 @@
+
+conus_plan <- drake_plan(
+  # 1.  Aeronet ---------------------------------------------------------------------
+  
+  # AERONET station locations file: 
+  aer_stns = fread(file = file_in(aer_stn_path), col.names = c("Site_Name", "lon", "lat", "elevm")),
+  conus_buff = get_conus_buff(),
+  nemia_buff = get_nemia_buff(),
+  aerpts = get_aer_spatial(aer_stns),               # wgs84
+  conus_aer = select_points(aerpts, conus_buff),    # AERONET sites in CONUS as points
+  nemia_aer = select_points(conus_aer, nemia_buff), # AERONET sites in NEMIA as points
+  
+  # get nearest MODIS cells 
+  refgrid = get_ref_grid(),
+  
+  # aeronet sites with cloest MODIS grid
+  aer_nearest = get_nearest_cell(conus_aer, refgrid), # Aeronet matched to grid, 174x4
+  aer_nearest_2 = remove_site_on_water(aer_nearest), # remove 2 sites on water
+  
+  # limit aeronet data by date (aer_btw)
+  aer_data = get_stn_data(aod_dir = file_in(aer_files_path)),  # 26171206x56, 11G
+  aer_btw = target(sel_data_bytime(aer_data, date_start, date_end),
+                   transform = map(date_start = !!date_start, 
+                                   date_end = !!date_end,
+                                   .id = FALSE)),
+  # limit aeronet data by station, could be NEMIA or CONUS 
+  sel_aer_region = target(sel_data_bystation(aer_btw, aer_nearest_2),
+                          transform = map(aer_btw, .id = FALSE)),
+  
+  
+  # 2. Interpolation -----------------------------------------------------------
+  # so instead of running all the Aeronet data, only run what is used
+  # it also join with the nearest grid id 
+  wPred = target(interpolate_aod(sel_aer_region, aer_nearest_2), transform = map(sel_aer_region, .id = FALSE)),
+  
+  # 3. WPred Join MCD19 -----------------------------------------------------------
+  # mcd is the large MCD19 dataset, limit to `refsub`:nearby(300km) when readin to 
+  # control total lines, unable to read in all data together, too many rows
+  mcd = target(read_mcd19_one(i, sat = sat, file_in(mcd19path_CONUS)), 
+               transform = cross( i = !!MCD_files_i, 
+                                  sat = !!sats),
+               format = "fst_dt"),
+  # join is the rolling-joined dataset with aeronet
+  join = target(rolling_join(mcd_sat = mcd, aer_data_wPred = wPred),
+                transform = cross(mcd, wPred, .id = mcd)),
+  
+  # For calculating new variables
+  # selected aeronet 
+  sel_aer = target(get_conus_aer_used(conus_aer, sel_aer_region),
+                   transform = map(sel_aer_region, .id = FALSE)),
+  
+  # buffers 
+  ref = target(ref_in_buffer(sel_aer, refgrid),
+               transform = map(sel_aer)),
+  # sites
+  p = target(get_site_list(sel_aer), transform = map(sel_aer)),
+  n = target(get_site_name(sel_aer), transform = map(sel_aer)),
+  
+  # mapping 
+  # this way doesn't work:
+  # sub_grid = target(select_refgrid_subset(ref_list0 = ref, point0 = p, name0 = n),
+  #              transform = map(ref, p, n))
+  sub_grid = target(purrr_pmap(ref = ref, p = p, n = n),
+                    transform = map(ref, p, n, .id = FALSE),
+                    format = "fst_dt"),
+  # calculate new vars to obtain the dataset ready for modeling for terra and aqua, using join, mcd, sub_grid 
+  new_var = target(aod_MODIS_newVars(aod_join_MODIS = join, 
+                                     MODIS_all = mcd, refDT_sub = sub_grid),
+                   transform = map(join, mcd, .id = c(join)),
+                   format = "fst_dt"),
+  # deliver two rowbinded dataset: for terra and aqua 
+  # I am not sure what this way doesn't work: 
+  # binded = target(rbindlist(new_var),
+  #                 transform = combine(new_var, .by = c(i, sat))),
+  # `.id_chr` let you save the file using target names:
+  out = target(write_new_var(new_var, id = .id_chr), transform = map(new_var))
+)
+
+conus_plan
+nrow(conus_plan)
+#drake_plan_source(conus_plan)
+if(nrow(conus_plan)<100){
+  conus_config <- drake_config(conus_plan, cache = ssd_cache) # show the dependency
+  # vis_drake_graph(conus_config, from = names(conus_config$layout))
+  vis_drake_graph(conus_config, ncol_legend = 0)
+}
