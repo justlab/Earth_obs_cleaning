@@ -13,9 +13,21 @@ modify_aer_stns <- function(aer_stns0){
   return(aer_stns0)
 }
 
+#' get_aoi_buffer
+#' @param aoiname Either "conus" or "nemia" for the region to to use for selection buffer
+#' @return sf object of region buffer
+get_aoi_buffer <- function(aoiname){
+  switch(aoiname,
+    "conus" = buff <- get_conus_buff(),
+    "nemia" = buff <- get_nemia_buff(),
+    stop("Unsupported aoi name:", aoiname)
+  )
+  buff
+} 
+
 #' get_conus_buff
 #' @param conus_file location of the sf CONUS file no Great Lake -- rds file
-#' @return sf object of CONUS shapfile
+#' @return sf object of CONUS shapefile
 get_conus_buff <- function(conus_file = 
   "/data-belle/LST/MODIS.LST.C6/derived/conus_GLakes_buff_sf_poly_201906.rds"){
   readRDS(conus_file)
