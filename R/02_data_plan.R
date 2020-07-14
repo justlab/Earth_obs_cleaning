@@ -3,7 +3,7 @@ data_plan <- drake_plan(
   # 1.  Aeronet ---------------------------------------------------------------------
   
   # AERONET station locations file: 
-  aer_stns = fread(file = file_in(aer_stn_path), col.names = c("Site_Name", "lon", "lat", "elevm")),
+  aer_stns = fread(file = file_in(!!aer_stn_path), col.names = c("Site_Name", "lon", "lat", "elevm")),
   region_buff = target(get_aoi_buffer(aoiname), transform = map(aoiname = !!aoiname)),
   aerpts = get_aer_spatial(aer_stns),               # wgs84
   aer = target(select_points(aerpts, region_buff),
@@ -17,7 +17,7 @@ data_plan <- drake_plan(
   aer_nearest_2 = remove_site_on_water(aer_nearest), # remove 2 sites on water
   
   # limit aeronet data by date (aer_btw)
-  aer_data = get_stn_data(aod_dir = file_in(aer_files_path)),  # 26171206x56, 11G
+  aer_data = get_stn_data(aod_dir = file_in(!!aer_files_path)),  # 26171206x56, 11G
   aer_btw = target(sel_data_bytime(aer_data, date_start, date_end),
                    transform = map(date_start = !!date_start, 
                                    date_end = !!date_end,
@@ -37,7 +37,7 @@ data_plan <- drake_plan(
   # 3. WPred Join MCD19 -----------------------------------------------------------
   # mcd is the large MCD19 dataset, limit to `refsub`:nearby(300km) when readin to 
   # control total lines, unable to read in all data together, too many rows
-  mcd = target(read_mcd19_one(i, sat = sat, file_in(mcd19path_CONUS)), 
+  mcd = target(read_mcd19_one(i, sat = sat, file_in(!!mcd19path_CONUS)), 
                transform = cross( i = !!MCD_files_i, 
                                   sat = !!sats),
                format = "fst_dt"),
