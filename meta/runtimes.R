@@ -3,15 +3,15 @@ library(drake)
 packageVersion("drake") # 7.8.0, Coco, before updating to R 4.0
 
 allan_cache = drake_cache(path = "/scratch/cache/aeronet_drake")      # Dec 22 2019, Allan's run
-allan_cache2= drake_cache(path = "/data-coco/mcd19/cache/aeronet_drake") # Jan 4 2020, newer run
+allan_cache = drake_cache(path = "/data-coco/mcd19/cache/aeronet_drake") # Jan 4 2020, newer run
 # changed group to shared and added group write to everything; deleted drake/history/lock
 yang_cache  = drake_cache(path = "/scratch/cache/aeronet_drake_yang") # Aug 28 2019
 # Johnathan's only cache to date is on Belle /scratch/cache/aeronet_drake, but only has 13 targets, and was probably just aeronet_subset project that Yang built on
 
 # note: should add years to target names (like in MAIAC processing) unless we do not want to keep cache of previous years
 
-ac = cached(cache = yang_cache)
-yc = cached(cache = allan_cache)
+yc = cached(cache = yang_cache)
+ac = cached(cache = allan_cache)
 length(ac) # 3203
 length(yc) # 2955
 
