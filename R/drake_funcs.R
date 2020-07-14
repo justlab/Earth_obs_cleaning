@@ -386,7 +386,7 @@ aod_MODIS_newVars <- function(aod_join_MODIS, MODIS_all, refDT_sub){
 }
  
 write_new_var <- function(new_var, id){
-  if (!is.null(new_var)) write.fst(new_var, path = file.path(file_out(out_dir),id))
+  if (!is.null(new_var)) write.fst(new_var, path = file.path(out_dir,id))
 }
 
 # 7. CV -------------------------------------------------------------------
