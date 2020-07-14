@@ -1,20 +1,19 @@
 
-conus_plan <- drake_plan(
+data_plan <- drake_plan(
   # 1.  Aeronet ---------------------------------------------------------------------
   
   # AERONET station locations file: 
   aer_stns = fread(file = file_in(aer_stn_path), col.names = c("Site_Name", "lon", "lat", "elevm")),
-  conus_buff = get_conus_buff(),
-  nemia_buff = get_nemia_buff(),
+  region_buff = target(get_aoi_buffer(aoiname), transform = map(aoiname = !!aoiname)),
   aerpts = get_aer_spatial(aer_stns),               # wgs84
-  conus_aer = select_points(aerpts, conus_buff),    # AERONET sites in CONUS as points
-  nemia_aer = select_points(conus_aer, nemia_buff), # AERONET sites in NEMIA as points
+  aer = target(select_points(aerpts, region_buff),
+               transform = map(aoiname)),           # AERONET sites in region as points
   
   # get nearest MODIS cells 
-  refgrid = get_ref_grid(),
+  refgrid = get_ref_grid(refgrid_path),
   
   # aeronet sites with cloest MODIS grid
-  aer_nearest = get_nearest_cell(conus_aer, refgrid), # Aeronet matched to grid, 174x4
+  aer_nearest = target(get_nearest_cell(aer, refgrid), transform = map(aer, .id = FALSE)), # Aeronet matched to grid, 174x4
   aer_nearest_2 = remove_site_on_water(aer_nearest), # remove 2 sites on water
   
   # limit aeronet data by date (aer_btw)
@@ -31,7 +30,9 @@ conus_plan <- drake_plan(
   # 2. Interpolation -----------------------------------------------------------
   # so instead of running all the Aeronet data, only run what is used
   # it also join with the nearest grid id 
-  wPred = target(interpolate_aod(sel_aer_region, aer_nearest_2), transform = map(sel_aer_region, .id = FALSE)),
+  wPred = target(interpolate_aod(sel_aer_region, aer_nearest_2), 
+                 transform = map(sel_aer_region, .id = FALSE),
+                 format = "fst_dt"),
   
   # 3. WPred Join MCD19 -----------------------------------------------------------
   # mcd is the large MCD19 dataset, limit to `refsub`:nearby(300km) when readin to 
@@ -42,12 +43,13 @@ conus_plan <- drake_plan(
                format = "fst_dt"),
   # join is the rolling-joined dataset with aeronet
   join = target(rolling_join(mcd_sat = mcd, aer_data_wPred = wPred),
-                transform = cross(mcd, wPred, .id = mcd)),
+                transform = cross(mcd, wPred, .id = mcd),
+                format = "fst_dt"),
   
   # For calculating new variables
   # selected aeronet 
-  sel_aer = target(get_conus_aer_used(conus_aer, sel_aer_region),
-                   transform = map(sel_aer_region, .id = FALSE)),
+  sel_aer = target(get_conus_aer_used(aer, sel_aer_region),
+                   transform = map(aer, sel_aer_region, .id = FALSE)),
   
   # buffers 
   ref = target(ref_in_buffer(sel_aer, refgrid),
@@ -75,12 +77,3 @@ conus_plan <- drake_plan(
   # `.id_chr` let you save the file using target names:
   out = target(write_new_var(new_var, id = .id_chr), transform = map(new_var))
 )
-
-conus_plan
-nrow(conus_plan)
-#drake_plan_source(conus_plan)
-if(nrow(conus_plan)<100){
-  conus_config <- drake_config(conus_plan, cache = ssd_cache) # show the dependency
-  # vis_drake_graph(conus_config, from = names(conus_config$layout))
-  vis_drake_graph(conus_config, ncol_legend = 0)
-}
