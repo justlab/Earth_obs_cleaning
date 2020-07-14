@@ -169,8 +169,8 @@ sel_data_bystation <- function(aer_data, aer_stns){
 
 #' select AOD data by date 
 sel_data_bytime <- function(aer_data, date_start = NULL, date_end = NULL){
-  if(!is.null(date_start)){ aer_data = aer_data[stn_time >= as.POSIXct(date_start, tz = "UTC"), ] }
-  if(!is.null(date_end)) {aer_data = aer_data[stn_time <= as.POSIXct(date_end, tz = "UTC"),   ] }
+  if(!is.null(date_start)){ aer_data = aer_data[as.Date(stn_time) >= as.Date(date_start), ] }
+  if(!is.null(date_end)) {aer_data = aer_data[as.Date(stn_time) <= as.Date(date_end), ] }
   return(aer_data)
 }
 
