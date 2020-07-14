@@ -80,8 +80,8 @@ select_points <- function(aerpts, reg_polygon){
 #' 
 #' @return sf object of grid in WGS84
 #' 
-get_ref_grid <- function(ref_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_grid_201906.fst"){
-  refDT = read_fst(ref_file, as.data.table = TRUE, columns = c("idLSTpair0", "x_wgs84", "y_wgs84"))
+get_ref_grid <- function(ref_file){
+  refDT = read_fst(ref_file, as.data.table = TRUE, columns = c("idM21pair0", "x_wgs84", "y_wgs84"))
   st_as_sf(refDT, coords = c("x_wgs84", "y_wgs84"), crs = 4326)
 }
 
@@ -92,8 +92,8 @@ get_ref_grid <- function(ref_file = "/data-belle/LST/MODIS.LST.C6/derived/conus_
 #' @param conus_aer The NEMIA Aeronet sites points 
 #' @param refgrid The loaded refereence grid points by \code{\function{get_ref_grid}}  
 #' 
-#' @return conus_aer: aer_nearest, aeronets sites with cloest grid point (idLSTpair0)
-#' find near cells: find grid idLSTpair0 around 
+#' @return conus_aer: aer_nearest, aeronet sites with closest grid point (idM21pair0)
+#' find near cells: find grid idM21pair0 around 
 get_nearest_cell <- function(conus_aer, refgrid){
   conus_aerNA <- st_transform(conus_aer, crs = 2163) # US National Atlas
   # limit a 1500m buffer, I agree this part is a little bit similar to `ref_in_buffer`
@@ -109,7 +109,7 @@ get_nearest_cell <- function(conus_aer, refgrid){
   # match the nearest grid point to Aeronet sites
   nn_aer_ref <- st_nn(conus_aer, refsub, k = 1, returnDist = FALSE)
   # join LSTids to stations, named it as `nearest_refgrid`
-  conus_aer$nearest_refgrid <- refsub[unlist(nn_aer_ref), ]$idLSTpair0
+  conus_aer$nearest_refgrid <- refsub[unlist(nn_aer_ref), ]$idM21pair0
   return(conus_aer)
 }
 
@@ -203,7 +203,7 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
   # remove unncessary variables: 
   aer_data_wPred <- aer_data_wPred[,-c(vars_aod_sub, vars_wv), with = F]
   
-  # attach nearest_refgrid (also called idLSTpair0 in many our script) to Aer Site_Name
+  # attach nearest_refgrid (also called idM21pair0 in many our script) to Aer Site_Name
   setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
   setkey(aer_data_wPred, Site_Name)
   aer_sites <- as.data.table(aer_nearest_2)[,c("Site_Name", "nearest_refgrid"), with = F]
@@ -226,11 +226,11 @@ read_mcd19_one <- function(sat = "terra", i, filepath){
     dt = read.fst(lst_files[i], as.data.table = T,
                   columns = c("overpass_index", "Optical_Depth_047", 
                               "AOD_Uncertainty", "Column_WV", "AOD_QA", "RelAZ", 
-                              "idLSTpair0", "overpass_time"))
-    # return(t[idLSTpair0%in%refsub$idLSTpair0])
+                              "idM21pair0", "overpass_time"))
+    # return(t[idM21pair0%in%refsub$idM21pair0])
     dt[, join_time:=overpass_time] # join later using `overpass_time`
     dt[, sat := choose]
-    setnames(dt, "idLSTpair0", "nearest_refgrid") # rename for join later 
+    setnames(dt, "idM21pair0", "nearest_refgrid") # rename for join later 
     setkey(dt, nearest_refgrid, join_time)
   return(dt)
 }
@@ -313,8 +313,8 @@ purrr_pmap <- function(ref, p, n){
   refDT_sub <- rbindlist(refDT_sub_list)
   refDT_sub[, dist_km:=as.numeric(dist)/1000] # change distance to km 
   # returns dt with three variables: 
-  refDT_sub <- setDT(refDT_sub)[,.(Site_Name, idLSTpair0, dist_km)]
-  setnames(refDT_sub, "idLSTpair0", "nearest_refgrid")
+  refDT_sub <- setDT(refDT_sub)[,.(Site_Name, idM21pair0, dist_km)]
+  setnames(refDT_sub, "idM21pair0", "nearest_refgrid")
   setkey(refDT_sub, Site_Name)
   return(refDT_sub)
 }
