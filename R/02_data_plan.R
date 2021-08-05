@@ -13,25 +13,29 @@ data_plan <- drake_plan(
   refgrid = get_ref_grid(refgrid_path),
   
   # aeronet sites with cloest MODIS grid
-  aer_nearest = target(get_nearest_cell(aer, refgrid), transform = map(aer, .id = FALSE)), # Aeronet matched to grid, 174x4
-  aer_nearest_2 = remove_site_on_water(aer_nearest), # remove 2 sites on water
+  nearest_grid = target(get_nearest_cell(aer, refgrid), transform = map(aer)), # Aeronet matched to grid
+  nearest_grid_2 = target(remove_site_on_water(aer_nearest), transform = map(aer)), # remove 2 sites on water
   
-  # limit aeronet data by date (aer_btw)
-  aer_data = get_stn_data(aod_dir = aer_files_path),  # 26171206x56, 11G
-  aer_btw = target(sel_data_bytime(aer_data, date_start, date_end),
-                   transform = map(date_start = !!date_start, 
-                                   date_end = !!date_end,
-                                   .id = FALSE)),
-  # limit aeronet data by station, could be NEMIA or CONUS 
-  sel_aer_region = target(sel_data_bystation(aer_btw, aer_nearest_2),
-                          transform = map(aer_btw, .id = FALSE)),
+  # limit aeronet data by date
+  aer_data = target(get_stn_data(aod_dir = aer_files_path, stn_names = aer_nearest_2$Site_Name,
+                                 date_start, date_end),  # 26171206x56, 11G
+                    transform = map(date_start = !!date_start, 
+                                    date_end = !!date_end),
+                    format = "fst_dt"),
+  # aer_btw = target(sel_data_bytime(aer_data, date_start, date_end),
+  #                  transform = map(date_start = !!date_start, 
+  #                                  date_end = !!date_end,
+  #                                  .id = FALSE)),
+  # # limit aeronet data by station, could be NEMIA or CONUS 
+  # sel_aer_region = target(sel_data_bystation(aer_btw, aer_nearest_2),
+  #                         transform = map(aer_btw, .id = FALSE)),
   
   
   # 2. Interpolation -----------------------------------------------------------
   # so instead of running all the Aeronet data, only run what is used
   # it also join with the nearest grid id 
-  wPred = target(interpolate_aod(sel_aer_region, aer_nearest_2), 
-                 transform = map(sel_aer_region, .id = FALSE),
+  wPred = target(interpolate_aod(aer_data, nearest_grid_2), 
+                 transform = map(aer_data, nearest_grid_2),
                  format = "fst_dt"),
   
   # 3. WPred Join MCD19 -----------------------------------------------------------
