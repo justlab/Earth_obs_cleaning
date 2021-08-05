@@ -68,7 +68,9 @@ if(nrow(data_plan)<100){
   #conus_config <- drake_config(data_plan, cache = aod_cache) 
   # vis_drake_graph(conus_config, from = names(conus_config$layout))
   #vis_drake_graph(conus_config, ncol_legend = 0)
-  vis_drake_graph(data_plan, cache = aod_cache, ncol_legend = 0)
+  
+  #vis_drake_graph(data_plan, cache = aod_cache, ncol_legend = 0)
+  vis_drake_graph(data_plan, cache = aod_cache, ncol_legend = 0, targets_only = TRUE)
 }
 
 future::plan(future::multiprocess) # falls back to multisession in RStudio
