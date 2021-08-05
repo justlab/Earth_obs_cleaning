@@ -17,7 +17,7 @@ data_plan <- drake_plan(
   nearest_grid_2 = target(remove_site_on_water(aer_nearest), transform = map(aer)), # remove 2 sites on water
   
   # limit aeronet data by date
-  aer_data = target(get_stn_data(aod_dir = aer_files_path, stn_names = aer_nearest_2$Site_Name,
+  aer_data = target(get_stn_data(aod_dir = aer_files_path, stn_names = nearest_grid_2$Site_Name,
                                  date_start, date_end),  # 26171206x56, 11G
                     transform = map(date_start = !!date_start, 
                                     date_end = !!date_end),
