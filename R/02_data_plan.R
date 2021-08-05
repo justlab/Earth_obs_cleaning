@@ -52,8 +52,8 @@ data_plan <- drake_plan(
   
   # For calculating new variables
   # selected aeronet 
-  sel_aer = target(get_conus_aer_used(aer, sel_aer_region),
-                   transform = map(aer, sel_aer_region, .id = FALSE)),
+  sel_aer = target(get_conus_aer_used(aer, unique(aer_data$AERONET_Site_Name)),
+                   transform = map(aer, aer_data, .id = FALSE)),
   
   # buffers 
   ref = target(ref_in_buffer(sel_aer, refgrid),
