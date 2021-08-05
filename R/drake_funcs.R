@@ -259,12 +259,13 @@ rolling_join <- function(mcd_sat, aer_data_wPred){
 
 # 5. Calculate distance ------------------------------------------------------
 
-#' get aernet used in this year, since I plan to cal
+#' subset to AERONET sites with available observation data
 #' 
-#' @return sel_aer, a selected conus_aer in year 2018, about 86 stations
-get_conus_aer_used <- function(conus_aer, sel_aer_region){
-  # limit the gridcell by useful aeronet sites in the first place:
-  sel_aer = conus_aer[conus_aer$Site_Name%in%unique(sel_aer_region$AERONET_Site_Name),]
+#' @param aer_points sf points of AERONET stations
+#' @param aer_data_sites character vector of site names from the Aeronet obsevations table
+#' @return sf points of AERONET stations reprojected to EPSG:2163
+get_aer_points_used <- function(aer_points, aer_data_sites){
+  sel_aer = aer_points[aer_points$Site_Name %in% aer_data_sites,]
   sel_aer = st_transform(sel_aer, crs = 2163)
   return(sel_aer)
 }
@@ -275,10 +276,10 @@ get_conus_aer_used <- function(conus_aer, sel_aer_region){
 ref_in_buffer <- function(sel_aer, refgrid){
   # not all aer sites are needed 
   radius0 <-  270000
+  if(!st_crs(sel_aer) == st_crs(2163)) sel_aer <- st_transform(sel_aer, crs = 2163)
   aod_buffers <- st_buffer(sel_aer, radius0)
   aod_buffers_list <- st_geometry(aod_buffers)
   refgrid_m <- st_transform(refgrid, crs = 2163) 
-  sel_aer <-  st_transform(sel_aer, crs = 2163)
   # # you cannot do this directly: since it will join all the buffer and produce one 
   # refsub <- refgrid_m[st_intersects(refgrid_m, aod_buffers, sparse = FALSE), ]
   join_list <- lapply(aod_buffers_list, function(x)st_intersects(refgrid_m, x))
