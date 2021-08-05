@@ -129,30 +129,38 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
                # "elev", "ozone", "NO2", 
                # "Solar_Zenith_Angle", "Precipitable_Water")
 
-#' read in the Aeronet AOD measurement data from `aod20_file_dir` files.   
-#' @param aod_dir where the files located on coco.   
+#' read in the Aeronet AOD measurement data from text files sourced from downloaded `tar.gz` file.   
+#' @param aod_dir directory where the `.lev20` files were extracted to.   
 #' @return 
 #' 
-get_stn_data <- function(aod_dir){
-  aer_files_dir  <-  list.files(aod_dir, pattern = "*.lev20", full.names = TRUE)
-  t0 <- fread(aer_files_dir[1]) # to get variable names: 
+get_stn_data <- function(aod_dir, stn_names, date_start = NULL, date_end = NULL){
+  stn_names = unique(stn_names)
+  # open files containing names of stations in the specified region 
+  aer_files_dir <- sapply(paste0(unique(stn_names),".*\\.lev20"), FUN = list.files, 
+                                 path = aod_dir, full.names = TRUE)
+  found_files <- sapply(aer_files_dir, function(x) length(x) > 0)
+  aer_files_dir = aer_files_dir[found_files]
+  t0 <- fread(aer_files_dir[[1]], nrows = 10) # to get variable names: 
   vars_aod <- intersect(grep("AOD_", names(t0), value = T), grep("nm", names(t0), value = T))
   # sort the wave lengths varnames from low to high, and update the vars_aod
   x_nm <- sort(readr::parse_number(vars_aod)) # 340, 380, ... , 1640
   vars_aod <- paste0("AOD_", x_nm,"nm") # the AOD_...nm variables
   vars_wv <- paste0("Exact_Wavelengths_of_AOD(um)_", x_nm,"nm") # the Exact wv length
-  # some other variables 
+
   # data_path is a single file path
-  read.aod <- function(data_path){
+  read_aod <- function(data_path, date_start = NULL, date_end = NULL){
     dt <- fread(data_path, select =  c(vars0,vars_aod,vars_wv))
     dt[, stn_time := as.POSIXct(paste(`Date(dd:mm:yyyy)`, `Time(hh:mm:ss)`), 
                            format = "%d:%m:%Y %H:%M:%S", tz = "UTC")]
     dt[, c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)") := NULL]
-    for (i in names(dt)) dt[get(i) == -999, (i):= NA] # set NA 
+    for (i in names(dt)) dt[get(i) == -999, (i):= NA] # set NA
+    if(!is.null(date_start)) {dt = dt[as.Date(stn_time) >= as.Date(date_start), ] }
+    if(!is.null(date_end))   {dt = dt[as.Date(stn_time) <= as.Date(date_end), ] }
+    setcolorder(dt, c("AERONET_Site_Name", "stn_time"))
     dt
   }
   
-  file_list <- lapply(aer_files_dir, read.aod) # 440s
+  file_list <- lapply(unlist(aer_files_dir), read_aod, date_start = date_start, date_end = date_end) # 440s
   aer_data <- rbindlist(file_list) 
   return(aer_data)
 }
