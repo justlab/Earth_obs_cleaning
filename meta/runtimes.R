@@ -6,21 +6,28 @@ allan_cache = drake_cache(path = "/scratch/cache/aeronet_drake")      # Dec 22 2
 allan_cache = drake_cache(path = "/data-coco/mcd19/cache/aeronet_drake") # Jan 4 2020, newer run
 # changed group to shared and added group write to everything; deleted drake/history/lock
 yang_cache  = drake_cache(path = "/scratch/cache/aeronet_drake_yang") # Aug 28 2019
-# Johnathan's only cache to date is on Belle /scratch/cache/aeronet_drake, but only has 13 targets, and was probably just aeronet_subset project that Yang built on
+# Johnathan's old cache on Belle /scratch/cache/aeronet_drake, but only has 13 targets, and was probably just aeronet_subset project that Yang built on
+john_cache = drake_cache(path = "/data-belle/mcd19/cache/aeronet_drake_johnathan")
 
 # note: should add years to target names (like in MAIAC processing) unless we do not want to keep cache of previous years
 
 yc = cached(cache = yang_cache)
 ac = cached(cache = allan_cache)
-length(ac) # 3203
+jc = cached(cache = john_cache)
+length(ac) # 2956
 length(yc) # 2955
+length(jc) # 14
 
 abt = build_times(cache = allan_cache, all_of(ac))
 ybt = build_times(cache = yang_cache, all_of(yc))
+jbt = build_times(cache = john_cache, all_of(jc))
+
 
 library(fst)
 write_fst(abt, "meta/allan_runtimes.fst", compress = 100)
 write_fst(ybt, "meta/yang_runtimes.fst", compress = 100)
+#write_fst(jbt, "meta/johnathan_runtimes_pre-optimize.fst", compress = 100)
+#write_fst(jbt, "meta/johnathan_runtimes.fst", compress = 100)
 
 library(dplyr)
 library(stringr)
