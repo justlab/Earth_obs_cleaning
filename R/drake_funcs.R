@@ -190,20 +190,23 @@ sel_data_bytime <- function(aer_data, date_start = NULL, date_end = NULL){
 #' @return dataset of aer_data with pred, also with `nearest_refgrid` next to Site_Name
 #' 
 interpolate_aod <- function(aer_data, aer_nearest_2){
-  aer_data <- aer_data[, -c("AOD_1020nm", "AOD_1640nm"), with = F]
+  keepcols = grep('1020|1640', names(aer_data), invert = T)
+  aer_data <- aer_data[, ..keepcols]
   aer_data[,obs:=.I]
   setkey(aer_data, obs)
   vars_wv <- grep("Exact_Wavelengths_of_AOD", names(aer_data), value = T)
   vars_aod_sub <- grep("AOD_", names(aer_data), value = T)
   aer_data$N_NAAOD <- rowSums(!is.na(aer_data[,..vars_aod_sub]))
   # create long-format data 
-  d <- melt(aer_data[, c(vars_aod_sub,vars_wv[1:22], "obs"), with = F], 
-            measure = list(vars_aod_sub, vars_wv[1:22]),value.name = c("aod", "exact_wv"))
+  d <- melt(aer_data[, c(vars_aod_sub, vars_wv, "obs"), with = F], 
+            measure = list(vars_aod_sub, vars_wv), value.name = c("aod", "exact_wv"))
   obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside ==T, obs]
   # choose non-NA and >0 AOD
   d <- d[!is.na(aod)]
   # the predict part: 
-  d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(log(aod) ~  log(exact_wv) + I((log(exact_wv))^2)), newdata = data.frame(exact_wv = 0.47))))] # notice to put 0.47 not 470
+  d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(
+    log(aod) ~ log(exact_wv) + I((log(exact_wv))^2)), 
+    newdata = data.frame(exact_wv = 0.47))))] # notice to put 0.47 not 470
   setkey(d2, obs)
   aer_data_wPred <- d2[aer_data]
   # set NA: At least 4 observations wanted for exterpolation 
