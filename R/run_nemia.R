@@ -40,7 +40,7 @@ sats = c("terra", "aqua")
 
 # MCD19 data load and save output: 
 #mcd19path = paste0("/data-coco/mcd19/fst/nemia/", this_year, "/")
-mcd19path_CONUS = paste0("/data-coco/mcd19/fst/conus/", this_year, "/")
+mcd19path_CONUS = paste0("/data-coco/mcd19/fst/conus_full/", this_year, "/")
 out_dir = paste0("/data-coco/mcd19/fst/conus/", this_year, "_AOD_newVar/")
 if(!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
