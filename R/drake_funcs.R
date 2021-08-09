@@ -133,8 +133,8 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
 #' @param aod_dir directory where the `.lev20` files were extracted to.   
 #' @return 
 #' 
-get_stn_data <- function(aod_dir, stn_names, date_start = NULL, date_end = NULL){
-  stn_names = unique(stn_names)
+get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
+  stn_names = unique(stations$Site_Name)
   # open files containing names of stations in the specified region 
   aer_files_dir <- sapply(paste0(unique(stn_names),".*\\.lev20"), FUN = list.files, 
                                  path = aod_dir, full.names = TRUE)
