@@ -14,13 +14,14 @@ data_plan <- drake_plan(
   
   # aeronet sites with cloest MODIS grid
   nearest_grid = target(get_nearest_cell(aer, refgrid), transform = map(aer)), # Aeronet matched to grid
-  nearest_grid_2 = target(remove_site_on_water(aer_nearest), transform = map(aer)), # remove 2 sites on water
+  nearest_grid_2 = target(remove_site_on_water(nearest_grid), transform = map(aer, nearest_grid)), # remove 2 sites on water
   
   # limit aeronet data by date
   aer_data = target(get_stn_data(aod_dir = aer_files_path, stn_names = nearest_grid_2$Site_Name,
                                  date_start, date_end),  # 26171206x56, 11G
                     transform = map(date_start = !!date_start, 
-                                    date_end = !!date_end),
+                                    date_end = !!date_end,
+                                    nearest_grid_2),
                     format = "fst_dt"),
   # aer_btw = target(sel_data_bytime(aer_data, date_start, date_end),
   #                  transform = map(date_start = !!date_start, 
@@ -52,7 +53,7 @@ data_plan <- drake_plan(
   
   # For calculating new variables
   # selected aeronet 
-  sel_aer = target(get_conus_aer_used(aer, unique(aer_data$AERONET_Site_Name)),
+  sel_aer = target(get_aer_points_used(aer, unique(aer_data$AERONET_Site_Name)),
                    transform = map(aer, aer_data, .id = FALSE)),
   
   # buffers 
