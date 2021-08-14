@@ -228,7 +228,7 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
   if(nrow(rj_newvars) > 0){
     rj_newvars
   } else {
-    NULL
+    data.table(NA)
   }
 }
 
