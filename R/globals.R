@@ -13,12 +13,8 @@ refras_path = "/data-belle/LST/MYD21A1/derived/conus_myd21_stack.tif"
 this_year = 2018
 # if you don't want to limit, do not include dates in `sel_data_bytime`
 date_start = paste0(this_year, "-01-01")
-date_end = paste0(this_year, "-01-01") # XXX DEBUG 
-#date_end = paste0(this_year, "-12-31") 
-
-# how many MCD days (files) to work on:
-maxdays = as.integer(format(as.Date(date_end), "%j"))
-MCD_files_i = c(1:maxdays)
+#date_end = paste0(this_year, "-01-02") # for testing
+date_end = paste0(this_year, "-12-31") 
 
 # the aer site info. file:
 aer_stn_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt"
