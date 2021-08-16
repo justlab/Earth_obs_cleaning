@@ -1,5 +1,7 @@
 # See runtimes of previous runs
 library(drake)
+library(magrittr)
+library(dplyr)
 packageVersion("drake") # 7.8.0, Coco, before updating to R 4.0
 
 allan_cache = drake_cache(path = "/scratch/cache/aeronet_drake")      # Dec 22 2019, Allan's run
@@ -22,6 +24,18 @@ abt = build_times(cache = allan_cache, all_of(ac))
 ybt = build_times(cache = yang_cache, all_of(yc))
 jbt = build_times(cache = john_cache, all_of(jc))
 
+# checking time to run aod_MODIS_newVars() for Allan's run:
+library(dplyr)
+abt %>% filter(substr(target, 1, 7) == 'new_var') %>% select(elapsed) %>% summary()
+#     elapsed                    
+# Min.   :0.268s                
+# 1st Qu.:34.2535s              
+# Median :38.215s               
+# Mean   :46.5202421340629s     
+# 3rd Qu.:43.8105s              
+# Max.   :119s (~1.98 minutes) 
+abt %>% filter(substr(target, 1, 7) == 'new_var') %>% select(elapsed) %>% sum()
+# 34006 seconds, or 9.4 hours for CONUS
 
 library(fst)
 write_fst(abt, "meta/allan_runtimes.fst", compress = 100)

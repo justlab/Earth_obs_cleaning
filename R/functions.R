@@ -228,6 +228,11 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
     }
     if(nrow(rj_newvars) > 0){
       rj_newvars
+    } else {
+      # This will create an extra "V1" column in rowbound final target with all NAs,
+      # but it gets around the error of writing NULL to FST format
+      data.table(NA) 
+    }
   } else {
     data.table(NA)
   }
