@@ -1,9 +1,7 @@
 library(targets)
 library(tarchetypes)
 library(future)
-# plan(multisession)
-library(future.callr)
-plan(callr)
+plan(multicore)
 
 tar_option_set(
   packages = c('data.table',
@@ -57,7 +55,7 @@ list(
       tar_map( # sat mapping
         values = sat_values,
         tar_target(mcd19_vars, derive_mcd19_vars(aer_bydate, nearby_cells, sat), 
-                   pattern = head(map(aer_bydate), n = 20),
+                   pattern = map(aer_bydate),
                    format = 'fst_dt',
                    storage = 'worker')
       )
