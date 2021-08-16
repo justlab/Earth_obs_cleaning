@@ -178,55 +178,56 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
   
   # 2. Roll Join
   mcd = read_mcd19_one(sat = sat, daynum = this_daynum, filepath = mcd19path_CONUS)
-  # roll join will update value of the time column in X to the value of the time
-  # column in i. Copy AERONET's stn_time to a column with the same name as
-  # MCD19's time column so we can compare the time difference afterwards using
-  # meaningful column names.
-  aer_data[, overpass_time := stn_time]
-  rj <- aer_data[mcd, roll = 'nearest', nomatch = 0, 
-                 on = c(idM21pair0 = 'idM21pair0', overpass_time = 'overpass_time')]
-  rm(aer_data)
-  
-  # Only keep AERONET to MCD19A2 joins with difference of 30 minutes or less
-  rj[, rj_difftime := overpass_time - stn_time]
-  rj = rj[rj_difftime <= rolldiff_limit, ]
-  rj = rj[!is.na(Optical_Depth_047), ]
-  
-  # 3. Derived Values using nearby MCD19 cells
-  nearby_cells = nearby_cells[Site_Name %in% rj$Site_Name]
-  setnames(nearby_cells, "idM21pair0", "nearby_cellid", skip_absent=TRUE)
-  # join every MODIS cell ID within 270km (default) from station
-  rjbuff = rj[nearby_cells, allow.cartesian = TRUE, 
-              on = c(Site_Name = 'Site_Name')]
-  
-  # join mcd19 AOD values (only) to the cells in the distance buffers
-  # note the join only uses idM21pair0 because this function processes one date at a time
-  # if that ever changes, will need to add date to the `on` vector
-  setnames(mcd, 'idM21pair0', 'nearby_cellid')
-  rjbuff_vals = mcd[, .(nearby_cellid = nearby_cellid, 
-                        nearby_mcd_aod = Optical_Depth_047)][
-                     rjbuff, on = c(nearby_cellid = 'nearby_cellid')]
-  
-  calc_buff_vals <- function(distx){
-    d_summary = rjbuff_vals[site_dist <= distx * 1000, 
-                            .(nonmissing = mean(!is.na(nearby_mcd_aod)), 
-                              AOD_buffer_mean = mean(nearby_mcd_aod, na.rm = T)),
-                            by = idM21pair0]
-    setnames(d_summary, c("nonmissing", "AOD_buffer_mean"), 
-             paste0(c("pNonNAAOD", "Mean_AOD"), distx, "km"))
-    setkey(d_summary, idM21pair0)
-  }
-  new_vars = Reduce(merge, lapply(buffers_km, calc_buff_vals))
-  rj_newvars = new_vars[rj]
-  rm(new_vars, rj, rjbuff_vals, mcd)
-  
-  # difference between central cell MCD19 AOD and mean AOD in buffers
-  for(distx in buffers_km){
-    rj_newvars[, diff_AOD := Optical_Depth_047 - get(paste0('Mean_AOD', distx, 'km'))]
-    setnames(rj_newvars, 'diff_AOD', paste0('diff_AOD', distx, 'km'))
-  }
-  if(nrow(rj_newvars) > 0){
-    rj_newvars
+  if(!is.null(mcd)){
+    # roll join will update value of the time column in X to the value of the time
+    # column in i. Copy AERONET's stn_time to a column with the same name as
+    # MCD19's time column so we can compare the time difference afterwards using
+    # meaningful column names.
+    aer_data[, overpass_time := stn_time]
+    rj <- aer_data[mcd, roll = 'nearest', nomatch = 0, 
+                   on = c(idM21pair0 = 'idM21pair0', overpass_time = 'overpass_time')]
+    rm(aer_data)
+    
+    # Only keep AERONET to MCD19A2 joins with difference of 30 minutes or less
+    rj[, rj_difftime := overpass_time - stn_time]
+    rj = rj[rj_difftime <= rolldiff_limit, ]
+    rj = rj[!is.na(Optical_Depth_047), ]
+    
+    # 3. Derived Values using nearby MCD19 cells
+    nearby_cells = nearby_cells[Site_Name %in% rj$Site_Name]
+    setnames(nearby_cells, "idM21pair0", "nearby_cellid", skip_absent=TRUE)
+    # join every MODIS cell ID within 270km (default) from station
+    rjbuff = rj[nearby_cells, allow.cartesian = TRUE, 
+                on = c(Site_Name = 'Site_Name')]
+    
+    # join mcd19 AOD values (only) to the cells in the distance buffers
+    # note the join only uses idM21pair0 because this function processes one date at a time
+    # if that ever changes, will need to add date to the `on` vector
+    setnames(mcd, 'idM21pair0', 'nearby_cellid')
+    rjbuff_vals = mcd[, .(nearby_cellid = nearby_cellid, 
+                          nearby_mcd_aod = Optical_Depth_047)][
+                       rjbuff, on = c(nearby_cellid = 'nearby_cellid')]
+    
+    calc_buff_vals <- function(distx){
+      d_summary = rjbuff_vals[site_dist <= distx * 1000, 
+                              .(nonmissing = mean(!is.na(nearby_mcd_aod)), 
+                                AOD_buffer_mean = mean(nearby_mcd_aod, na.rm = T)),
+                              by = idM21pair0]
+      setnames(d_summary, c("nonmissing", "AOD_buffer_mean"), 
+               paste0(c("pNonNAAOD", "Mean_AOD"), distx, "km"))
+      setkey(d_summary, idM21pair0)
+    }
+    new_vars = Reduce(merge, lapply(buffers_km, calc_buff_vals))
+    rj_newvars = new_vars[rj]
+    rm(new_vars, rj, rjbuff_vals, mcd)
+    
+    # difference between central cell MCD19 AOD and mean AOD in buffers
+    for(distx in buffers_km){
+      rj_newvars[, diff_AOD := Optical_Depth_047 - get(paste0('Mean_AOD', distx, 'km'))]
+      setnames(rj_newvars, 'diff_AOD', paste0('diff_AOD', distx, 'km'))
+    }
+    if(nrow(rj_newvars) > 0){
+      rj_newvars
   } else {
     data.table(NA)
   }
@@ -242,17 +243,20 @@ read_mcd19_one <- function(sat = "terra", daynum, filepath){
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
   mcd_file = file.path(filepath, paste0('mcd19_conus_', choose, '_', this_year, 
                                         daynum, '.fst'))
+  if(file.exists(mcd_file)){
+    dt = read.fst(mcd_file, as.data.table = TRUE,
+                  columns = c("overpass_index", "Optical_Depth_047", 
+                              "AOD_Uncertainty", "Column_WV", "AOD_QA", "RelAZ", 
+                              "idM21pair0", "overpass_time"))
   
-  dt = read.fst(mcd_file, as.data.table = TRUE,
-                columns = c("overpass_index", "Optical_Depth_047", 
-                            "AOD_Uncertainty", "Column_WV", "AOD_QA", "RelAZ", 
-                            "idM21pair0", "overpass_time"))
-
-  dt[, sat := choose]
-  #setnames(dt, "idM21pair0", "nearest_refgrid") # rename for join later 
-  #setkey(dt, nearest_refgrid, join_time)
-  setkey(dt, idM21pair0, overpass_time)
-  dt
+    dt[, sat := choose]
+    #setnames(dt, "idM21pair0", "nearest_refgrid") # rename for join later 
+    #setkey(dt, nearest_refgrid, join_time)
+    setkey(dt, idM21pair0, overpass_time)
+    dt
+  } else {
+    NULL
+  }
 }
 
 
