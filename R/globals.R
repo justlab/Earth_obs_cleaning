@@ -3,7 +3,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Region
-aoiname = "nemia"
+aoiname = "conus"
 
 # Reference grid
 refgrid_path = "/data-belle/LST/MYD21A1/derived/conus_grid_2020.fst"
