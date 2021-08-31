@@ -265,3 +265,26 @@ read_mcd19_one <- function(sat = "terra", daynum, filepath){
 }
 
 
+# TEMPORARY BARELY-CHANGED CV PREP FUNCTIONS FROM DRAKE
+create_qc_vars <- function(dt){
+  dt[, qa_bits := bitwAnd(AOD_QA, strtoi("111100000000", base = 2))]
+  dt[, qa_best := 0]
+  dt[qa_bits == 0 , qa_best := 1]
+  
+  dt[, qa_bits := bitwAnd(AOD_QA, strtoi("11000", base = 2))]
+  dt[qa_bits==0, qa_lwsi := "land"]
+  dt[qa_bits==8, qa_lwsi := "water"]
+  dt[qa_bits==16, qa_lwsi := "snow"]
+  dt[qa_bits==24, qa_lwsi := "ice"]
+  dt[, qa_bits:= NULL]
+  return(dt)
+}
+
+prepare_dt <- function(dt){
+  setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm", skip_absent=TRUE)
+  # The dependent variable: diff_AOD = MCD19 - AERONET = Optical_Depth_047 - AOD_470nm
+  dt[, diff_AOD := MCD19_AOD_470nm - AOD_470nm]
+  dt <- create_qc_vars(dt)
+  dt[, dayint:=as.integer(as.Date(overpass_time))]
+  return(dt)
+}
