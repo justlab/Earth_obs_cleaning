@@ -286,5 +286,6 @@ prepare_dt <- function(dt){
   dt[, diff_AOD := MCD19_AOD_470nm - AOD_470nm]
   dt <- create_qc_vars(dt)
   dt[, dayint:=as.integer(as.Date(overpass_time))]
+  dt = dt[!is.na(get(y_var))]
   return(dt)
 }
