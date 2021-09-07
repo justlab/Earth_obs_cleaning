@@ -7,6 +7,29 @@
 # 
 
 
+#' run the cross-validation by station with RFE.
+#' 
+#' This function is the 4th layer wrap of Kodi's random search cv function
+#' 
+run_cv <- function(dt, ...){
+  # The predictors
+  features = c("MCD19_AOD_470nm",
+               "dayint", 
+               "AOD_Uncertainty", "Column_WV", "RelAZ",
+               "qa_best", 
+               do.call(paste0,expand.grid(
+                 c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
+                 paste0(c(10, 30, 90, 270),"km"))))
+  
+  cv_results <- run.k.fold.cv.rfe.wrap(
+    data = dt, 
+    stn_var = "Site_Name",
+    features0 = features, 
+    y_var = "diff_AOD", 
+    run_param_cv = TRUE, 
+    run_rfe = TRUE,
+    ...)
+}
 
 # Version 3 CV with RFE -------------------------------------------------------------
 # 19.4, a better version that seperates the rfe process
