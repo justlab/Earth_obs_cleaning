@@ -10,7 +10,7 @@ refgrid_path = "/data-belle/LST/MYD21A1/derived/conus_grid_2020.fst"
 refras_path = "/data-belle/LST/MYD21A1/derived/conus_myd21_stack.tif"
 
 # Year
-this_year = 2018
+this_year = 2017
 # if you don't want to limit, do not include dates in `sel_data_bytime`
 date_start = paste0(this_year, "-01-01")
 #date_end = paste0(this_year, "-01-02") # for testing
