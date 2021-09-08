@@ -146,7 +146,7 @@ run.k.fold.cv.rfe.wrap <- function(
     
     for (nf in (n_features):1){
       features_rank_rfe_record[[nf]] <- cv_results$features_rank_full_model # save all the features
-      cat("nf = ",nf, 'features ranked for',sat, 'are\n', features_rank_rfe_record[[nf]], '\n')
+      cat("nf = ", nf, 'features ranked for', sat, 'are\n', features_rank_rfe_record[[nf]], '\n')
       features_rank_rfe[nf] <- cv_results$features_rank_full_model[nf] # save the last feature
       features_updated <- cv_results$features_rank_full_model[-nf] # remove the last and refit to model
       rmse_rfe[nf] <- cv_results$rmse_all_folds
@@ -224,7 +224,7 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
   
   # output dataset
   y_pred_dt <- data.table(y_pred = rep(NA_real_, n_row))
-  shap_score <- as.data.table(matrix(rep(NA_real_, n_row*n_col) ,ncol = n_col))
+  shap_score <- as.data.table(matrix(rep(NA_real_, n_row*n_col), ncol = n_col))
   names(shap_score) <- names(data_X)
   xgb_param_list1 <- xgb_param_list2 <- list()
   BIAS0 <- rep(NA_real_, k_fold)
@@ -305,7 +305,7 @@ rfe.fit <- function(X, Y, xgb_param){
   # message(paste("xgb_param is", unlist(xgb_param)))
   xgboost::xgboost(data = as.matrix(X),
                     label = as.matrix(Y),
-                    params = xgb_param,
+                    params = xgb_param[names(xgb_param) != 'nrounds'],
                     nrounds = xgb_param$nrounds,
                     verbose = FALSE,
                     nthread = xgb_threads,
