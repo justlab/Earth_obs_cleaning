@@ -289,3 +289,80 @@ prepare_dt <- function(dt){
   dt = dt[!is.na(get(y_var))]
   return(dt)
 }
+
+
+# Do initial CV with hyperparameter selection with DART and rank features
+# Depends on functions in xgboost_cv_RFE.R
+initial_cv_dart <- function(
+  data,
+  #sat = '', 
+  y_var,
+  features,
+  k_fold = 5,
+  n_rounds = 100,
+  stn_var = NULL,
+  day_var = NULL,
+  #run_param_cv = TRUE,
+  progress = TRUE
+){
+  xgb_threads <- get.threads()
+  
+  mDT <- data.table::copy(setDT(data)) # needed for drake, uncertain about targets
+  if(!is.null(day_var)) {
+    mDT[, dayint := as.integer(get(day_var))]
+    by_var = "day"
+  }
+  if(!is.null(stn_var)) {
+    mDT[, stn := get(stn_var)]
+    by_var = "stn"
+  }
+  if (!is.null(day_var) & !is.null(stn_var))
+    stop("Please provide either day_var or stn_var.")
+  
+  # some internal variables names
+  y_formula <- as.formula(paste(y_var, "~."))
+  y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
+  y_var_pred_whole <- paste0(y_var, "_pred_whole") # name of the predicted y
+  
+  # bin data into specified number of folds
+  temp <- prepare.bin(mDT, by_var = by_var, k_fold = k_fold)
+  mDT <- temp$data
+  bin_list <- temp$bin # list of values of selected variable (stn or day) by fold
+  rm(temp)
+  index.fs.list <-  list(
+    # return the observations in each fold
+    stn = function(x, bin_list) mDT[stn%in%bin_list[[x]], which = TRUE],
+    day = function(x, bin_list) mDT[dayint%in%bin_list[[x]], which = TRUE]
+  )
+  
+  index_train <- index_test <- list()
+  for (k in 1:k_fold){
+    index_test[[k]]  <- index.fs.list[[by_var]](k, bin_list)
+    index_train[[k]] <- -index_test[[k]]
+  }
+  
+  # run k-fold cv and record SHAP matrix, predicted value, overall rmse...
+  if (!y_var%in%features) features <- c(features, y_var) 
+  
+  message("Run k-fold cv \n")
+  cv_results <- run.k.fold.cv(k_fold = k_fold, 
+                              run_param_cv = TRUE, # run DART to select hyperparameters
+                              dataXY_df = mDT[, ..features], 
+                              by_var = by_var, 
+                              n_rounds = n_rounds, 
+                              y_var = y_var, 
+                              progress = progress,
+                              index_train = index_train, 
+                              index_test = index_test,
+                              xgb_threads = xgb_threads)
+  # removed: will use hyperparams as a parameter to RFE function
+  # # write param list so in rfe process there is no need to run param search
+  # xgb_param_list_full <- cv_results$xgb_param_list2
+  # if (!dir.exists(here("Intermediate"))) dir.create(here("Intermediate"))
+  # saveRDS(xgb_param_list_full, here("Intermediate", "xgb_param_list_full.rds"))
+
+  mDT <- cbind(mDT, cv_results$y_pred_dt)
+  
+  # output
+  c(list(by_var = by_var, bin_list = bin_list, mDT_wPred = mDT), cv_results)
+}
