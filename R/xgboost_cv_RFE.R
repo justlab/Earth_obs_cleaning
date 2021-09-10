@@ -211,7 +211,7 @@ run.k.fold.cv.rfe.wrap <- function(
 #' @param progress whether to show progress bars, default TRUE
 #' @param ... other arguments
 #'
-run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
+run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
                           index_train, index_test, xgb_threads, by_var, n_rounds, 
                           progress = TRUE, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
