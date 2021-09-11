@@ -14,6 +14,7 @@ tar_option_set(
                'ggplot2',
                'SHAPforxgboost',
                'Just.universal',
+               'xgboost',
                'tibble'),
   format = 'qs')
 
@@ -23,6 +24,7 @@ tar_config_set(store = '/data-belle/cache/aod_targets/')
 source('R/globals.R')
 source('R/drake_funcs.R')
 source('R/functions.R')
+source('R/xgboost_cv_RFE.R')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Targets ####
@@ -57,7 +59,17 @@ list(
         tar_target(mcd19_vars, derive_mcd19_vars(aer_bydate, nearby_cells, sat), 
                    pattern = map(aer_bydate),
                    format = 'fst_dt',
-                   storage = 'worker')
+                   storage = 'worker'),
+        tar_target(modelinput, prepare_dt(mcd19_vars),
+                   format = 'fst_dt'),
+        tar_target(initial_cv, initial_cv_dart(modelinput, 
+                     y_var = "diff_AOD", 
+                     features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty", 
+                                  "Column_WV", "RelAZ", "qa_best", 
+                                  do.call(paste0, expand.grid(
+                                    c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
+                                    paste0(c(10, 30, 90, 270),"km")))),
+                     stn_var = "Site_Name"))
       )
     )
   )
