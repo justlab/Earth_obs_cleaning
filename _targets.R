@@ -3,6 +3,10 @@ library(tarchetypes)
 library(future)
 plan(multicore)
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Configuration ####
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 tar_option_set(
   packages = c('data.table',
                'fst',
@@ -39,14 +43,15 @@ list(
              fread(aer_stn_path, col.names = c("Site_Name", "lon", "lat", "elevm")),
              format = 'fst_dt'),
   
+  # Area of interest ####
   tar_map( # region mapping
     values = region_values, 
-    
     tar_target(buff, get_aoi_buffer(regions)),
     tar_target(aer, select_stations(aer_stations, buff)),
     tar_target(nearby_cells, cells_in_buffer(aer),
                format = 'fst_dt'),
     
+    # Load AERONET data ####
     tar_map( # time mapping
       values = time_values,
       tar_target(aer_data, get_stn_data(aod_dir = aer_files_path, stations = aer,
@@ -54,12 +59,16 @@ list(
                  format = 'fst_dt'),
       tar_target(aer_filtered, filter_stations(aer, aer_data)),
       tar_group_by(aer_bydate, aer_data, aer_date),
+    
+      # Load MCD19A2 AOD ####
       tar_map( # sat mapping
         values = sat_values,
         tar_target(mcd19_vars, derive_mcd19_vars(aer_bydate, nearby_cells, sat), 
                    pattern = map(aer_bydate),
                    format = 'fst_dt',
                    storage = 'worker'),
+      
+        # Model ####
         tar_target(modelinput, prepare_dt(mcd19_vars),
                    format = 'fst_dt'),
         tar_target(initial_cv, initial_cv_dart(modelinput, 
