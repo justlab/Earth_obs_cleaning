@@ -34,8 +34,10 @@ source('R/xgboost_cv_RFE.R')
 # Targets ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+process_years = 2017:2018
 region_values = list(regions = aoiname)
-time_values = list(date_start = date_start, date_end = date_end)
+time_values = list(date_start = paste0(min(process_years), '-01-01'), 
+                   date_end = paste0(max(process_years), '-12-31'))
 sat_values = list(sat = sats)
 
 list(

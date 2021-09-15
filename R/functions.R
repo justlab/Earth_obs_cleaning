@@ -165,7 +165,7 @@ cells_in_buffer = function(stations, dist_km = 270){
 #' @param sat
 #' @param buffers_km
 #' @param rolldiff_limit
-# GLOBALS: this_year, mcd19path_CONUS
+# GLOBALS: mcd19path_CONUS
 derive_mcd19_vars = function(aer_data, nearby_cells, sat, 
                              buffers_km = c(10, 30, 90, 270),
                              rolldiff_limit = as.difftime(30, units = 'mins')){
@@ -173,11 +173,13 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
   # 1. Get date & julian date
   if(aer_data[, uniqueN(aer_date)] > 1) stop('Use tar_group_by and pattern=map to send one date at a time to derive_mcd19_vars')
   this_date = aer_data[1, aer_date]
-  if(!this_year == year(this_date)) stop("AERONET dates don't match this_year global variable")
   this_daynum = format(this_date, '%j')
+  this_year = year(this_date)
   
   # 2. Roll Join
-  mcd = read_mcd19_one(sat = sat, daynum = this_daynum, filepath = mcd19path_CONUS)
+  mcd = read_mcd19_one(sat = sat, daynum = this_daynum, 
+                       filepath = file.path(mcd19path_CONUS, this_year),
+                       load_year = this_year)
   if(!is.null(mcd)){
     # roll join will update value of the time column in X to the value of the time
     # column in i. Copy AERONET's stn_time to a column with the same name as
@@ -242,11 +244,10 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
 #' @param sat input "terra" or "aqua", if sat !="terra", load aqua
 #' @param daynum day number as character with padding to three digits, leading zeroes
 #' @param filepath path to the year of MCD19A2 daily best overpasses as FST files
-# GLOBALS: this_year
-read_mcd19_one <- function(sat = "terra", daynum, filepath){
+read_mcd19_one <- function(sat = "terra", daynum, filepath, load_year){
   
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
-  mcd_file = file.path(filepath, paste0('mcd19_conus_', choose, '_', this_year, 
+  mcd_file = file.path(filepath, paste0('mcd19_conus_', choose, '_', load_year, 
                                         daynum, '.fst'))
   if(file.exists(mcd_file)){
     dt = read.fst(mcd_file, as.data.table = TRUE,
