@@ -56,33 +56,59 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
                           path = aod_dir, full.names = TRUE)
   found_files <- sapply(aer_files_dir, function(x) length(x) > 0)
   aer_files_dir = aer_files_dir[found_files]
-  t0 <- fread(aer_files_dir[[1]], nrows = 10) # to get variable names: 
-  vars_aod <- intersect(grep("AOD_", names(t0), value = T), grep("nm", names(t0), value = T))
-  # sort the wave lengths varnames from low to high, and update the vars_aod
-  x_nm <- sort(readr::parse_number(vars_aod)) # 340, 380, ... , 1640
-  vars_aod <- paste0("AOD_", x_nm,"nm") # the AOD_...nm variables
-  vars_wv <- paste0("Exact_Wavelengths_of_AOD(um)_", x_nm,"nm") # the Exact wv length
-  
-  # data_path is a single file path
-  read_aod <- function(data_path, date_start = NULL, date_end = NULL){
-    dt <- fread(data_path, select =  c(vars0,vars_aod,vars_wv))
-    dt[, stn_time := as.POSIXct(paste(`Date(dd:mm:yyyy)`, `Time(hh:mm:ss)`), 
-                                format = "%d:%m:%Y %H:%M:%S", tz = "UTC")]
-    dt[, c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)") := NULL]
-    for (i in names(dt)) dt[get(i) == -999, (i):= NA] # set NA
-    if(!is.null(date_start)) {dt = dt[as.Date(stn_time) >= as.Date(date_start), ] }
-    if(!is.null(date_end))   {dt = dt[as.Date(stn_time) <= as.Date(date_end), ] }
-    setcolorder(dt, c("AERONET_Site_Name", "stn_time"))
-    dt
+  if(length(aer_files_dir) > 0){
+    t0 <- fread(aer_files_dir[[1]], nrows = 10) # to get variable names: 
+    vars_aod <- intersect(grep("AOD_", names(t0), value = T), grep("nm", names(t0), value = T))
+    # sort the wave lengths varnames from low to high, and update the vars_aod
+    x_nm <- sort(readr::parse_number(vars_aod)) # 340, 380, ... , 1640
+    vars_aod <- paste0("AOD_", x_nm,"nm") # the AOD_...nm variables
+    vars_wv <- paste0("Exact_Wavelengths_of_AOD(um)_", x_nm,"nm") # the Exact wv length
+    
+    # data_path is a single file path
+    read_aod <- function(data_path, date_start = NULL, date_end = NULL){
+      dt <- fread(data_path, select =  c(vars0,vars_aod,vars_wv))
+      dt[, stn_time := as.POSIXct(paste(`Date(dd:mm:yyyy)`, `Time(hh:mm:ss)`), 
+                                  format = "%d:%m:%Y %H:%M:%S", tz = "UTC")]
+      dt[, c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)") := NULL]
+      for (i in names(dt)) dt[get(i) == -999, (i):= NA] # set NA
+      if(!is.null(date_start)) {dt = dt[as.Date(stn_time) >= as.Date(date_start), ] }
+      if(!is.null(date_end))   {dt = dt[as.Date(stn_time) <= as.Date(date_end), ] }
+      setcolorder(dt, c("AERONET_Site_Name", "stn_time"))
+      dt
+    }
+    
+    file_list <- lapply(unlist(aer_files_dir), read_aod, date_start = date_start, date_end = date_end) 
+    aer_data <- rbindlist(file_list) 
+    
+    aer_data[, aer_date := as.Date(stn_time)]
+    aer_data
+  } else {
+    NULL
   }
-  
-  file_list <- lapply(unlist(aer_files_dir), read_aod, date_start = date_start, date_end = date_end) 
-  aer_data <- rbindlist(file_list) 
-  
-  aer_data <- interpolate_aod(aer_data, stations)
-  aer_data[, aer_date := as.Date(stn_time)]
-  aer_data
 }
+
+
+#' Generate a tibble with a column for year and a column with a list of every date in the year
+#' 
+#' @param years vector of four-digit years
+#' @return a tibble with a "year" column and a "dates" column containing a list of every date in the year
+#' 
+dates_year <- function(years){
+  dates = lapply(years, function(y) seq.Date(as.Date(paste0(y, '-01-01')), 
+                                            as.Date(paste0(y, '-12-31')), 1))
+  tibble::tibble(year = years, dates = dates)
+}
+
+#' Filter data.table of AERONET observations to only those in the given dates
+#' 
+#' @param aer_data AERONET observation data.table with a date column `aer_date`
+#' @param dates vector of dates to filter the AERONET observation
+#' @return data.table of AERONET observations in the given dates
+#' 
+filter_aer_bydate <- function(aer_data, dates){
+  aer_data[aer_date %in% dates, ]
+}
+
 
 #' prepare aer_date for interpolation of AOD470nm 
 #' interpolating to wavelength 470 nm, input as 0.47 
@@ -168,8 +194,14 @@ cells_in_buffer = function(stations, dist_km = 270){
 # GLOBALS: mcd19path_CONUS
 derive_mcd19_vars = function(aer_data, nearby_cells, sat, 
                              buffers_km = c(10, 30, 90, 270),
-                             rolldiff_limit = as.difftime(30, units = 'mins')){
+                             rolldiff_limit = as.difftime(30, units = 'mins'),
+                             aer_stn){
   setDT(aer_data)
+  
+  t1 = Sys.time()
+  aer_data = interpolate_aod(aer_data, aer_stn)
+  message(paste('AERONET 470nm interpolation finished in', round(Sys.time() - t1)))
+  
   # 1. Get date & julian date
   if(aer_data[, uniqueN(aer_date)] > 1) stop('Use tar_group_by and pattern=map to send one date at a time to derive_mcd19_vars')
   this_date = aer_data[1, aer_date]
@@ -281,8 +313,11 @@ create_qc_vars <- function(dt){
   return(dt)
 }
 
-prepare_dt <- function(dt){
+prepare_dt <- function(dt, date_range = NULL){
   setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm", skip_absent=TRUE)
+  if(!is.null(date_range)){
+    dt = dt[aer_date %in% date_range, ]
+  }
   # The dependent variable: diff_AOD = MCD19 - AERONET = Optical_Depth_047 - AOD_470nm
   dt[, diff_AOD := MCD19_AOD_470nm - AOD_470nm]
   dt <- create_qc_vars(dt)
