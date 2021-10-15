@@ -23,7 +23,7 @@ station_cell_ids = function(stations_sf){
   gras = raster(refras_path, band = 4)
   stations_sf = st_transform(stations_sf, crs = st_crs(gras))
   stations_sf$cell_index = raster::extract(gras, as(stations_sf, 'Spatial'))
-  
+
   gDT = read_fst(refgrid_path, as.data.table = TRUE, columns = c('idM21pair0', 'cell_index'))
   setkey(gDT, cell_index)
   setDT(stations_sf)
@@ -43,31 +43,31 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
            "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 #' Load Aeronet AOD measurement data from text files sourced from downloaded
 #' `tar.gz` file. Only load the data for the specified stations.
-#' @param aod_dir directory where the `.lev20` files were extracted to.   
+#' @param aod_dir directory where the `.lev20` files were extracted to.
 #' @param stations SF points of AERONET stations
 #' @param date_start subset to observations this date or later
 #' @param date_end subset to observations this date or earlier
 #' @return data.table of AERONET observations, joined with MODIS reference grid unique ID
-#' 
+#'
 get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
   stn_names = unique(stations$Site_Name)
-  # open files containing names of stations in the specified region 
-  aer_files_dir <- sapply(paste0(unique(stn_names),".*\\.lev20"), FUN = list.files, 
+  # open files containing names of stations in the specified region
+  aer_files_dir <- sapply(paste0(unique(stn_names),".*\\.lev20"), FUN = list.files,
                           path = aod_dir, full.names = TRUE)
   found_files <- sapply(aer_files_dir, function(x) length(x) > 0)
   aer_files_dir = aer_files_dir[found_files]
   if(length(aer_files_dir) > 0){
-    t0 <- fread(aer_files_dir[[1]], nrows = 10) # to get variable names: 
+    t0 <- fread(aer_files_dir[[1]], nrows = 10) # to get variable names:
     vars_aod <- intersect(grep("AOD_", names(t0), value = T), grep("nm", names(t0), value = T))
     # sort the wave lengths varnames from low to high, and update the vars_aod
     x_nm <- sort(readr::parse_number(vars_aod)) # 340, 380, ... , 1640
     vars_aod <- paste0("AOD_", x_nm,"nm") # the AOD_...nm variables
     vars_wv <- paste0("Exact_Wavelengths_of_AOD(um)_", x_nm,"nm") # the Exact wv length
-    
+
     # data_path is a single file path
     read_aod <- function(data_path, date_start = NULL, date_end = NULL){
       dt <- fread(data_path, select =  c(vars0,vars_aod,vars_wv))
-      dt[, stn_time := as.POSIXct(paste(`Date(dd:mm:yyyy)`, `Time(hh:mm:ss)`), 
+      dt[, stn_time := as.POSIXct(paste(`Date(dd:mm:yyyy)`, `Time(hh:mm:ss)`),
                                   format = "%d:%m:%Y %H:%M:%S", tz = "UTC")]
       dt[, c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)") := NULL]
       for (i in names(dt)) dt[get(i) == -999, (i):= NA] # set NA
@@ -76,10 +76,10 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
       setcolorder(dt, c("AERONET_Site_Name", "stn_time"))
       dt
     }
-    
-    file_list <- lapply(unlist(aer_files_dir), read_aod, date_start = date_start, date_end = date_end) 
-    aer_data <- rbindlist(file_list) 
-    
+
+    file_list <- lapply(unlist(aer_files_dir), read_aod, date_start = date_start, date_end = date_end)
+    aer_data <- rbindlist(file_list)
+
     aer_data[, aer_date := as.Date(stn_time)]
     aer_data
   } else {
@@ -89,32 +89,32 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
 
 
 #' Generate a tibble with a column for year and a column with a list of every date in the year
-#' 
+#'
 #' @param years vector of four-digit years
 #' @return a tibble with a "year" column and a "dates" column containing a list of every date in the year
-#' 
+#'
 dates_year <- function(years){
-  dates = lapply(years, function(y) seq.Date(as.Date(paste0(y, '-01-01')), 
+  dates = lapply(years, function(y) seq.Date(as.Date(paste0(y, '-01-01')),
                                             as.Date(paste0(y, '-12-31')), 1))
   tibble::tibble(year = years, dates = dates)
 }
 
 #' Filter data.table of AERONET observations to only those in the given dates
-#' 
+#'
 #' @param aer_data AERONET observation data.table with a date column `aer_date`
 #' @param dates vector of dates to filter the AERONET observation
 #' @return data.table of AERONET observations in the given dates
-#' 
+#'
 filter_aer_bydate <- function(aer_data, dates){
   aer_data[aer_date %in% dates, ]
 }
 
 
-#' prepare aer_date for interpolation of AOD470nm 
-#' interpolating to wavelength 470 nm, input as 0.47 
+#' prepare aer_date for interpolation of AOD470nm
+#' interpolating to wavelength 470 nm, input as 0.47
 #' @param aer_data the dataset contains all the AOD measurements and exact wavelengths
 #' @return dataset of aer_data with pred, also with `nearest_refgrid` next to Site_Name
-#' 
+#'
 interpolate_aod <- function(aer_data, aer_nearest_2){
   keepcols = grep('1020|1640', names(aer_data), invert = T)
   aer_data <- aer_data[, ..keepcols]
@@ -123,23 +123,24 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
   vars_wv <- grep("Exact_Wavelengths_of_AOD", names(aer_data), value = T)
   vars_aod_sub <- grep("AOD_", names(aer_data), value = T)
   aer_data$N_NAAOD <- rowSums(!is.na(aer_data[,..vars_aod_sub]))
-  # create long-format data 
-  d <- melt(aer_data[, c(vars_aod_sub, vars_wv, "obs"), with = F], 
+  # create long-format data
+  d <- melt(aer_data[, c(vars_aod_sub, vars_wv, "obs"), with = F],
             measure = list(vars_aod_sub, vars_wv), value.name = c("aod", "exact_wv"))
-  obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside ==T, obs]
   # choose non-NA and >0 AOD
-  d <- d[!is.na(aod)]
-  # the predict part: 
+  d <- d[!is.na(aod) & aod > 0]
+  # ids for wavelengths observed on one side of 470nm
+  obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside ==T, obs]
+  # the predict part:
   d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(
-    log(aod) ~ log(exact_wv) + I((log(exact_wv))^2)), 
+    log(aod) ~ log(exact_wv) + I((log(exact_wv))^2)),
     newdata = data.frame(exact_wv = 0.47))))] # notice to put 0.47 not 470
   setkey(d2, obs)
   aer_data_wPred <- d2[aer_data]
-  # set NA: At least 4 observations wanted for exterpolation 
+  # set NA: At least 4 observations wanted for exterpolation
   aer_data_wPred[N_NAAOD<4 & obs%in%obs_os, AOD_470nm:=NA]
-  # remove unncessary variables: 
+  # remove unncessary variables:
   aer_data_wPred <- aer_data_wPred[,-c(vars_aod_sub, vars_wv), with = F]
-  
+
   # attach nearest_refgrid (also called idM21pair0 in many our script) to Aer Site_Name
   setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
   setkey(aer_data_wPred, Site_Name)
@@ -167,12 +168,12 @@ cells_in_buffer = function(stations, dist_km = 270){
   # set up so that function can either receive a single station (1 row) or
   # multiple stations, allowing external parallelism from dynamic branching
   gDT = read_fst(refgrid_path, as.data.table = TRUE, columns = c('idM21pair0', 'x_sinu', 'y_sinu'))
-  
+
   cells_by_station = function(rownum, gDT){
     stn_coords = st_coordinates(stations[rownum, ])
-    subDT = gDT[x_sinu <= stn_coords[, 'X'] + dist_km * 1000 & 
-                x_sinu >= stn_coords[, 'X'] - dist_km * 1000 & 
-                y_sinu <= stn_coords[, 'Y'] + dist_km * 1000 & 
+    subDT = gDT[x_sinu <= stn_coords[, 'X'] + dist_km * 1000 &
+                x_sinu >= stn_coords[, 'X'] - dist_km * 1000 &
+                y_sinu <= stn_coords[, 'Y'] + dist_km * 1000 &
                 y_sinu >= stn_coords[, 'X'] - dist_km * 1000]
     subDT[, Site_Name := stations[rownum, ]$Site_Name]
     subDT[, site_dist := as.numeric(st_distance(st_as_sf(.SD[, .(x_sinu, y_sinu)],
@@ -185,31 +186,31 @@ cells_in_buffer = function(stations, dist_km = 270){
 }
 
 #' Roll join a single day of AERONET data to nearest MCD19A2 overpass and calculate derived
-#' values from MCD19A2 within specified distances from the AERONET station. 
+#' values from MCD19A2 within specified distances from the AERONET station.
 #' @param aer_data A single day of AERONET observations (provided by tar_group_by)
 #' @param nearby_cells
 #' @param sat
 #' @param buffers_km
 #' @param rolldiff_limit
 # GLOBALS: mcd19path_CONUS
-derive_mcd19_vars = function(aer_data, nearby_cells, sat, 
+derive_mcd19_vars = function(aer_data, nearby_cells, sat,
                              buffers_km = c(10, 30, 90, 270),
                              rolldiff_limit = as.difftime(30, units = 'mins'),
                              aer_stn){
   setDT(aer_data)
-  
+
   t1 = Sys.time()
   aer_data = interpolate_aod(aer_data, aer_stn)
   message(paste('AERONET 470nm interpolation finished in', round(Sys.time() - t1)))
-  
+
   # 1. Get date & julian date
   if(aer_data[, uniqueN(aer_date)] > 1) stop('Use tar_group_by and pattern=map to send one date at a time to derive_mcd19_vars')
   this_date = aer_data[1, aer_date]
   this_daynum = format(this_date, '%j')
   this_year = year(this_date)
-  
+
   # 2. Roll Join
-  mcd = read_mcd19_one(sat = sat, daynum = this_daynum, 
+  mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
                        filepath = file.path(mcd19path_CONUS, this_year),
                        load_year = this_year)
   if(!is.null(mcd)){
@@ -218,43 +219,43 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
     # MCD19's time column so we can compare the time difference afterwards using
     # meaningful column names.
     aer_data[, overpass_time := stn_time]
-    rj <- aer_data[mcd, roll = 'nearest', nomatch = 0, 
+    rj <- aer_data[mcd, roll = 'nearest', nomatch = 0,
                    on = c(idM21pair0 = 'idM21pair0', overpass_time = 'overpass_time')]
     rm(aer_data)
-    
+
     # Only keep AERONET to MCD19A2 joins with difference of 30 minutes or less
     rj[, rj_difftime := overpass_time - stn_time]
     rj = rj[rj_difftime <= rolldiff_limit, ]
     rj = rj[!is.na(Optical_Depth_047), ]
-    
+
     # 3. Derived Values using nearby MCD19 cells
     nearby_cells = nearby_cells[Site_Name %in% rj$Site_Name]
     setnames(nearby_cells, "idM21pair0", "nearby_cellid", skip_absent=TRUE)
     # join every MODIS cell ID within 270km (default) from station
-    rjbuff = rj[nearby_cells, allow.cartesian = TRUE, 
+    rjbuff = rj[nearby_cells, allow.cartesian = TRUE,
                 on = c(Site_Name = 'Site_Name')]
-    
+
     # join mcd19 AOD values (only) to the cells in the distance buffers
     # note the join only uses idM21pair0 because this function processes one date at a time
     # if that ever changes, will need to add date to the `on` vector
     setnames(mcd, 'idM21pair0', 'nearby_cellid')
-    rjbuff_vals = mcd[, .(nearby_cellid = nearby_cellid, 
+    rjbuff_vals = mcd[, .(nearby_cellid = nearby_cellid,
                           nearby_mcd_aod = Optical_Depth_047)][
                        rjbuff, on = c(nearby_cellid = 'nearby_cellid')]
-    
+
     calc_buff_vals <- function(distx){
-      d_summary = rjbuff_vals[site_dist <= distx * 1000, 
-                              .(nonmissing = mean(!is.na(nearby_mcd_aod)), 
+      d_summary = rjbuff_vals[site_dist <= distx * 1000,
+                              .(nonmissing = mean(!is.na(nearby_mcd_aod)),
                                 AOD_buffer_mean = mean(nearby_mcd_aod, na.rm = T)),
                               by = idM21pair0]
-      setnames(d_summary, c("nonmissing", "AOD_buffer_mean"), 
+      setnames(d_summary, c("nonmissing", "AOD_buffer_mean"),
                paste0(c("pNonNAAOD", "Mean_AOD"), distx, "km"))
       setkey(d_summary, idM21pair0)
     }
     new_vars = Reduce(merge, lapply(buffers_km, calc_buff_vals))
     rj_newvars = new_vars[rj]
     rm(new_vars, rj, rjbuff_vals, mcd)
-    
+
     # difference between central cell MCD19 AOD and mean AOD in buffers
     for(distx in buffers_km){
       rj_newvars[, diff_AOD := Optical_Depth_047 - get(paste0('Mean_AOD', distx, 'km'))]
@@ -265,30 +266,30 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
     } else {
       # This will create an extra "V1" column in rowbound final target with all NAs,
       # but it gets around the error of writing NULL to FST format
-      data.table(NA) 
+      data.table(NA)
     }
   } else {
     data.table(NA)
   }
 }
 
-#' Open one day of MCD19A2 data from a FST file. Adds a column for the satellite. 
+#' Open one day of MCD19A2 data from a FST file. Adds a column for the satellite.
 #' @param sat input "terra" or "aqua", if sat !="terra", load aqua
 #' @param daynum day number as character with padding to three digits, leading zeroes
 #' @param filepath path to the year of MCD19A2 daily best overpasses as FST files
 read_mcd19_one <- function(sat = "terra", daynum, filepath, load_year){
-  
+
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
-  mcd_file = file.path(filepath, paste0('mcd19_conus_', choose, '_', load_year, 
+  mcd_file = file.path(filepath, paste0('mcd19_conus_', choose, '_', load_year,
                                         daynum, '.fst'))
   if(file.exists(mcd_file)){
     dt = read.fst(mcd_file, as.data.table = TRUE,
-                  columns = c("overpass_index", "Optical_Depth_047", 
-                              "AOD_Uncertainty", "Column_WV", "AOD_QA", "RelAZ", 
+                  columns = c("overpass_index", "Optical_Depth_047",
+                              "AOD_Uncertainty", "Column_WV", "AOD_QA", "RelAZ",
                               "idM21pair0", "overpass_time"))
-  
+
     dt[, sat := choose]
-    #setnames(dt, "idM21pair0", "nearest_refgrid") # rename for join later 
+    #setnames(dt, "idM21pair0", "nearest_refgrid") # rename for join later
     #setkey(dt, nearest_refgrid, join_time)
     setkey(dt, idM21pair0, overpass_time)
     dt
@@ -303,7 +304,7 @@ create_qc_vars <- function(dt){
   dt[, qa_bits := bitwAnd(AOD_QA, strtoi("111100000000", base = 2))]
   dt[, qa_best := 0]
   dt[qa_bits == 0 , qa_best := 1]
-  
+
   dt[, qa_bits := bitwAnd(AOD_QA, strtoi("11000", base = 2))]
   dt[qa_bits==0, qa_lwsi := "land"]
   dt[qa_bits==8, qa_lwsi := "water"]
@@ -331,7 +332,7 @@ prepare_dt <- function(dt, date_range = NULL){
 # Depends on functions in xgboost_cv_RFE.R
 initial_cv_dart <- function(
   data,
-  #sat = '', 
+  #sat = '',
   y_var,
   features,
   k_fold = 5,
@@ -342,7 +343,7 @@ initial_cv_dart <- function(
   progress = TRUE
 ){
   xgb_threads <- get.threads()
-  
+
   mDT <- data.table::copy(setDT(data)) # needed for drake, uncertain about targets
   if(!is.null(day_var)) {
     mDT[, dayint := as.integer(get(day_var))]
@@ -354,12 +355,12 @@ initial_cv_dart <- function(
   }
   if (!is.null(day_var) & !is.null(stn_var))
     stop("Please provide either day_var or stn_var.")
-  
+
   # some internal variables names
   y_formula <- as.formula(paste(y_var, "~."))
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   y_var_pred_whole <- paste0(y_var, "_pred_whole") # name of the predicted y
-  
+
   # bin data into specified number of folds
   temp <- prepare.bin(mDT, by_var = by_var, k_fold = k_fold)
   mDT <- temp$data
@@ -370,25 +371,25 @@ initial_cv_dart <- function(
     stn = function(x, bin_list) mDT[stn%in%bin_list[[x]], which = TRUE],
     day = function(x, bin_list) mDT[dayint%in%bin_list[[x]], which = TRUE]
   )
-  
+
   index_train <- index_test <- list()
   for (k in 1:k_fold){
     index_test[[k]]  <- index.fs.list[[by_var]](k, bin_list)
     index_train[[k]] <- -index_test[[k]]
   }
-  
+
   # run k-fold cv and record SHAP matrix, predicted value, overall rmse...
-  if (!y_var%in%features) features <- c(features, y_var) 
-  
+  if (!y_var%in%features) features <- c(features, y_var)
+
   message("Run k-fold cv \n")
-  cv_results <- run.k.fold.cv(k_fold = k_fold, 
+  cv_results <- run.k.fold.cv(k_fold = k_fold,
                               run_param_cv = TRUE, # run DART to select hyperparameters
-                              dataXY_df = mDT[, ..features], 
-                              by_var = by_var, 
-                              n_rounds = n_rounds, 
-                              y_var = y_var, 
+                              dataXY_df = mDT[, ..features],
+                              by_var = by_var,
+                              n_rounds = n_rounds,
+                              y_var = y_var,
                               progress = progress,
-                              index_train = index_train, 
+                              index_train = index_train,
                               index_test = index_test,
                               xgb_threads = xgb_threads)
   # removed: will use hyperparams as a parameter to RFE function
@@ -398,7 +399,7 @@ initial_cv_dart <- function(
   # saveRDS(xgb_param_list_full, here("Intermediate", "xgb_param_list_full.rds"))
 
   mDT <- cbind(mDT, cv_results$y_pred_dt)
-  
+
   # output
   c(list(by_var = by_var, bin_list = bin_list, mDT_wPred = mDT), cv_results)
 }
