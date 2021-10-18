@@ -5,21 +5,20 @@
 #' @param stations data.table including coordiantes (lon, lat) points of AERONET stations
 #' @param reg_polygon SF polygon defining the area of interest
 #' @return a subset of geometry points within the given polygon
-select_stations <- function(stations, reg_polygon){
+select_stations <- function(stations, reg_polygon, refgrid_path, refras_path){
   aerpts = st_as_sf(stations, coords = c("lon", "lat"), crs = 4326)
   if(st_crs(aerpts) != st_crs(reg_polygon)){ # polygons are in nad83
     aerpts <- st_transform(aerpts, crs = st_crs(reg_polygon))
   }
   aerpts <- aerpts[st_intersects(aerpts, reg_polygon, sparse = FALSE),]
-  aerpts <- station_cell_ids(aerpts) # now in sinusoidal CRS
+  aerpts <- station_cell_ids(aerpts, refgrid_path, refras_path) # now in sinusoidal CRS
   aerpts
 }
 
 #' Get the unique ID of the grid cell an AERONET station is in.
-#' GLOBALS: refgrid_path, refras_path
 #' @param stations_sf SF points of AERONET stations
 #' @return SF points of AERONET stations with unique MODIS grid cell IDs added (idM21pair0)
-station_cell_ids = function(stations_sf){
+station_cell_ids = function(stations_sf, refgrid_path, refras_path){
   gras = raster(refras_path, band = 4)
   stations_sf = st_transform(stations_sf, crs = st_crs(gras))
   stations_sf$cell_index = raster::extract(gras, as(stations_sf, 'Spatial'))
@@ -163,8 +162,7 @@ filter_stations = function(stations, stn_data){
 #' distance from AERONET stations.
 #' @param stations
 #' @param dist_km Return cell IDs within this distance, in kilometers
-# GLOBALS: refgrid_path
-cells_in_buffer = function(stations, dist_km = 270){
+cells_in_buffer = function(stations, dist_km = 270, refgrid_path){
   # set up so that function can either receive a single station (1 row) or
   # multiple stations, allowing external parallelism from dynamic branching
   gDT = read_fst(refgrid_path, as.data.table = TRUE, columns = c('idM21pair0', 'x_sinu', 'y_sinu'))
@@ -192,11 +190,10 @@ cells_in_buffer = function(stations, dist_km = 270){
 #' @param sat
 #' @param buffers_km
 #' @param rolldiff_limit
-# GLOBALS: mcd19path_CONUS
 derive_mcd19_vars = function(aer_data, nearby_cells, sat,
                              buffers_km = c(10, 30, 90, 270),
                              rolldiff_limit = as.difftime(30, units = 'mins'),
-                             aer_stn){
+                             aer_stn, mcd19path){
   setDT(aer_data)
 
   t1 = Sys.time()
@@ -211,7 +208,7 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
 
   # 2. Roll Join
   mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
-                       filepath = file.path(mcd19path_CONUS, this_year),
+                       filepath = file.path(mcd19path, this_year),
                        load_year = this_year)
   if(!is.null(mcd)){
     # roll join will update value of the time column in X to the value of the time

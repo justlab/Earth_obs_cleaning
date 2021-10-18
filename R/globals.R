@@ -5,21 +5,9 @@
 # Region
 aoiname = "conus"
 
-# Reference grid
-refgrid_path = "/data-belle/LST/MYD21A1/derived/conus_grid_2020.fst"
-refras_path = "/data-belle/LST/MYD21A1/derived/conus_myd21_stack.tif"
-
-# the aer site info. file:
-aer_stn_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt"
-
-# the aer data files:
-aer_files_path = "/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/"
-
 # which MODIS platforms to use
 sats = c("terra", "aqua")
 
-# MCD19 data load and save output: 
-mcd19path_CONUS = paste0("/data-coco/mcd19/fst/conus_full")
 # out_dir = paste0("/data-coco/mcd19/fst/conus/", this_year, "_AOD_newVar/")
 # if(!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
