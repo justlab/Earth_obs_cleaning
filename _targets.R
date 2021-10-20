@@ -42,8 +42,7 @@ date_table = dates_year(process_years)
 sat_values = list(sat = sats)
 
 list(
-  tar_target(mcd19path, '/data-coco/mcd19/fst/conus_full',
-             format = 'file'),
+  tar_target(mcd19path, '/data-coco/mcd19/fst/conus_full'),
   tar_target(aer_stn_path, '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt',
              format = 'file'),
   tar_target(aer_files_path, '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/',
