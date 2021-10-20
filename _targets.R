@@ -72,18 +72,14 @@ list(
                pattern = map(aer_bystation)),
     tar_target(aer_filtered, filter_aer_bydate(aer_data, all_dates),
                format = 'fst_dt'),
-    #tar_group_by(aer_bydate, aer_filtered, aer_date),
+    tar_group_by(aer_bydate, aer_filtered, aer_date),
 
     # Load MCD19A2 AOD ####
     tar_map( # sat mapping
       values = sat_values,
-      tar_target(mcd19_vars, furrr::future_map_dfr(aer_filtered %>% split(.$aer_date),
-                                                   derive_mcd19_vars,
-                                                   nearby_cells = nearby_cells,
-                                                   sat = sat,
-                                                   aer_stn = aer_nospace,
-                                                   mcd19path = mcd19path),
-                 #pattern = map(aer_bydate),
+      tar_target(mcd19_vars, derive_mcd19_vars(aer_bydate, nearby_cells, sat,
+                                               aer_stn = aer_nospace, mcd19path),
+                 pattern = map(aer_bydate),
                  format = 'fst_dt',
                  storage = 'worker'),
 
