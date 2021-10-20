@@ -162,7 +162,7 @@ filter_stations = function(stations, stn_data){
 #' distance from AERONET stations.
 #' @param stations
 #' @param dist_km Return cell IDs within this distance, in kilometers
-cells_in_buffer = function(stations, dist_km = 270, refgrid_path){
+cells_in_buffer = function(stations, refgrid_path, dist_km = 270){
   # set up so that function can either receive a single station (1 row) or
   # multiple stations, allowing external parallelism from dynamic branching
   gDT = read_fst(refgrid_path, as.data.table = TRUE, columns = c('idM21pair0', 'x_sinu', 'y_sinu'))
