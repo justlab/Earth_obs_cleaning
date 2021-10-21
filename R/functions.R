@@ -348,12 +348,7 @@ initial_cv_dart <- function(
   #run_param_cv = TRUE,
   progress = TRUE
 ){
-  log_file = '~/rtemp/multisession_xgboost.log'
-  logger = logger('DEBUG', file_appender(log_file))
-  debug(logger, 'starting initial CV')
   xgb_threads <- get.threads()
-  debug(logger, paste0('got threads:', xgb_threads))
-  message(paste('Threads:', xgb_threads))
 
   mDT <- data.table::copy(setDT(data)) # needed for drake, uncertain about targets
   if(!is.null(day_var)) {
