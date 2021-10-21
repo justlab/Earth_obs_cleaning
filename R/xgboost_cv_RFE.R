@@ -290,19 +290,7 @@ run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
 #' internal function to get threads to use
 #'
 get.threads <- function(){
-  log_file = '~/rtemp/multisession_xgboost.log'
-  logger = logger('DEBUG', file_appender(log_file))
-
-  opt = options("xgb.threads")$xgb.threads
-  if (!is.null(opt)) {
-    debug(logger, paste0('used mc.cores:', mc))
-    opt
-  }
-  else {
-    dc = parallel::detectCores()%/%2
-    debug(logger, paste0('used detect cores %/%2:', dc))
-    dc
-  }
+  parallel::detectCores()%/%2
 }
 
 #' A wrapped function to run xgboost model.
