@@ -6,25 +6,25 @@
 #
 
 #' run the cross-validation by station with RFE.
-#' 
+#'
 #' This function is the 4th layer wrap of Kodi's random search cv function
-#' 
+#'
 run_cv <- function(dt, ...){
   # The predictors
   features = c("MCD19_AOD_470nm",
-               "dayint", 
+               "dayint",
                "AOD_Uncertainty", "Column_WV", "RelAZ",
-               "qa_best", 
+               "qa_best",
                do.call(paste0,expand.grid(
                  c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
                  paste0(c(10, 30, 90, 270),"km"))))
-  
+
   cv_results <- run.k.fold.cv.rfe.wrap(
-    data = dt, 
+    data = dt,
     stn_var = "Site_Name",
-    features0 = features, 
-    y_var = "diff_AOD", 
-    run_param_cv = TRUE, 
+    features0 = features,
+    y_var = "diff_AOD",
+    run_param_cv = TRUE,
     run_rfe = TRUE,
     ...)
 }
@@ -86,7 +86,8 @@ run.k.fold.cv.rfe.wrap <- function(
   predict_whole_model = TRUE # optional to predict using whole dataset
 ){
   xgb_threads <- get.threads()
-  
+  message(paste('Threads:', xgb_threads))
+
   mDT <- data.table::copy(setDT(data))
   if(!is.null(day_var)) {
     mDT[,dayint := as.integer(get(day_var))]
@@ -102,7 +103,7 @@ run.k.fold.cv.rfe.wrap <- function(
   y_formula <- as.formula(paste(y_var, "~."))
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   y_var_pred_whole <- paste0(y_var, "_pred_whole") # name of the predicted y
-  
+
   # divide data by folders and get list of index
   time0 <- Sys.time()
   temp <- prepare.bin(mDT, by_var = by_var, k_fold = k_fold)
@@ -113,19 +114,19 @@ run.k.fold.cv.rfe.wrap <- function(
     stn = function(x, bin_list) mDT[stn%in%bin_list[[x]], which = TRUE],
     day = function(x, bin_list) mDT[dayint%in%bin_list[[x]], which = TRUE]
   )
-  
+
   index_train <- index_test <- list()
   for (k in 1:k_fold){
     index_test[[k]] <- index.fs.list[[by_var]](k, bin_list)
     index_train[[k]] <- -index_test[[k]]
   }
-  
+
   # run k-fold cv and record SHAP matrix, predicted value, overall rmse...
-  if (!y_var%in%features0) features0 <- c(features0, y_var) 
+  if (!y_var%in%features0) features0 <- c(features0, y_var)
   dataXY0 <- mDT[,..features0]
   message("Run k-fold cv \n")
   cv_results <- run.k.fold.cv(sat = sat, k_fold=k_fold, run_param_cv = run_param_cv,
-                              dataXY_df = dataXY0, by_var = by_var, n_rounds = n_rounds, 
+                              dataXY_df = dataXY0, by_var = by_var, n_rounds = n_rounds,
                               y_var = y_var, progress = progress,
                               index_train = index_train, index_test = index_test,
                               xgb_threads = xgb_threads)
@@ -135,7 +136,7 @@ run.k.fold.cv.rfe.wrap <- function(
   saveRDS(xgb_param_list_full, here("Intermediate", "xgb_param_list_full.rds"))
   cv_results_full_model <- cv_results
   mDT <- cbind(mDT, cv_results$y_pred_dt)
-  
+
   ## RFE part
   if (run_rfe){
     message("Run RFE \n")
@@ -143,7 +144,7 @@ run.k.fold.cv.rfe.wrap <- function(
     features_rank_rfe <- rep(NA_character_, n_features)
     features_rank_rfe_record <- list()
     rmse_rfe <- rep(NA_real_, n_features)
-    
+
     for (nf in (n_features):1){
       features_rank_rfe_record[[nf]] <- cv_results$features_rank_full_model # save all the features
       cat("nf = ", nf, 'features ranked for', sat, 'are\n', features_rank_rfe_record[[nf]], '\n')
@@ -167,7 +168,7 @@ run.k.fold.cv.rfe.wrap <- function(
     rfe_output <- list(features_rank_rfe = features_rank_rfe,
                        features_rank_rfe_record = features_rank_rfe_record,
                        rmse_rfe = rmse_rfe)
-    
+
     ## predict whole data
     if (predict_whole_model){
       # select by number of features from rfe
@@ -187,11 +188,11 @@ run.k.fold.cv.rfe.wrap <- function(
     }
   }
   time_spent <- Sys.time() - time0
-  
+
   # output
   general_output <- list(sat = sat, by_var = by_var, time_spent = time_spent,
                          bin_list = bin_list, mDT_wPred = mDT)
-  
+
   if (run_rfe) {
     return(c(general_output, cv_results_full_model, rfe_output))
   } else {
@@ -207,12 +208,12 @@ run.k.fold.cv.rfe.wrap <- function(
 #' @param index_train index for training
 #' @param index_test index for testing
 #' @param xgb_threads xgb_threads passed from parent function
-#' @param by_var string of "stn" or "day" passed from parent function 
+#' @param by_var string of "stn" or "day" passed from parent function
 #' @param progress whether to show progress bars, default TRUE
 #' @param ... other arguments
 #'
 run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
-                          index_train, index_test, xgb_threads, by_var, n_rounds, 
+                          index_train, index_test, xgb_threads, by_var, n_rounds,
                           progress = TRUE, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   Y <-  dataXY_df[, ..y_var]
@@ -220,8 +221,8 @@ run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
   # prepare dataset
   n_row <- nrow(data_X)
   n_col <- ncol(data_X)
-  
-  
+
+
   # output dataset
   y_pred_dt <- data.table(y_pred = rep(NA_real_, n_row))
   shap_score <- as.data.table(matrix(rep(NA_real_, n_row*n_col), ncol = n_col))
@@ -229,7 +230,7 @@ run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
   xgb_param_list1 <- xgb_param_list2 <- list()
   BIAS0 <- rep(NA_real_, k_fold)
   # loop for each fold
-  
+
   set.seed(1234)
   for (i in 1:k_fold){
     cat('number of obs in testing fold', i, 'is:', nrow(data_X[index_test[[i]], ]), '\n')
@@ -243,7 +244,7 @@ run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
       # manually select and store some params
       xgb_param_dart <- c(rsxgb0$model$params[c(1,2,4, 6:11)], nrounds = rsxgb0$model$niter)
       xgbmod <- rsxgb0$model
-      
+
       # fit model
       y_pred_dt[index_test[[i]], y_pred:= rsxgb0$pred.fun(dataXY_df[index_test[[i]],])] # record the prediction
       # predicted SHAP
@@ -255,18 +256,18 @@ run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
       xgb_param_dart <- xgb_param_list_full[[paste0(by_var, i)]]
       train_mm <- as.matrix(data_X[index_train[[i]], ])
       test_mm  <- as.matrix(data_X[index_test[[i]], ]) # features do not contain Y variable
-      xgbmod <- rfe.fit(X = train_mm, Y = as.matrix(Y[index_train[[i]], ..y_var]), 
+      xgbmod <- rfe.fit(X = train_mm, Y = as.matrix(Y[index_train[[i]], ..y_var]),
                         xgb_param = xgb_param_dart)
       # predicted y
       y_pred_dt[index_test[[i]], y_pred:= predict(xgbmod, test_mm)]
       # predicted SHAP
       shap_pred <- as.data.table(predict(xgbmod, test_mm, predcontrib = TRUE, approxcontrib = FALSE))
     }
-    
+
     BIAS0[i] <- first(shap_pred$BIAS)
     shap_pred[, BIAS := NULL]
     shap_score[index_test[[i]],] <- shap_pred # record the SHAP values (for whole model)
-    
+
     xgb_param_list1[[paste0(by_var, i)]] <- unlist(xgb_param_dart)
     xgb_param_list2[[paste0(by_var, i)]] <- xgb_param_dart
   }
@@ -289,7 +290,19 @@ run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
 #' internal function to get threads to use
 #'
 get.threads <- function(){
-  future::availableCores()/2
+  log_file = '~/rtemp/multisession_xgboost.log'
+  logger = logger('DEBUG', file_appender(log_file))
+
+  opt = options("xgb.threads")$xgb.threads
+  if (!is.null(opt)) {
+    debug(logger, paste0('used mc.cores:', mc))
+    opt
+  }
+  else {
+    dc = parallel::detectCores()%/%2
+    debug(logger, paste0('used detect cores %/%2:', dc))
+    dc
+  }
 }
 
 #' A wrapped function to run xgboost model.
@@ -329,15 +342,15 @@ prepare.bin <- function(mDT, by_var, k_fold){
   ## use helper.pack.bins is better
   ss$bin_stn <- helper.pack.bins(ss[, group_count], k_fold)
   bin_list <- split(ss[[by_var]], ss$bin_stn)
-  
+
   setkeyv(mDT, by_var)
   setkeyv(ss, by_var)
   mDT <- mDT[ss, on = by_var]
   mDT[, bin_stn := as.factor(bin_stn)]
-  
+
   message('Obs in each stn_bin and total obs:')
   print(ss[, .(count = sum(group_count)), by = bin_stn][order(bin_stn)])
-  
+
   return(list(data = mDT, bin = bin_list))
 }
 
@@ -386,13 +399,13 @@ report.r.squared <- function(dataXY, nround = 2){
   s <-  paste('N =', dataXY[,.N],', RMSE reduced from',
             round(sqrt(mean((dataXY[[y_var]])^2)),4),
             'to', round(rmse,4), "(", round(rmse_pcnt*100, nround), "%),", "\n",
-            
+
             'Traditional R2: 1-SSE/(SST(n-1)) =', round(R2*100,nround),'%;', "\n",
-            
+
             'Pearson R2 between y_var_pred and y_var is',
             round(cor(dataXY[[y_var]], dataXY[[y_var_pred]])^2*100, nround),
             '%;', "\n",
-            
+
             "Pearson r = ",round(cor(dataXY[[y_var]], dataXY[[y_var_pred]]),
                                  nround+2), '.')
   print(s)
@@ -404,7 +417,7 @@ report.r.squared <- function(dataXY, nround = 2){
 #' updated on (19.04.06). only one line is plotted.
 #' @param rmse_rfe use rferesults$rmse_rfe
 #' @import ggplot2
-#' 
+#'
 #' @return ggplot2 object
 #' @export rfe.rmse.plot
 rfe.rmse.plot <- function(rmse_rfe = rferesults$rmse_rfe){

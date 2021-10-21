@@ -1,16 +1,20 @@
 library(targets)
 library(tarchetypes)
 library(future)
-#library(future.callr)
-#plan(callr)
-plan(multicore)
+# library(future.callr)
+# plan(callr)
+#plan(multicore)
+plan(multisession)
+options(xgb.threads = 8) # used by xgboost_cv_RFE
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Configuration ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 tar_option_set(
-  packages = c('data.table',
+  packages = c('lubridate',
+               'log4r',
+               'data.table',
                'fst',
                'sf',
                'magrittr',
@@ -72,14 +76,21 @@ list(
                pattern = map(aer_bystation)),
     tar_target(aer_filtered, filter_aer_bydate(aer_data, all_dates),
                format = 'fst_dt'),
-    tar_group_by(aer_bydate, aer_filtered, aer_date),
+    tar_target(aer_months, assign_monthid(aer_filtered),
+               format = 'fst_dt'),
+    tar_group_by(aer_bymonth, aer_months, monthid),
 
     # Load MCD19A2 AOD ####
     tar_map( # sat mapping
       values = sat_values,
-      tar_target(mcd19_vars, derive_mcd19_vars(aer_bydate, nearby_cells, sat,
-                                               aer_stn = aer_nospace, mcd19path),
-                 pattern = map(aer_bydate),
+      tar_target(mcd19_vars,
+                 purrr::map_dfr(aer_bymonth %>% split(.$aer_date),
+                                derive_mcd19_vars,
+                                nearby_cells = nearby_cells,
+                                sat = sat,
+                                aer_stn = aer_nospace,
+                                mcd19path = mcd19path),
+                 pattern = map(aer_bymonth),
                  format = 'fst_dt',
                  storage = 'worker'),
 

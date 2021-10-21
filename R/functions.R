@@ -98,6 +98,15 @@ dates_year <- function(years){
   tibble::tibble(year = years, dates = dates)
 }
 
+#' Assign a month index from 1970-01-01 to all observation dates.
+#'
+#' Month indexes are used to batch the extraction of training data into chunks and increase targets throughput.
+assign_monthid <- function(aer_data){
+  start = as.Date('1970-01-01')
+  aer_data[, monthid := as.period(as.Date(aer_date) - start) %/% months(1)]
+  aer_data
+}
+
 #' Filter data.table of AERONET observations to only those in the given dates
 #'
 #' @param aer_data AERONET observation data.table with a date column `aer_date`
@@ -339,7 +348,12 @@ initial_cv_dart <- function(
   #run_param_cv = TRUE,
   progress = TRUE
 ){
+  log_file = '~/rtemp/multisession_xgboost.log'
+  logger = logger('DEBUG', file_appender(log_file))
+  debug(logger, 'starting initial CV')
   xgb_threads <- get.threads()
+  debug(logger, paste0('got threads:', xgb_threads))
+  message(paste('Threads:', xgb_threads))
 
   mDT <- data.table::copy(setDT(data)) # needed for drake, uncertain about targets
   if(!is.null(day_var)) {
