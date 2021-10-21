@@ -85,6 +85,9 @@ run.k.fold.cv.rfe.wrap <- function(
   run_rfe = TRUE, # optional to run rfe
   predict_whole_model = TRUE # optional to predict using whole dataset
 ){
+  xgb_threads <- get.threads()
+  message(paste('Threads:', xgb_threads))
+
   mDT <- data.table::copy(setDT(data))
   if(!is.null(day_var)) {
     mDT[,dayint := as.integer(get(day_var))]
@@ -125,7 +128,8 @@ run.k.fold.cv.rfe.wrap <- function(
   cv_results <- run.k.fold.cv(sat = sat, k_fold=k_fold, run_param_cv = run_param_cv,
                               dataXY_df = dataXY0, by_var = by_var, n_rounds = n_rounds,
                               y_var = y_var, progress = progress,
-                              index_train = index_train, index_test = index_test)
+                              index_train = index_train, index_test = index_test,
+                              xgb_threads = xgb_threads)
   # write param list so in rfe process there is no need to run param search
   xgb_param_list_full <- cv_results$xgb_param_list2
   if (!dir.exists(here("Intermediate"))) dir.create(here("Intermediate"))
@@ -157,7 +161,8 @@ run.k.fold.cv.rfe.wrap <- function(
                                     n_rounds = n_rounds,
                                     index_train = index_train,
                                     index_test = index_test,
-                                    progress = progress)
+                                    progress = progress,
+                                    xgb_threads = xgb_threads)
       }
     }
     rfe_output <- list(features_rank_rfe = features_rank_rfe,
@@ -171,7 +176,7 @@ run.k.fold.cv.rfe.wrap <- function(
       rsxgb_whole <- xgboost.dart.cvtune(
         n.rounds = n_rounds,
         d = mDT, dv = y_var, ivs = var_selected,
-        progress = progress)
+        progress = progress, nthread = xgb_threads)
       xgb_param_dart <- rsxgb_whole$model$params
       xgbmod <- rsxgb_whole$model
       mDT[[y_var_pred_whole]] <-  rsxgb_whole$pred.fun(mDT)
@@ -202,12 +207,13 @@ run.k.fold.cv.rfe.wrap <- function(
 #' @param dataXY_df dataset with only X and Y
 #' @param index_train index for training
 #' @param index_test index for testing
+#' @param xgb_threads xgb_threads passed from parent function
 #' @param by_var string of "stn" or "day" passed from parent function
 #' @param progress whether to show progress bars, default TRUE
 #' @param ... other arguments
 #'
 run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
-                          index_train, index_test, by_var, n_rounds,
+                          index_train, index_test, xgb_threads, by_var, n_rounds,
                           progress = TRUE, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   Y <-  dataXY_df[, ..y_var]
@@ -234,7 +240,7 @@ run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
         # by default, gives 100 rounds, and it is enough by experience
         n.rounds = n_rounds,
         d = dataXY_df[index_train[[i]],], dv = y_var, ivs = colnames(data_X),
-        progress = progress)
+        progress = progress, nthread = xgb_threads)
       # manually select and store some params
       xgb_param_dart <- c(rsxgb0$model$params[c(1,2,4, 6:11)], nrounds = rsxgb0$model$niter)
       xgbmod <- rsxgb0$model
@@ -296,11 +302,14 @@ get.threads <- function(){
 #'
 rfe.fit <- function(X, Y, xgb_param){
   if (!is.null(xgb_param$seed)) set.seed(xgb_param$seed) else set.seed(1234)
+  xgb_threads <- get.threads()
+  # message(paste("xgb_param is", unlist(xgb_param)))
   xgboost::xgboost(data = as.matrix(X),
                     label = as.matrix(Y),
                     params = xgb_param[names(xgb_param) != 'nrounds'],
                     nrounds = xgb_param$nrounds,
                     verbose = FALSE,
+                    nthread = xgb_threads,
                     early_stopping_rounds = 8)
 }
 
