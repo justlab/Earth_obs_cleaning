@@ -348,8 +348,6 @@ initial_cv_dart <- function(
   #run_param_cv = TRUE,
   progress = TRUE
 ){
-  xgb_threads <- get.threads()
-
   mDT <- data.table::copy(setDT(data)) # needed for drake, uncertain about targets
   if(!is.null(day_var)) {
     mDT[, dayint := as.integer(get(day_var))]
@@ -396,8 +394,7 @@ initial_cv_dart <- function(
                               y_var = y_var,
                               progress = progress,
                               index_train = index_train,
-                              index_test = index_test,
-                              xgb_threads = xgb_threads)
+                              index_test = index_test)
   # removed: will use hyperparams as a parameter to RFE function
   # # write param list so in rfe process there is no need to run param search
   # xgb_param_list_full <- cv_results$xgb_param_list2
