@@ -45,7 +45,7 @@ region_values = list(regions = aoiname)
 date_table = dates_year(process_years)
 sat_values = list(sat = sats)
 
-list(
+set1 = list(
   tar_target(mcd19path, '/data-coco/mcd19/fst/conus_full'),
   tar_target(aer_stn_path, '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt',
              format = 'file'),
@@ -96,6 +96,7 @@ list(
 
       # Model ####
       tar_map( # date range (year) mapping
+        unlist = FALSE,
         values = date_table,
         names = 'year',
         tar_target(modelinput, prepare_dt(mcd19_vars, date_range = dates),
@@ -112,3 +113,9 @@ list(
     )
   )
 )
+set1u = unlist(set1)
+combined = tar_combine(combined_cv, set1u[grep('initial_cv', names(set1u))],
+                       command = list(!!!.x))
+list(set1, combined,
+     tar_render(initial_cv_report, 'R/initial_cv_report.Rmd',
+                params = list(cv_names = names(combined_cv))))

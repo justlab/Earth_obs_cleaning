@@ -409,3 +409,17 @@ initial_cv_dart <- function(
   # output
   c(list(by_var = by_var, bin_list = bin_list, mDT_wPred = mDT), cv_results)
 }
+
+cv_reporting <- function(cv){
+  dt = cv$mDT_wPred
+  mae = function(v1, v2) mean(abs(v1 - v2))
+  mad = function(v1) mean(abs(v1 - median(v1)))
+  dt[, aod_hat := MCD19_AOD_470nm - diff_AOD_pred]
+
+  list(
+    mae_uncorrected = dt[, mae(MCD19_AOD_470nm, AOD_470nm)],
+    mae_corrected   = dt[, mae(aod_hat, AOD_470nm)],
+    mad_MCD19  = mad(dt$MCD19_AOD_470nm),
+    mad_aodhat = mad(dt$aod_hat)
+  )
+}

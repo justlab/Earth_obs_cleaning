@@ -1,0 +1,55 @@
+---
+title: "Initial CV Report"
+output: html_document
+params:
+  cv_names: none
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r basics, echo=FALSE}
+source('R/functions.R')
+library(targets)
+```
+
+```{r get_results, echo=FALSE}
+output = list()
+for(t in params$cv_names){
+  cv = tar_read_raw(t)
+  stats = cv_reporting(cv)
+  stats$name <- t
+  stats$year <- substr(t, 12, 15)
+  output[[t]] <- stats
+}
+```
+
+# Aqua
+```{r render_aqua, echo=FALSE, results='asis'}
+res = lapply(output[grep('aqua', names(output))], function(x){
+  knitr::knit_child(text = c(
+    '## `r x$year`',
+    'Uncorrected MAE: `r round(x$mae_uncorrected,3)`  ',
+    'Corrected MAE: `r round(x$mae_corrected,3)`  ',
+    'MAD MCD19: `r round(x$mad_MCD19,3)`  ',
+    'MAD AOD_HAT: `r round(x$mad_aodhat,3)`  '
+  ), envir = environment(), quiet = TRUE)
+})
+cat(unlist(res), sep = '\n')
+```
+
+# Terra
+```{r render_terra, echo=FALSE, results='asis'}
+res = lapply(output[grep('terra', names(output))], function(x){
+  knitr::knit_child(text = c(
+    '## `r x$year`',
+    'Uncorrected MAE: `r round(x$mae_uncorrected,3)`  ',
+    'Corrected MAE: `r round(x$mae_corrected,3)`  ',
+    'MAD MCD19: `r round(x$mad_MCD19,3)`  ',
+    'MAD AOD_HAT: `r round(x$mad_aodhat,3)`  '
+  ), envir = environment(), quiet = TRUE)
+})
+cat(unlist(res), sep = '\n')
+```
+
