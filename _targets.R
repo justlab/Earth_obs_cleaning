@@ -13,6 +13,7 @@ options(xgb.threads = 8) # used by xgboost_cv_RFE
 
 tar_option_set(
   packages = c('lubridate',
+               'stringr',
                'log4r',
                'data.table',
                'fst',
