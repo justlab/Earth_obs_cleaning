@@ -5,3 +5,6 @@
 *.fst
 *.drake
 *.swp
+Intermediate/
+meta/
+_targets.yaml
