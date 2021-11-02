@@ -469,6 +469,9 @@ cv_reporting <- function(cv){
     mae_uncorrected = dt[, mae(MCD19_AOD_470nm, AOD_470nm)],
     mae_corrected   = dt[, mae(aod_hat, AOD_470nm)],
     mad_MCD19  = mad(dt$MCD19_AOD_470nm),
-    mad_aodhat = mad(dt$aod_hat)
+    mad_aodhat = mad(dt$aod_hat),
+    stn_count = dt[, uniqueN(stn)],
+    train_N = dt[, .N],
+    mean_daily_overpass = dt[, mean(overpass_index), by = aer_date][, mean(V1)]
   )
 }
