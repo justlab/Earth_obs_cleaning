@@ -17,6 +17,7 @@ select_stations <- function(stations, reg_polygon, refgrid_path, refras_path){
 
 #' Get the unique ID of the grid cell an AERONET station is in.
 #' @param stations_sf SF points of AERONET stations
+#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
 #' @return SF points of AERONET stations with unique MODIS grid cell IDs added (idM21pair0)
 station_cell_ids = function(stations_sf, refgrid_path, refras_path){
   gras = raster(refras_path, band = 4)
@@ -170,6 +171,7 @@ filter_stations = function(stations, stn_data){
 #' Get MODIS grid unique IDs (idM21pair0) for every cell within specified
 #' distance from AERONET stations.
 #' @param stations
+#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
 #' @param dist_km Return cell IDs within this distance, in kilometers
 cells_in_buffer = function(stations, refgrid_path, dist_km = 270){
   # set up so that function can either receive a single station (1 row) or
@@ -190,6 +192,53 @@ cells_in_buffer = function(stations, refgrid_path, dist_km = 270){
   }
   # would exceed row maximum after ~8000 stations with 270km distance
   rbindlist(lapply(1:nrow(stations), FUN = cells_by_station, gDT = gDT))
+}
+
+#' calculate grid X,Y positions from the top left of the most northwestern tile
+#' over CONUS
+#' @param refgrid_path FST with coordinates of all raster cells in the area of
+#'   interest
+#' @return data table keyed by reference grid unique ID with X,Y offsets from
+#'   northwestern corner of area of interest
+calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0' , aoiname = 'conus'){
+  if(!aoiname %in% c('conus', 'nemia')) stop('Only CONUS region has been implemented')
+  refgrid = read_fst(refgrid_path, as.data.table = TRUE)
+
+  # most northwestern tile used as origin is h08v04
+  refgrid[, aoi_tile_h := as.integer(substr(tile, 2, 3)) - 8]
+  refgrid[, aoi_tile_v := as.integer(substr(tile, 5, 6)) - 4]
+
+  refgrid[, cell_x := col + 1000 * aoi_tile_h]
+  refgrid[, cell_y := row + 1000 * aoi_tile_v]
+
+}
+
+#' Return a matrix classifying cells as being within a distance from the center.
+#'
+#' Assumes square matrix with odd number of rows & columns. The width (and
+#' height) will be 2x the radius plus one cell.
+#' @param radius distance, in kilometers, from center cell to classify as
+#'   inside circle
+#' @param cellsize dimensions of raster cells in meters. Pixels assumed square.
+#' @param binary return a binary matrix classifying cells as inside the circle
+#'   radius (TRUE, default), or distance from the center in cell counts (FALSE).
+#' @return a data table with offsets from the central cell that are within the
+#'   specified radius
+circle_mat = function(radius, cellsize = 926.6254){
+  radius = radius * 1000
+  width = ceiling(radius/cellsize*2+1)
+  if(width%%2 == 0) width <- width + 1 # ensure odd row and column count
+  height = width # assuming square matrix
+  circle_df = expand.grid(mrow = 1:height, mcol = 1:width)
+  center_val = median(circle_df$mrow) # assuming square matrix
+  circle_df$dist_cells = sqrt((circle_df$mrow - center_val)^2 + (circle_df$mcol - center_val)^2)
+  circle_df$circ = ifelse(circle_df$dist_cells * cellsize <= radius, TRUE, FALSE)
+  #circle_mat = matrix(circle_df$circ, height, width)
+
+  setDT(circle_df)
+  circle_df[, offset_x := mcol - center_val]
+  circle_df[, offset_y := mrow - center_val]
+  circle_df[circ == TRUE, .(offset_x, offset_y)]
 }
 
 #' Roll join a single day of AERONET data to nearest MCD19A2 overpass and calculate derived
