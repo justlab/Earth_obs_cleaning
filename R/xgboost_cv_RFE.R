@@ -214,7 +214,7 @@ run.k.fold.cv.rfe.wrap <- function(
 #'
 run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
                           index_train, index_test, xgb_threads, by_var, n_rounds,
-                          progress = TRUE, ...){
+                          progress = TRUE, seed = 1234, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   Y <-  dataXY_df[, ..y_var]
   data_X <- dataXY_df[, -..y_var]
@@ -231,7 +231,7 @@ run.k.fold.cv <- function(k_fold, run_param_cv, dataXY_df, y_var,
   BIAS0 <- rep(NA_real_, k_fold)
   # loop for each fold
 
-  set.seed(1234)
+  if(!(is.null(seed) || is.na(seed))) set.seed(seed)
   for (i in 1:k_fold){
     cat('number of obs in testing fold', i, 'is:', nrow(data_X[index_test[[i]], ]), '\n')
     # change to use random search
