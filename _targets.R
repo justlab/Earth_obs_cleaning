@@ -41,6 +41,7 @@ source('R/xgboost_cv_RFE.R')
 # Targets ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+buffers_km = c(10, 30, 90, 270)
 process_years = 2015:2019
 region_values = list(regions = aoiname)
 date_table = dates_year(process_years)
@@ -101,6 +102,7 @@ set1_targets = list(
       tar_target(mcd19_vars,
                  purrr::map_dfr(aer_bymonth %>% split(.$aer_date),
                                 derive_mcd19_vars,
+                                buffers_km = buffers_km,
                                 nearby_cells = nearby_cells,
                                 sat = sat,
                                 aer_stn = aer_nospace,
@@ -124,7 +126,7 @@ set1_targets = list(
                                   "Column_WV", "RelAZ", "qa_best",
                                   do.call(paste0, expand.grid(
                                     c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
-                                    paste0(c(10, 30, 90, 270),"km")))),
+                                    paste0(buffers_km, "km")))),
                      stn_var = "Site_Name"))
       )
     )
