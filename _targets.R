@@ -46,15 +46,20 @@ region_values = list(regions = aoiname)
 date_table = dates_year(process_years)
 sat_values = list(sat = sats)
 
-set1 = list(
-  tar_target(mcd19path, '/data-coco/mcd19/fst/conus_full'),
-  tar_target(aer_stn_path, '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt',
+set1_targets = list(
+  tar_target(mcd19path,
+             '/data-coco/mcd19/fst/conus_full'),
+  tar_target(aer_stn_path,
+             '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt',
              format = 'file'),
-  tar_target(aer_files_path, '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/',
+  tar_target(aer_files_path,
+             '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/',
              format = 'file'),
-  tar_target(refgrid_path, '/data-belle/LST/MYD21A1/derived/conus_grid_2020.fst',
+  tar_target(refgrid_path,
+             '/data-belle/LST/MYD21A1/derived/conus_grid_2020.fst',
              format = 'file'),
-  tar_target(refras_path, '/data-belle/LST/MYD21A1/derived/conus_myd21_stack.tif',
+  tar_target(refras_path,
+             '/data-belle/LST/MYD21A1/derived/conus_myd21_stack.tif',
              format = 'file'),
   tar_target(aer_stations,
              fread(aer_stn_path, col.names = c('Site_Name', 'lon', 'lat', 'elevm')),
@@ -63,23 +68,32 @@ set1 = list(
   # Area of interest ####
   tar_map( # region mapping
     values = region_values,
-    tar_target(buff, get_aoi_buffer(regions)),
-    tar_target(aer, select_stations(aer_stations, buff, refgrid_path, refras_path)),
-    tar_target(nearby_cells, cells_in_buffer(aer, refgrid_path),
+    tar_target(buff,
+               get_aoi_buffer(regions)),
+    tar_target(aer,
+               select_stations(aer_stations, buff, refgrid_path, refras_path)),
+    tar_target(nearby_cells,
+               cells_in_buffer(aer, refgrid_path),
                format = 'fst_dt'),
 
     # Load AERONET data ####
-    tar_target(all_dates, lubridate::as_date(unlist(date_table$dates))),
-
-    tar_target(aer_nospace, sf::st_drop_geometry(aer)),
-    tar_group_by(aer_bystation, aer_nospace, Site_Name),
-    tar_target(aer_data, get_stn_data(aod_dir = aer_files_path, stations = aer_bystation),
+    tar_target(all_dates,
+               lubridate::as_date(unlist(date_table$dates))),
+    tar_target(aer_nospace,
+               sf::st_drop_geometry(aer)),
+    tar_group_by(aer_bystation,
+                 aer_nospace, Site_Name),
+    tar_target(aer_data,
+               get_stn_data(aod_dir = aer_files_path, stations = aer_bystation),
                pattern = map(aer_bystation)),
-    tar_target(aer_filtered, filter_aer_bydate(aer_data, all_dates),
+    tar_target(aer_filtered,
+               filter_aer_bydate(aer_data, all_dates),
                format = 'fst_dt'),
-    tar_target(aer_months, assign_monthid(aer_filtered),
+    tar_target(aer_months,
+               assign_monthid(aer_filtered),
                format = 'fst_dt'),
-    tar_group_by(aer_bymonth, aer_months, monthid),
+    tar_group_by(aer_bymonth,
+                 aer_months, monthid),
 
     # Load MCD19A2 AOD ####
     tar_map( # sat mapping
@@ -100,9 +114,11 @@ set1 = list(
         unlist = FALSE,
         values = date_table,
         names = 'year',
-        tar_target(modelinput, prepare_dt(mcd19_vars, date_range = dates),
+        tar_target(modelinput,
+                   prepare_dt(mcd19_vars, date_range = dates),
                    format = 'fst_dt'),
-        tar_target(initial_cv, initial_cv_dart(modelinput,
+        tar_target(initial_cv,
+                   initial_cv_dart(modelinput,
                      y_var = "diff_AOD",
                      features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
                                   "Column_WV", "RelAZ", "qa_best",
@@ -114,9 +130,15 @@ set1 = list(
     )
   )
 )
-set1u = unlist(set1)
-combined = tar_combine(combined_cv, set1u[grep('initial_cv', names(set1u))],
-                       command = list(!!!.x))
-list(set1, combined,
-     tar_render(initial_cv_report, 'R/initial_cv_report.Rmd',
-                params = list(cv_names = names(combined_cv))))
+
+# Combine all initial CV results into a list ####
+set1u = unlist(set1_targets)
+combined_target = tar_combine(combined_cv, set1u[grep('initial_cv', names(set1u))],
+                              command = list(!!!.x))
+
+# Render CV report ####
+cv_report_target = tar_render(initial_cv_report, 'R/initial_cv_report.Rmd',
+                       params = list(cv_names = names(combined_cv)))
+
+# Final targets list ####
+list(set1_targets, combined_target, cv_report_target)
