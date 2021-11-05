@@ -4,6 +4,8 @@
 #' grid.
 #' @param stations data.table including coordiantes (lon, lat) points of AERONET stations
 #' @param reg_polygon SF polygon defining the area of interest
+#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param refras_path path to MODIS reference raster stack
 #' @return a subset of geometry points within the given polygon
 select_stations <- function(stations, reg_polygon, refgrid_path, refras_path){
   aerpts = st_as_sf(stations, coords = c("lon", "lat"), crs = 4326)
@@ -18,6 +20,7 @@ select_stations <- function(stations, reg_polygon, refgrid_path, refras_path){
 #' Get the unique ID of the grid cell an AERONET station is in.
 #' @param stations_sf SF points of AERONET stations
 #' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param refras_path path to MODIS reference raster stack
 #' @return SF points of AERONET stations with unique MODIS grid cell IDs added (idM21pair0)
 station_cell_ids = function(stations_sf, refgrid_path, refras_path){
   gras = raster(refras_path, band = 4)
@@ -220,8 +223,6 @@ calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0' , aoiname = 'co
 #' @param radius distance, in kilometers, from center cell to classify as
 #'   inside circle
 #' @param cellsize dimensions of raster cells in meters. Pixels assumed square.
-#' @param binary return a binary matrix classifying cells as inside the circle
-#'   radius (TRUE, default), or distance from the center in cell counts (FALSE).
 #' @return a data table with offsets from the central cell that are within the
 #'   specified radius
 circle_mat = function(radius, cellsize = 926.6254){
@@ -245,9 +246,10 @@ circle_mat = function(radius, cellsize = 926.6254){
 #' values from MCD19A2 within specified distances from the AERONET station.
 #' @param aer_data A single day of AERONET observations (provided by tar_group_by)
 #' @param nearby_cells
-#' @param sat
-#' @param buffers_km
+#' @param sat input "terra" or "aqua"
+#' @param buffers_km vector of buffer radii in kilometers
 #' @param rolldiff_limit
+#' @param mcd19path path to MCD19A2 FST files
 derive_mcd19_vars = function(aer_data, nearby_cells, sat,
                              buffers_km = c(10, 30, 90, 270),
                              rolldiff_limit = as.difftime(30, units = 'mins'),
@@ -385,6 +387,7 @@ prepare_dt <- function(dt, date_range = NULL){
 
 # Do initial CV with hyperparameter selection with DART and rank features
 # Depends on functions in xgboost_cv_RFE.R
+#' @param features character vector of column names to train on
 initial_cv_dart <- function(
   data,
   #sat = '',
