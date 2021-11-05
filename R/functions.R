@@ -275,9 +275,9 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
     # column in i. Copy AERONET's stn_time to a column with the same name as
     # MCD19's time column so we can compare the time difference afterwards using
     # meaningful column names.
-    aer_data[, overpass_time := stn_time]
-    rj <- aer_data[mcd, roll = 'nearest', nomatch = 0,
-                   on = c(idM21pair0 = 'idM21pair0', overpass_time = 'overpass_time')]
+    setnames(aer_data, 'stn_time', 'overpass_time')
+    aer_data[, stn_time := overpass_time]
+    rj <- aer_data[mcd, roll = 'nearest', nomatch = 0] # using keys to join
     rm(aer_data)
 
     # Only keep AERONET to MCD19A2 joins with difference of 30 minutes or less
@@ -295,10 +295,12 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
     # join mcd19 AOD values (only) to the cells in the distance buffers
     # note the join only uses idM21pair0 because this function processes one date at a time
     # if that ever changes, will need to add date to the `on` vector
-    setnames(mcd, 'idM21pair0', 'nearby_cellid')
-    rjbuff_vals = mcd[, .(nearby_cellid = nearby_cellid,
-                          nearby_mcd_aod = Optical_Depth_047)][
-                       rjbuff, on = c(nearby_cellid = 'nearby_cellid')]
+    setnames(mcd, c('idM21pair0', 'Optical_Depth_047'),
+                  c('nearby_cellid', 'nearby_mcd_aod'))
+    mcd = mcd[, .(nearby_cellid, nearby_mcd_aod)]
+    setkey(mcd, nearby_cellid)
+    setkey(rjbuff, nearby_cellid)
+    rjbuff_vals = mcd[rjbuff]
 
     calc_buff_vals <- function(distx){
       d_summary = rjbuff_vals[site_dist <= distx * 1000,
