@@ -41,11 +41,16 @@ source('R/xgboost_cv_RFE.R')
 # Targets ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-buffers_km = c(10, 30, 90, 270)
 process_years = 2015:2019
 region_values = list(regions = aoiname)
 date_table = dates_year(process_years)
 sat_values = list(sat = sats)
+buffers_km = c(10, 30, 90, 270)
+features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
+             "Column_WV", "RelAZ", "qa_best",
+             do.call(paste0, expand.grid(
+               c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
+               paste0(buffers_km, "km"))))
 
 set1_targets = list(
   tar_target(mcd19path,
@@ -122,11 +127,7 @@ set1_targets = list(
         tar_target(initial_cv,
                    initial_cv_dart(modelinput,
                      y_var = "diff_AOD",
-                     features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
-                                  "Column_WV", "RelAZ", "qa_best",
-                                  do.call(paste0, expand.grid(
-                                    c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
-                                    paste0(buffers_km, "km")))),
+                     features = features,
                      stn_var = "Site_Name"))
       )
     )
