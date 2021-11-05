@@ -23,6 +23,7 @@ for(t in params$cv_names){
   stats$year <- substr(t, 12, 15)
   output[[t]] <- stats
 }
+rm(cv, stats)
 ```
 
 ```{r table_cv_results, echo=FALSE}
@@ -31,4 +32,9 @@ setkey(outDT, sat, year)
 setcolorder(outDT)
 knitr::kable(outDT)
 ```
+
+```{r dt_raw, echo=FALSE}
+outDT
+```
+
 

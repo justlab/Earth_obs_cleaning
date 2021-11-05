@@ -471,12 +471,12 @@ cv_reporting <- function(cv){
   dt[, aod_hat := MCD19_AOD_470nm - diff_AOD_pred]
 
   list(
-    mae_uncorrected = dt[, mae(MCD19_AOD_470nm, AOD_470nm)],
-    mae_corrected   = dt[, mae(aod_hat, AOD_470nm)],
-    mad_MCD19  = mad(dt$MCD19_AOD_470nm),
-    mad_aodhat = mad(dt$aod_hat),
+    mae_uncorrected = round(dt[, mae(MCD19_AOD_470nm, AOD_470nm)],3),
+    mae_corrected   = round(dt[, mae(aod_hat, AOD_470nm)],3),
+    mad_MCD19  = round(mad(dt$MCD19_AOD_470nm),3),
+    mad_aodhat = round(mad(dt$aod_hat),3),
     stn_count = dt[, uniqueN(stn)],
     train_N = dt[, .N],
-    mean_daily_overpass = dt[, mean(overpass_index), by = aer_date][, mean(V1)]
+    mean_daily_overpass = round(dt[, mean(overpass_index), by = aer_date][, mean(V1)],3)
   )
 }
