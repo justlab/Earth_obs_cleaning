@@ -19,3 +19,10 @@ y_var_pred = "diff_AOD_pred"
 n_vars = 10
 
 set.seed(1234)
+
+# temporary AOI for testing prediction table preparation
+library(sf)
+crs_sinu = '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs'
+dc_wgs = st_bbox(c(xmin = -77.78, xmax = -76.45, ymax = 39.27, ymin = 38.52), crs = 4326)
+dc_sinu = st_bbox(st_transform(st_as_sfc(dc_wgs), crs_sinu))
+rm(dc_wgs)

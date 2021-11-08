@@ -480,3 +480,105 @@ cv_reporting <- function(cv){
     mean_daily_overpass = round(dt[, mean(overpass_index), by = aer_date][, mean(V1)],3)
   )
 }
+
+#' Prepare prediction table
+#'
+#' @param pred_bbox sf bbox or named numeric vector conforming to st_bbox spec:
+#'   xmin, xmax, ymax, ymin. The rectangular spatial region to predict in. Must
+#'   be in MODIS sinusoidal CRS.
+#' @param features character vector of column names to train on
+#' @param buffers_km vector of buffer radii in kilometers
+#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param mcd19path path to MCD19A2 FST files
+#' @param aoiname the region the model was trained over ('conus' or 'nemia')
+#' @param dates vector of dates to make predictions for. Must be within the same year.
+#' @param sat input "terra" or "aqua"
+pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path,
+                        aoiname, sat, dates){
+  if(uniqueN(year(dates)) > 1) stop('More than one year in the prediction date range')
+  dates = sort(dates)
+
+  # Get an area of interest grid including border cells needed for buffered calculations
+  refgrid = calc_XY_offsets(refgrid_path, aoiname = aoiname)
+
+  pred_bbox = st_bbox(pred_bbox)
+  m_extend = max(buffers_km) * 1000
+  mod_box = st_bbox(c(xmin = -m_extend, xmax = m_extend,
+                      ymin = -m_extend, ymax = m_extend))
+  m_bbox = pred_bbox + mod_box
+  # subset to prediction area plus an extension to support focal operations
+  rgDT = refgrid[x_sinu >= m_bbox$xmin & x_sinu <= m_bbox$xmax &
+                 y_sinu >= m_bbox$ymin & y_sinu <= m_bbox$ymax]
+  # mark which cells to predict
+  rgDT[x_sinu >= pred_bbox$xmin & x_sinu <= pred_bbox$xmax &
+       y_sinu >= pred_bbox$ymin & y_sinu <= pred_bbox$ymax,
+       do_preds := TRUE]
+
+  setkey(rgDT, cell_x, cell_y)
+
+  # Calculate buffered values around a single cell
+  buff_mcd19_vals <- function(cellid, cdf, buff_size, mcd, rgDT){
+    buff_center = rgDT[idM21pair0 == cellid, .(cell_x, cell_y)]
+    buff_offsets = cdf[, .(cell_x = offset_x + buff_center$cell_x,
+                           cell_y = offset_y + buff_center$cell_y)]
+    setkey(buff_offsets)
+    buff_ids = rgDT[buff_offsets, .(idM21pair0)]
+    d_summary = mcd[.(buff_ids), .(cellid,
+                                'Mean_AOD' = mean(MCD19_AOD_470nm, na.rm = TRUE),
+                                'nonmissing' = sum(!is.na(MCD19_AOD_470nm))/nrow(cdf))]
+    d_summary[, diff_AOD := mcd[.(cellid), MCD19_AOD_470nm] - Mean_AOD]
+
+    setnames(d_summary, c('Mean_AOD', 'nonmissing', 'diff_AOD', 'cellid'),
+             c(paste0('Mean_AOD', buff_size, 'km'), paste0('pNonNAAOD', buff_size, 'km'),
+               paste0('diff_AOD', buff_size, 'km'), 'idM21pair0'))
+  }
+
+  # Prepare MCD19A2 predictors for one day
+  gather_mcd19_day <- function(this_date){
+    this_year = year(this_date)
+    this_daynum = format(this_date, '%j')
+    # read the satellite-day MCD19A2 FST, subsetting to cells needed for prediction
+    mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
+                         filepath = file.path(mcd19path, this_year),
+                         load_year = this_year)[idM21pair0 %in% rgDT$idM21pair0]
+    if(!is.null(mcd)){
+      # single cell variables
+      mcd[, dayint:= as.integer(as.Date(overpass_time))]
+      create_qc_vars(mcd)
+      setnames(mcd, "Optical_Depth_047", "MCD19_AOD_470nm")
+
+      # buffered variables
+      buff_vars = Reduce(merge,
+                         # for each buffer radius:
+                         lapply(buffers_km,
+                                FUN = function(buff_size){
+                                  # for each cell in AOI:
+                                  cdf = circle_mat(buff_size)
+                                  rbindlist(lapply(rgDT[do_preds == TRUE, idM21pair0],
+                                            FUN = buff_mcd19_vals,
+                                            mcd = mcd, rgDT = rgDT,
+                                            cdf = cdf, buff_size = buff_size))
+      }))
+      # join single cell variables to buffered variables
+      setkey(buff_vars, idM21pair0)
+      mcd[buff_vars]
+    } else {
+      NULL
+    }
+  }
+  dt = rbindlist(lapply(dates, FUN = gather_mcd19_day))
+  if(nrow(dt) == 0){
+    dt = data.table(NA) # avoid error of writing NULL DT to FST
+  } else {
+    # remove unncessary columns
+    dt = dt[, c('idM21pair0', features), with = FALSE]
+  }
+  dt
+}
+
+#' Predict the difference between MCD19 and AERONET
+#'
+
+
+#' Adjust MCD19 AOD values using predicted difference between MCD19 and AERONET.
+#'

@@ -129,7 +129,22 @@ set1_targets = list(
                      y_var = "diff_AOD",
                      features = features,
                      stn_var = "Site_Name"))
-      )
+      ),
+      # later, move within year mapping
+      # Prediction ####
+      tar_target(pred_dates, as.Date('2018-06-01')),
+      tar_target(predinput, pred_inputs(
+        pred_bbox = dc_sinu,
+        features = features,
+        buffers_km = buffers_km,
+        refgrid_path = refgrid_path,
+        mcd19path = mcd19path,
+        aoiname = regions,
+        sat = sat,
+        dates = pred_dates),
+        pattern = map(pred_dates),
+        format = 'fst_dt',
+        storage = 'worker')
     )
   )
 )
@@ -142,6 +157,7 @@ combined_target = tar_combine(combined_cv, set1u[grep('initial_cv', names(set1u)
 # Render CV report ####
 cv_report_target = tar_render(initial_cv_report, 'R/initial_cv_report.Rmd',
                        params = list(cv_names = names(combined_cv)))
+
 
 # Final targets list ####
 list(set1_targets, combined_target, cv_report_target)
