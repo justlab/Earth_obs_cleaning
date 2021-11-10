@@ -490,6 +490,7 @@ cv_reporting <- function(cv){
   list(
     mae_uncorrected = round(dt[, mae(MCD19_AOD_470nm, AOD_470nm)],3),
     mae_corrected   = round(dt[, mae(aod_hat, AOD_470nm)],3),
+    rmse = round(cv$rmse_all_folds,3),
     mad_MCD19  = round(mad(dt$MCD19_AOD_470nm),3),
     mad_aodhat = round(mad(dt$aod_hat),3),
     stn_count = dt[, uniqueN(stn)],
@@ -533,7 +534,7 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
 
   setkey(rgDT, cell_x, cell_y)
 
-  # Calculate buffered values around a single cell
+  # Calculate buffered values around a single cellalgori
   buff_mcd19_vals <- function(cellid, cdf, buff_size, mcd, rgDT){
     buff_center = rgDT[idM21pair0 == cellid, .(cell_x, cell_y)]
     buff_offsets = cdf[, .(cell_x = offset_x + buff_center$cell_x,
