@@ -155,9 +155,13 @@ combined_target = tar_combine(combined_cv, set1u[grep('initial_cv', names(set1u)
                               command = list(!!!.x))
 
 # Render CV report ####
-cv_report_target = tar_render(initial_cv_report, 'R/initial_cv_report.Rmd',
-                       params = list(cv_names = names(combined_cv)))
-
+report_targets = list(
+  tar_target(cv_summary_table,
+             cv_summary(combined_cv)),
+  tar_render(initial_cv_report,
+             'R/initial_cv_report.Rmd',
+             params = list(cv_names = names(combined_cv)))
+)
 
 # Final targets list ####
-list(set1_targets, combined_target, cv_report_target)
+list(set1_targets, combined_target, report_targets)

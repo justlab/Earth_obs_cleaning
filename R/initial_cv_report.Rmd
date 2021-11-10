@@ -10,31 +10,23 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r basics, echo=FALSE}
-source('R/functions.R')
 library(targets)
 ```
 
-```{r get_results, echo=FALSE}
-output = list()
-for(t in params$cv_names){
-  cv = tar_read_raw(t)
-  stats = cv_reporting(cv)
-  stats$sat <- str_extract(t, 'terra|aqua')
-  stats$year <- substr(t, 12, 15)
-  output[[t]] <- stats
-}
-rm(cv, stats)
-```
 
 ```{r table_cv_results, echo=FALSE}
-outDT = rbindlist(lapply(output, as.data.table))
-setkey(outDT, sat, year)
-setcolorder(outDT)
-knitr::kable(outDT)
+tar_load(cv_summary_table)
+DT::datatable(cv_summary_table, 
+              rownames = FALSE,
+              fillContainer = FALSE,
+              autoHideNavigation = TRUE,
+              options = list(pageLength = 50,
+                             autoWidth = TRUE))
 ```
 
+Raw console print:
 ```{r dt_raw, echo=FALSE}
-outDT
+cv_summary_table
 ```
 
 

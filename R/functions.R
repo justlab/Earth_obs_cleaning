@@ -464,6 +464,23 @@ initial_cv_dart <- function(
   c(list(by_var = by_var, bin_list = bin_list, mDT_wPred = mDT), cv_results)
 }
 
+#' Summarize CV statistics on all initial_cv objects
+cv_summary <- function(cv_list){
+  output = vector(mode = "list", length = length(cv_list))
+  for(i in 1:length(cv_list)){
+    cv_name = names(cv_list)[[i]]
+    cv = cv_list[[i]]
+    stats = cv_reporting(cv)
+    stats$sat <- str_extract(cv_name, 'terra|aqua')
+    stats$year <- substr(cv_name, 12, 15)
+    output[[i]] <- stats
+  }
+  outDT = rbindlist(lapply(output, as.data.table))
+  setkey(outDT, sat, year)
+  setcolorder(outDT)
+}
+
+#' Calculate CV statistics on a single initial_cv object
 cv_reporting <- function(cv){
   dt = cv$mDT_wPred
   mae = function(v1, v2) mean(abs(v1 - v2))
