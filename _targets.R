@@ -128,23 +128,31 @@ set1_targets = list(
                    initial_cv_dart(modelinput,
                      y_var = "diff_AOD",
                      features = features,
-                     stn_var = "Site_Name"))
+                     stn_var = "Site_Name")),
+        tar_target(full_model, dart_full(modelinput,
+                                           y_var = "diff_AOD",
+                                           features = features)),
+        tar_target(model_file, full_model$model_out_path,
+                   format = 'file')
       ),
       # later, move within year mapping
       # Prediction ####
       tar_target(pred_dates, as.Date('2018-06-01')),
       tar_target(predinput, pred_inputs(
-        pred_bbox = dc_sinu,
-        features = features,
-        buffers_km = buffers_km,
-        refgrid_path = refgrid_path,
-        mcd19path = mcd19path,
-        aoiname = regions,
-        sat = sat,
-        dates = pred_dates),
+          pred_bbox = dc_sinu,
+          features = features,
+          buffers_km = buffers_km,
+          refgrid_path = refgrid_path,
+          mcd19path = mcd19path,
+          aoiname = regions,
+          sat = sat,
+          dates = pred_dates),
         pattern = map(pred_dates),
         format = 'fst_dt',
-        storage = 'worker')
+        storage = 'worker'),
+      # need a specific target from the static branches of tar_map above:
+      # the matching trained year model for the date chosen in pred_dates
+      tar_target(pred_out, run_preds(predinput, model_file_2018))
     )
   )
 )

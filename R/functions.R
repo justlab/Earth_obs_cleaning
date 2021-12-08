@@ -594,9 +594,70 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
   dt
 }
 
+#' Train a full model using DART and 2-fold CV to select hyperparameters from
+#' maximin Latin hypercube sample
+#'
+dart_full <- function(
+  data_train,
+  y_var,
+  features,
+  n_rounds = 100,
+  progress = TRUE
+){
+  xgb_threads <- get.threads()
+
+  data_train = data_train[, c(features, y_var), with = F]
+
+  xdc_out <- xgboost.dart.cvtune(
+    # by default, gives 100 rounds, and it is enough by experience
+    n.rounds = n_rounds,
+    d = data_train,
+    dv = y_var,
+    ivs = features,
+    progress = progress,
+    nthread = xgb_threads)
+
+  # manually select and store some params
+  param_dart <- c(xdc_out$model$params[c(1,2,4, 6:11)], nrounds = xdc_out$model$niter)
+
+  # save the model
+  # hash important input and output to create a unique name
+  model_out_path = file.path('Intermediate',
+                     paste0('full_model_dart_',
+                            targets:::digest_obj64(list(data_train, features, y_var, param_dart)),
+                            '.xgb'))
+  xgboost::xgb.save(xdc_out$model, model_out_path)
+
+  # record the prediction
+  preds = xdc_out$pred.fun(data_train)
+  #rmse_full <- sqrt(mean((preds - data_train[[y_var]])^2))
+
+  # SHAP
+  shap_pred <- as.data.table(xdc_out$pred.fun(data_train, predcontrib = TRUE, approxcontrib = FALSE))
+  shap_bias <- first(shap_pred$BIAS)
+  shap_pred[, BIAS := NULL]
+
+  # features ranked by SHAP
+  mean_shaps = colMeans(abs(shap_pred))
+  ## feature names only:
+  # features_rank_full_model <- names(mean_shaps)[order(mean_shaps, decreasing = TRUE)]
+  # named vector:
+  features_rank_full_model = mean_shaps[order(mean_shaps, decreasing = T)]
+
+  list(features_rank_full_model = features_rank_full_model,
+       y_preds = preds,
+       shap_pred = shap_pred,
+       shap_bias = shap_bias,
+       model_out_path = model_out_path)
+}
+
 #' Predict the difference between MCD19 and AERONET
 #'
-
+run_preds = function(data, model_file){
+  data[, idM21pair0 := NULL]
+  model = xgboost::xgb.load(model_file)
+  predict(model, as.matrix(data))
+}
 
 #' Adjust MCD19 AOD values using predicted difference between MCD19 and AERONET.
 #'
