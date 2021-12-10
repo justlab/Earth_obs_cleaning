@@ -660,4 +660,80 @@ run_preds = function(data, model_file){
 }
 
 #' Adjust MCD19 AOD values using predicted difference between MCD19 and AERONET.
-#'
+#' Return as data.table
+adjust_mcd19 = function(data, preds){
+  data[, MCD19_adjust := MCD19_AOD_470nm - preds]
+}
+
+# Maps ####
+
+#' Compare adjusted AOD to original
+ggplot_orig_vs_adj = function(refgrid_path, data, preds){
+  data = adjust_mcd19(data, preds)
+  rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
+                as.data.table = TRUE)
+  data[rg, c('x', 'y') := .(x_sinu, y_sinu), on = 'idM21pair0']
+  orig = simple.pred.map(data, fillvar = 'MCD19_AOD_470nm')
+  adj = simple.pred.map(data, fillvar = 'MCD19_adjust')
+  aps = cowplot::align_plots(orig, adj, align = 'v')
+  cowplot::plot_grid(plotlist = aps, ncol = 1)
+}
+
+# adapted from CONUS_air:plots.R
+simple.pred.map = function(preds, fillvar, xvar = 'x', yvar = 'y',
+                           scale.args = list()){
+  ggplot(preds) +
+  geom_raster(aes_string(xvar, yvar, fill = fillvar)) +
+  do.call(scale_fill_distiller,
+          c(list(palette = "Spectral"), scale.args)) +
+  coord_equal() +
+  theme_void() +
+  theme(legend.justification = "left")
+}
+
+#' Interactively compare adjusted AOD to original
+mapview_orig_vs_adj = function(refgrid_path, data, preds){
+  data = adjust_mcd19(data, preds)
+  rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
+                as.data.table = TRUE)
+  data[rg, c('x', 'y') := .(x_sinu, y_sinu), on = 'idM21pair0']
+  data = data[, .(x, y, MCD19_AOD_470nm, MCD19_adjust)]
+  ras = rasterFromXYZ(data, crs = crs_sinu)
+  #ras_range = range(ras[], na.rm = TRUE)
+
+  ub = unified_breaks(ras, n_classes = 10, viridis::inferno)
+  get_mapview = function(i){
+    mapview::mapview(ras[[i]], na.color = '#AAAAAA00', alpha.regions = 1,
+                     col.regions = ub[[i]]$colors,
+                     at = ub[[i]]$breaks, layer.name = names(ras[[i]]))}
+  maps = lapply(1:2, get_mapview)
+  maps[[1]] + maps[[2]]
+}
+
+#' Get unified breaks and color scheme for layer ranges that partially overlap
+unified_breaks = function(ras, n_classes, color_func){
+  rrange = range(ras[], na.rm = TRUE)
+  full_breaks = seq(rrange[1], rrange[2],
+                    (rrange[2]-rrange[1])/n_classes)
+  colors = color_func(n_classes)
+
+  breaks_by_layer = function(layernum, ras, full_breaks, colors){
+    layer_min = min(ras[[layernum]][], na.rm = TRUE)
+    layer_max = max(ras[[layernum]][], na.rm = TRUE)
+    lyrI = intersect(which(full_breaks >= layer_min), which(full_breaks <= layer_max))
+    lyrB = full_breaks[lyrI]
+
+    if(full_breaks[min(lyrI)] > layer_min){
+      lyrB = c(layer_min, lyrB)
+      lyrI = c(min(lyrI)-1, lyrI)
+    }
+    if(full_breaks[max(lyrI)] < layer_max){
+      lyrB = c(lyrB, layer_max)
+      lyrI = c(lyrI, max(lyrI) + 1)
+    }
+    list(breaks = lyrB, colors = colors[lyrI[1:(length(lyrI)-1)]])
+  }
+
+  lapply(1:nlayers(ras), FUN = breaks_by_layer,
+         ras = ras, full_breaks = full_breaks, colors)
+}
