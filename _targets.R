@@ -152,7 +152,13 @@ set1_targets = list(
         storage = 'worker'),
       # need a specific target from the static branches of tar_map above:
       # the matching trained year model for the date chosen in pred_dates
-      tar_target(pred_out, run_preds(predinput, model_file_2018))
+      tar_target(pred_out, run_preds(predinput, model_file_2018)),
+      # Map Predictions ####
+      tar_target(preds_ggplot, ggplot_orig_vs_adj(refgrid_path, predinput, pred_out),
+                 packages = c('ggplot2', 'cowplot', 'data.table', 'fst')),
+      tar_target(preds_mapshot, mapshot_orig_vs_adj(refgrid_path, predinput, pred_out),
+                 packages = c('mapview', 'raster', 'data.table', 'fst', 'here'),
+                 format = 'file')
     )
   )
 )

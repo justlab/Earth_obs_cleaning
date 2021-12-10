@@ -731,11 +731,12 @@ simple.pred.map = function(preds, fillvar, xvar = 'x', yvar = 'y',
 }
 
 #' Interactively compare adjusted AOD to original
+#'
 #' @param refgrid_path FST with coordinates of all raster cells in the area of interest
 #' @param data the data.table that was used as input to prediction function
 #' @param preds numeric vector of predictions
 #' @return mapview object with a layer for the original and adjusted MCD19A2 AOD
-mapview_orig_vs_adj = function(refgrid_path, data, preds){
+mapshot_orig_vs_adj = function(refgrid_path, data, preds){
   data = adjust_mcd19(data, preds)
   rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
                 as.data.table = TRUE)
@@ -749,7 +750,13 @@ mapview_orig_vs_adj = function(refgrid_path, data, preds){
                      col.regions = ub[[i]]$colors,
                      at = ub[[i]]$breaks, layer.name = names(ras[[i]]))}
   maps = lapply(1:2, get_mapview)
-  maps[[1]] + maps[[2]]
+  if(!dir.exists(here('Intermediate/mapshot'))) dir.create(here('Intermediate/mapshot'), recursive = T)
+  mapshot_path = here('Intermediate/mapshot',
+                      paste0('orig_adj_MCD19_',
+                             targets:::digest_obj64(list(refgrid_path, data, preds)),
+                             '.html'))
+  mapshot(maps[[1]] + maps[[2]], url = mapshot_path)
+  mapshot_path
 }
 
 #' Get unified breaks and color scheme for layer ranges that partially overlap
