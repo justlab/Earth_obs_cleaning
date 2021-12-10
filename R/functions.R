@@ -1,10 +1,14 @@
+# Contains most functions required for the AOD cleaning targets workflow
 
 #' Return AERONET points that intersect the polygon describing the area of
-#' interest, and include the cell ID (idM21pair0) from the reference CONUS MODIS
-#' grid.
-#' @param stations data.table including coordiantes (lon, lat) points of AERONET stations
+#' interest, and include the cell ID (\code{idM21pair0}) from the reference
+#' CONUS MODIS grid.
+#'
+#' @param stations data.table including coordiantes (\code{lon, lat}) points of
+#'   AERONET stations
 #' @param reg_polygon SF polygon defining the area of interest
-#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param refgrid_path FST with coordinates of all raster cells in the area of
+#'   interest
 #' @param refras_path path to MODIS reference raster stack
 #' @return a subset of geometry points within the given polygon
 select_stations <- function(stations, reg_polygon, refgrid_path, refras_path){
@@ -18,10 +22,13 @@ select_stations <- function(stations, reg_polygon, refgrid_path, refras_path){
 }
 
 #' Get the unique ID of the grid cell an AERONET station is in.
+#'
 #' @param stations_sf SF points of AERONET stations
-#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param refgrid_path FST with coordinates of all raster cells in the area of
+#'   interest
 #' @param refras_path path to MODIS reference raster stack
-#' @return SF points of AERONET stations with unique MODIS grid cell IDs added (idM21pair0)
+#' @return SF points of AERONET stations with unique MODIS grid cell IDs added
+#'   (\code{idM21pair0})
 station_cell_ids = function(stations_sf, refgrid_path, refras_path){
   gras = raster(refras_path, band = 4)
   stations_sf = st_transform(stations_sf, crs = st_crs(gras))
@@ -45,13 +52,14 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
            "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
            "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 #' Load Aeronet AOD measurement data from text files sourced from downloaded
-#' `tar.gz` file. Only load the data for the specified stations.
-#' @param aod_dir directory where the `.lev20` files were extracted to.
+#' \code{tar.gz} file. Only load the data for the specified stations.
+#'
+#' @param aod_dir directory where the \code{.lev20} files were extracted to.
 #' @param stations SF points of AERONET stations
 #' @param date_start subset to observations this date or later
 #' @param date_end subset to observations this date or earlier
-#' @return data.table of AERONET observations, joined with MODIS reference grid unique ID
-#'
+#' @return data.table of AERONET observations, joined with MODIS reference grid
+#'   unique ID
 get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
   stn_names = unique(stations$Site_Name)
   # open files containing names of stations in the specified region
@@ -90,12 +98,12 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
   }
 }
 
-
-#' Generate a tibble with a column for year and a column with a list of every date in the year
+#' Generate a tibble with a column for year and a column with a list of every
+#' date in the year
 #'
 #' @param years vector of four-digit years
-#' @return a tibble with a "year" column and a "dates" column containing a list of every date in the year
-#'
+#' @return a tibble with a "year" column and a "dates" column containing a list
+#'   of every date in the year
 dates_year <- function(years){
   dates = lapply(years, function(y) seq.Date(as.Date(paste0(y, '-01-01')),
                                             as.Date(paste0(y, '-12-31')), 1))
@@ -105,6 +113,8 @@ dates_year <- function(years){
 #' Assign a month index from 1970-01-01 to all observation dates.
 #'
 #' Month indexes are used to batch the extraction of training data into chunks and increase targets throughput.
+#' @param aer_data AERONET observation data
+#' @return data.table of AERONET observation data with a monthid column added
 assign_monthid <- function(aer_data){
   start = as.Date('1970-01-01')
   aer_data[, monthid := as.period(as.Date(aer_date) - start) %/% months(1)]
@@ -121,12 +131,12 @@ filter_aer_bydate <- function(aer_data, dates){
   aer_data[aer_date %in% dates, ]
 }
 
-
-#' prepare aer_date for interpolation of AOD470nm
+#' prepare AERONET observation data for interpolation of AOD470nm
+#'
 #' interpolating to wavelength 470 nm, input as 0.47
+#'
 #' @param aer_data the dataset contains all the AOD measurements and exact wavelengths
 #' @return dataset of aer_data with pred, also with `nearest_refgrid` next to Site_Name
-#'
 interpolate_aod <- function(aer_data, aer_nearest_2){
   keepcols = grep('1020|1640', names(aer_data), invert = T)
   aer_data <- aer_data[, ..keepcols]
@@ -165,14 +175,16 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
 
 #' Return the SF points for stations reporting data in the previously-selected
 #' time period
+#'
 #' @param stations SF points of AERONET stations
 #' @param stn_data data.table of station observations for previously-selected time period
 filter_stations = function(stations, stn_data){
   stations[stations$Site_Name %in% stn_data$Site_Name, ]
 }
 
-#' Get MODIS grid unique IDs (idM21pair0) for every cell within specified
+#' Get MODIS grid unique IDs (\code{idM21pair0}) for every cell within specified
 #' distance from AERONET stations.
+#'
 #' @param stations
 #' @param refgrid_path FST with coordinates of all raster cells in the area of interest
 #' @param dist_km Return cell IDs within this distance, in kilometers
@@ -197,8 +209,9 @@ cells_in_buffer = function(stations, refgrid_path, dist_km = 270){
   rbindlist(lapply(1:nrow(stations), FUN = cells_by_station, gDT = gDT))
 }
 
-#' calculate grid X,Y positions from the top left of the most northwestern tile
+#' Calculate grid X,Y positions from the top left of the most northwestern tile
 #' over CONUS
+#'
 #' @param refgrid_path FST with coordinates of all raster cells in the area of
 #'   interest
 #' @return data table keyed by reference grid unique ID with X,Y offsets from
@@ -220,6 +233,7 @@ calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0' , aoiname = 'co
 #'
 #' Assumes square matrix with odd number of rows & columns. The width (and
 #' height) will be 2x the radius plus one cell.
+#'
 #' @param radius distance, in kilometers, from center cell to classify as
 #'   inside circle
 #' @param cellsize dimensions of raster cells in meters. Pixels assumed square.
@@ -244,7 +258,8 @@ circle_mat = function(radius, cellsize = 926.6254){
 
 #' Roll join a single day of AERONET data to nearest MCD19A2 overpass and calculate derived
 #' values from MCD19A2 within specified distances from the AERONET station.
-#' @param aer_data A single day of AERONET observations (provided by tar_group_by)
+#'
+#' @param aer_data A single day of AERONET observations (provided by \code{tar_group_by})
 #' @param nearby_cells
 #' @param sat input "terra" or "aqua"
 #' @param buffers_km vector of buffer radii in kilometers
@@ -332,10 +347,16 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
   }
 }
 
-#' Open one day of MCD19A2 data from a FST file. Adds a column for the satellite.
+#' Open one day of MCD19A2 data from a FST file. Adds a column for the
+#' satellite.
+#'
 #' @param sat input "terra" or "aqua", if sat !="terra", load aqua
-#' @param daynum day number as character with padding to three digits, leading zeroes
-#' @param filepath path to the year of MCD19A2 daily best overpasses as FST files
+#' @param daynum day number as character with padding to three digits, leading
+#'   zeroes
+#' @param filepath path to the year of MCD19A2 daily best overpasses as FST
+#'   files
+#' @return one day of MCD19A2 AOD data as a data.table, keyed by
+#'   \code{idM21pair0, overpass_time}
 read_mcd19_one <- function(sat = "terra", daynum, filepath, load_year){
 
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
@@ -357,8 +378,6 @@ read_mcd19_one <- function(sat = "terra", daynum, filepath, load_year){
   }
 }
 
-
-# TEMPORARY BARELY-CHANGED CV PREP FUNCTIONS FROM DRAKE
 create_qc_vars <- function(dt){
   dt[, qa_bits := bitwAnd(AOD_QA, strtoi("111100000000", base = 2))]
   dt[, qa_best := 0]
@@ -373,6 +392,15 @@ create_qc_vars <- function(dt){
   return(dt)
 }
 
+#' Calculate DV, remove rows without DV, and calculate dayint and QC var IVs.
+#'
+#' Optionally subset the MCD19A2 observations to those with dates in the
+#' \code{date_range} vector.
+#'
+#' @param dt data.table of MCD19A2 observations
+#' @param date_range vector of Date type containing all dates to retain in the
+#'   subset
+#' @return data.table with DV and additional IV columns ready for running CV
 prepare_dt <- function(dt, date_range = NULL){
   setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm", skip_absent=TRUE)
   if(!is.null(date_range)){
@@ -386,20 +414,24 @@ prepare_dt <- function(dt, date_range = NULL){
   return(dt)
 }
 
-
-# Do initial CV with hyperparameter selection with DART and rank features
-# Depends on functions in xgboost_cv_RFE.R
+#' Do initial CV with hyperparameter selection with DART and rank features.
+#'
+#' Must provide either stn_var or day_var for binning folds.
+#'
+#' @param data data.frame of observations with DV and IVs
+#' @param y_var column name to predict
 #' @param features character vector of column names to train on
+#' @param stn_var if binning by stations, provide the station column name
+#' @param day_var if binning by days, provide the day column name
+# Depends on functions in xgboost_cv_RFE.R
 initial_cv_dart <- function(
   data,
-  #sat = '',
   y_var,
   features,
   k_fold = 5,
   n_rounds = 100,
   stn_var = NULL,
   day_var = NULL,
-  #run_param_cv = TRUE,
   progress = TRUE
 ){
   xgb_threads <- get.threads()
@@ -452,11 +484,6 @@ initial_cv_dart <- function(
                               index_train = index_train,
                               index_test = index_test,
                               xgb_threads = xgb_threads)
-  # removed: will use hyperparams as a parameter to RFE function
-  # # write param list so in rfe process there is no need to run param search
-  # xgb_param_list_full <- cv_results$xgb_param_list2
-  # if (!dir.exists(here("Intermediate"))) dir.create(here("Intermediate"))
-  # saveRDS(xgb_param_list_full, here("Intermediate", "xgb_param_list_full.rds"))
 
   mDT <- cbind(mDT, cv_results$y_pred_dt)
 
@@ -465,6 +492,10 @@ initial_cv_dart <- function(
 }
 
 #' Summarize CV statistics on all initial_cv objects
+#'
+#' @param cv_list list of all CV output objects; may include every year and both
+#'   satellites.
+#' @return data.table summarizing CV statistics for each year and satellite
 cv_summary <- function(cv_list){
   output = vector(mode = "list", length = length(cv_list))
   for(i in 1:length(cv_list)){
@@ -480,7 +511,8 @@ cv_summary <- function(cv_list){
   setcolorder(outDT)
 }
 
-#' Calculate CV statistics on a single initial_cv object
+#' Calculate CV statistics on a single \code{initial_cv_dart()} output list object
+#'
 cv_reporting <- function(cv){
   dt = cv$mDT_wPred
   mae = function(v1, v2) mean(abs(v1 - v2))
@@ -506,10 +538,12 @@ cv_reporting <- function(cv){
 #'   be in MODIS sinusoidal CRS.
 #' @param features character vector of column names to train on
 #' @param buffers_km vector of buffer radii in kilometers
-#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param refgrid_path FST with coordinates of all raster cells in the area of
+#'   interest
 #' @param mcd19path path to MCD19A2 FST files
 #' @param aoiname the region the model was trained over ('conus' or 'nemia')
-#' @param dates vector of dates to make predictions for. Must be within the same year.
+#' @param dates vector of dates to make predictions for. Must be within the same
+#'   year.
 #' @param sat input "terra" or "aqua"
 pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path,
                         aoiname, sat, dates){
@@ -534,7 +568,7 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
 
   setkey(rgDT, cell_x, cell_y)
 
-  # Calculate buffered values around a single cellalgori
+  # Calculate buffered values around a single cell
   buff_mcd19_vals <- function(cellid, cdf, buff_size, mcd, rgDT){
     buff_center = rgDT[idM21pair0 == cellid, .(cell_x, cell_y)]
     buff_offsets = cdf[, .(cell_x = offset_x + buff_center$cell_x,
@@ -660,7 +694,8 @@ run_preds = function(data, model_file){
 }
 
 #' Adjust MCD19 AOD values using predicted difference between MCD19 and AERONET.
-#' Return as data.table
+#'
+#' @return data.table of adjusted AOD values in \code{MCD19_adjust} column
 adjust_mcd19 = function(data, preds){
   data[, MCD19_adjust := MCD19_AOD_470nm - preds]
 }
@@ -668,6 +703,10 @@ adjust_mcd19 = function(data, preds){
 # Maps ####
 
 #' Compare adjusted AOD to original
+#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param data the data.table that was used as input to prediction function
+#' @param preds numeric vector of predictions
+#' @return vertically stacked ggplots comparing original and adjusted MCD19A2 AOD
 ggplot_orig_vs_adj = function(refgrid_path, data, preds){
   data = adjust_mcd19(data, preds)
   rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
@@ -692,6 +731,10 @@ simple.pred.map = function(preds, fillvar, xvar = 'x', yvar = 'y',
 }
 
 #' Interactively compare adjusted AOD to original
+#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param data the data.table that was used as input to prediction function
+#' @param preds numeric vector of predictions
+#' @return mapview object with a layer for the original and adjusted MCD19A2 AOD
 mapview_orig_vs_adj = function(refgrid_path, data, preds){
   data = adjust_mcd19(data, preds)
   rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
@@ -699,7 +742,6 @@ mapview_orig_vs_adj = function(refgrid_path, data, preds){
   data[rg, c('x', 'y') := .(x_sinu, y_sinu), on = 'idM21pair0']
   data = data[, .(x, y, MCD19_AOD_470nm, MCD19_adjust)]
   ras = rasterFromXYZ(data, crs = crs_sinu)
-  #ras_range = range(ras[], na.rm = TRUE)
 
   ub = unified_breaks(ras, n_classes = 10, viridis::inferno)
   get_mapview = function(i){
@@ -711,6 +753,14 @@ mapview_orig_vs_adj = function(refgrid_path, data, preds){
 }
 
 #' Get unified breaks and color scheme for layer ranges that partially overlap
+#' @param ras RasterStack or RasterBrick to prepare a unified set of class
+#'   breaks for all its layers
+#' @param n_classes number of classes, a numeric of length 1
+#' @param color_func function to use to calculate colors, should take a single
+#'   number as input
+#' @return list with length equal to count of raster layers. Each item contains
+#'   \code{$breaks}: numeric vector of class breaks, and \code{$colors} a
+#'   character vector of hex-encoded colors.
 unified_breaks = function(ras, n_classes, color_func){
   rrange = range(ras[], na.rm = TRUE)
   full_breaks = seq(rrange[1], rrange[2],
