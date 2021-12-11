@@ -575,16 +575,20 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
 
   # Calculate buffered values around a single cell
   buff_mcd19_vals <- function(cellid, cdf, buff_size, mcd, rgDT){
-    buff_center = rgDT[idM21pair0 == cellid, .(cell_x, cell_y)]
-    buff_offsets = cdf[, .(cell_x = offset_x + buff_center$cell_x,
-                           cell_y = offset_y + buff_center$cell_y)]
-    setkey(buff_offsets)
-    buff_ids = rgDT[buff_offsets, .(idM21pair0)]
-    d_summary = mcd[.(buff_ids), .(cellid,
-                                'Mean_AOD' = mean(MCD19_AOD_470nm, na.rm = TRUE),
-                                'nonmissing' = sum(!is.na(MCD19_AOD_470nm))/nrow(cdf))]
-    d_summary[, diff_AOD := mcd[.(cellid), MCD19_AOD_470nm] - Mean_AOD]
-
+    if(is.na(mcd[idM21pair0 == cellid, MCD19_AOD_470nm])){
+      # if no AOD in central cell, return a row with all NA values
+      d_summary = data.table(cellid = cellid, Mean_AOD = NA, nonmissing = NA, diff_AOD = NA)
+    } else {
+      buff_center = rgDT[idM21pair0 == cellid, .(cell_x, cell_y)]
+      buff_offsets = cdf[, .(cell_x = offset_x + buff_center$cell_x,
+                             cell_y = offset_y + buff_center$cell_y)]
+      setkey(buff_offsets)
+      buff_ids = rgDT[buff_offsets, .(idM21pair0)]
+      d_summary = mcd[.(buff_ids), .(cellid,
+                                  'Mean_AOD' = mean(MCD19_AOD_470nm, na.rm = TRUE),
+                                  'nonmissing' = sum(!is.na(MCD19_AOD_470nm))/nrow(cdf))]
+      d_summary[, diff_AOD := mcd[.(cellid), MCD19_AOD_470nm] - Mean_AOD]
+    }
     setnames(d_summary, c('Mean_AOD', 'nonmissing', 'diff_AOD', 'cellid'),
              c(paste0('Mean_AOD', buff_size, 'km'), paste0('pNonNAAOD', buff_size, 'km'),
                paste0('diff_AOD', buff_size, 'km'), 'idM21pair0'))
