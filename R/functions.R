@@ -535,7 +535,7 @@ cv_reporting <- function(cv){
 #'
 #' @param pred_bbox sf bbox or named numeric vector conforming to st_bbox spec:
 #'   xmin, xmax, ymax, ymin. The rectangular spatial region to predict in. Must
-#'   be in MODIS sinusoidal CRS.
+#'   be in MODIS sinusoidal CRS. If NULL, will operate on full CONUS.
 #' @param features character vector of column names to train on
 #' @param buffers_km vector of buffer radii in kilometers
 #' @param refgrid_path FST with coordinates of all raster cells in the area of
@@ -553,18 +553,23 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
   # Get an area of interest grid including border cells needed for buffered calculations
   refgrid = calc_XY_offsets(refgrid_path, aoiname = aoiname)
 
-  pred_bbox = st_bbox(pred_bbox)
-  m_extend = max(buffers_km) * 1000
-  mod_box = st_bbox(c(xmin = -m_extend, xmax = m_extend,
-                      ymin = -m_extend, ymax = m_extend))
-  m_bbox = pred_bbox + mod_box
-  # subset to prediction area plus an extension to support focal operations
-  rgDT = refgrid[x_sinu >= m_bbox$xmin & x_sinu <= m_bbox$xmax &
-                 y_sinu >= m_bbox$ymin & y_sinu <= m_bbox$ymax]
-  # mark which cells to predict
-  rgDT[x_sinu >= pred_bbox$xmin & x_sinu <= pred_bbox$xmax &
-       y_sinu >= pred_bbox$ymin & y_sinu <= pred_bbox$ymax,
-       do_preds := TRUE]
+  if(!is.null(pred_bbox)){
+    pred_bbox = st_bbox(pred_bbox)
+    m_extend = max(buffers_km) * 1000
+    mod_box = st_bbox(c(xmin = -m_extend, xmax = m_extend,
+                        ymin = -m_extend, ymax = m_extend))
+    m_bbox = pred_bbox + mod_box
+    # subset to prediction area plus an extension to support focal operations
+    rgDT = refgrid[x_sinu >= m_bbox$xmin & x_sinu <= m_bbox$xmax &
+                   y_sinu >= m_bbox$ymin & y_sinu <= m_bbox$ymax]
+    # mark which cells to predict
+    rgDT[x_sinu >= pred_bbox$xmin & x_sinu <= pred_bbox$xmax &
+         y_sinu >= pred_bbox$ymin & y_sinu <= pred_bbox$ymax,
+         do_preds := TRUE]
+  } else {
+    rgDT = refgrid
+    rgDT[, do_preds := TRUE]
+  }
 
   setkey(rgDT, cell_x, cell_y)
 
