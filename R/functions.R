@@ -581,10 +581,15 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
 
   # Calculate buffered values around a single cell
   buff_mcd19_vals <- function(cellid, cdf, buff_size, mcd, rgDT){
-    if(is.na(mcd[idM21pair0 == cellid, MCD19_AOD_470nm])){
+    aod_central = mcd[idM21pair0 == cellid, MCD19_AOD_470nm]
+    if(length(aod_central) == 0){
+      # if the requested cell is not in the FST
+      return(NULL)
+    } else if(is.na(aod_central)){
       # if no AOD in central cell, return a row with all NA values
       d_summary = data.table(cellid = cellid, Mean_AOD = NA, nonmissing = NA, diff_AOD = NA)
     } else {
+      d_summary = tryCatch({
           buff_center = rgDT[idM21pair0 == cellid, .(cell_x, cell_y)]
           buff_offsets = cdf[, .(cell_x = offset_x + buff_center$cell_x,
                                  cell_y = offset_y + buff_center$cell_y)]
@@ -594,6 +599,13 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
                                       'Mean_AOD' = mean(MCD19_AOD_470nm, na.rm = TRUE),
                                       'nonmissing' = sum(!is.na(MCD19_AOD_470nm))/nrow(cdf))]
           d_summary[, diff_AOD := mcd[.(cellid), MCD19_AOD_470nm] - Mean_AOD]
+        },
+        error = function(err){
+          d_summary = data.table(cellid = cellid, Mean_AOD = NA, nonmissing = NA,
+                                 diff_AOD = NA, error = as.character(err))
+          setnames(d_summary, 'error', paste0('err', buff_size))
+          return(d_summary)
+        })
     }
     setnames(d_summary, c('Mean_AOD', 'nonmissing', 'diff_AOD', 'cellid'),
              c(paste0('Mean_AOD', buff_size, 'km'), paste0('pNonNAAOD', buff_size, 'km'),
@@ -622,10 +634,11 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
                                 FUN = function(buff_size){
                                   # for each cell in AOI:
                                   cdf = circle_mat(buff_size)
-                                  rbindlist(lapply(rgDT[do_preds == TRUE, idM21pair0],
+                                  rbindlist(mclapply(rgDT[do_preds == TRUE, idM21pair0],
                                             FUN = buff_mcd19_vals,
                                             mcd = mcd, rgDT = rgDT,
-                                            cdf = cdf, buff_size = buff_size))
+                                            cdf = cdf, buff_size = buff_size,
+                                            mc.cores = get.threads()), fill = TRUE)
       }))
       # join single cell variables to buffered variables
       setkey(buff_vars, idM21pair0)
