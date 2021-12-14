@@ -216,7 +216,7 @@ cells_in_buffer = function(stations, refgrid_path, dist_km = 270){
 #'   interest
 #' @return data table keyed by reference grid unique ID with X,Y offsets from
 #'   northwestern corner of area of interest
-calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0' , aoiname = 'conus'){
+calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0', aoiname = 'conus'){
   if(!aoiname %in% c('conus', 'nemia')) stop('Only CONUS region has been implemented')
   refgrid = read_fst(refgrid_path, as.data.table = TRUE)
 
@@ -224,8 +224,8 @@ calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0' , aoiname = 'co
   refgrid[, aoi_tile_h := as.integer(substr(tile, 2, 3)) - 8]
   refgrid[, aoi_tile_v := as.integer(substr(tile, 5, 6)) - 4]
 
-  refgrid[, cell_x := col + 1000 * aoi_tile_h]
-  refgrid[, cell_y := row + 1000 * aoi_tile_v]
+  refgrid[, cell_x := col + 1200 * aoi_tile_h]
+  refgrid[, cell_y := row + 1200 * aoi_tile_v]
 
 }
 
@@ -579,15 +579,15 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
       # if no AOD in central cell, return a row with all NA values
       d_summary = data.table(cellid = cellid, Mean_AOD = NA, nonmissing = NA, diff_AOD = NA)
     } else {
-      buff_center = rgDT[idM21pair0 == cellid, .(cell_x, cell_y)]
-      buff_offsets = cdf[, .(cell_x = offset_x + buff_center$cell_x,
-                             cell_y = offset_y + buff_center$cell_y)]
-      setkey(buff_offsets)
-      buff_ids = rgDT[buff_offsets, .(idM21pair0)]
-      d_summary = mcd[.(buff_ids), .(cellid,
-                                  'Mean_AOD' = mean(MCD19_AOD_470nm, na.rm = TRUE),
-                                  'nonmissing' = sum(!is.na(MCD19_AOD_470nm))/nrow(cdf))]
-      d_summary[, diff_AOD := mcd[.(cellid), MCD19_AOD_470nm] - Mean_AOD]
+          buff_center = rgDT[idM21pair0 == cellid, .(cell_x, cell_y)]
+          buff_offsets = cdf[, .(cell_x = offset_x + buff_center$cell_x,
+                                 cell_y = offset_y + buff_center$cell_y)]
+          setkey(buff_offsets)
+          buff_ids = rgDT[buff_offsets, .(idM21pair0)]
+          d_summary = mcd[.(buff_ids), .(cellid,
+                                      'Mean_AOD' = mean(MCD19_AOD_470nm, na.rm = TRUE),
+                                      'nonmissing' = sum(!is.na(MCD19_AOD_470nm))/nrow(cdf))]
+          d_summary[, diff_AOD := mcd[.(cellid), MCD19_AOD_470nm] - Mean_AOD]
     }
     setnames(d_summary, c('Mean_AOD', 'nonmissing', 'diff_AOD', 'cellid'),
              c(paste0('Mean_AOD', buff_size, 'km'), paste0('pNonNAAOD', buff_size, 'km'),
