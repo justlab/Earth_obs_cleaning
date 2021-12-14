@@ -26,9 +26,11 @@ tar_option_set(
                'SHAPforxgboost',
                'Just.universal',
                'xgboost',
+               'parallel',
                'tibble'),
   format = 'qs',
-  workspace_on_error = TRUE)
+  workspace_on_error = TRUE,
+  error = 'abridge')
 
 tar_config_set(store = '/data-belle/cache/aod_targets/')
 
@@ -137,9 +139,9 @@ set1_targets = list(
       ),
       # later, move within year mapping
       # Prediction ####
-      tar_target(pred_dates, as.Date('2018-06-01')),
+      tar_target(pred_dates, c(as.Date('2008-01-16'), as.Date('2008-01-17'))),
       tar_target(predinput, pred_inputs(
-          pred_bbox = dc_sinu,
+          pred_bbox = NULL,
           features = features,
           buffers_km = buffers_km,
           refgrid_path = refgrid_path,
@@ -152,7 +154,7 @@ set1_targets = list(
         storage = 'worker'),
       # need a specific target from the static branches of tar_map above:
       # the matching trained year model for the date chosen in pred_dates
-      tar_target(pred_out, run_preds(predinput, model_file_2018)),
+      tar_target(pred_out, run_preds(predinput, model_file_2008)),
       # Map Predictions ####
       tar_target(preds_ggplot, ggplot_orig_vs_adj(refgrid_path, predinput, pred_out),
                  packages = c('ggplot2', 'cowplot', 'data.table', 'fst')),
