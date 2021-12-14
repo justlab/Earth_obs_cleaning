@@ -218,7 +218,8 @@ cells_in_buffer = function(stations, refgrid_path, dist_km = 270){
 #'   northwestern corner of area of interest
 calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0', aoiname = 'conus'){
   if(!aoiname %in% c('conus', 'nemia')) stop('Only CONUS region has been implemented')
-  refgrid = read_fst(refgrid_path, as.data.table = TRUE)
+  refgrid = read_fst(refgrid_path, as.data.table = TRUE,
+                     columns = c(ref_uid, 'tile', 'x_sinu', 'y_sinu', 'col', 'row'))
 
   # most northwestern tile used as origin is h08v04
   refgrid[, aoi_tile_h := as.integer(substr(tile, 2, 3)) - 8]
@@ -227,6 +228,7 @@ calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0', aoiname = 'con
   refgrid[, cell_x := col + 1200 * aoi_tile_h]
   refgrid[, cell_y := row + 1200 * aoi_tile_v]
 
+  refgrid[, c('tile', 'col', 'row', 'aoi_tile_h', 'aoi_tile_v') := NULL]
 }
 
 #' Return a matrix classifying cells as being within a distance from the center.
@@ -357,21 +359,25 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
 #'   files
 #' @return one day of MCD19A2 AOD data as a data.table, keyed by
 #'   \code{idM21pair0, overpass_time}
-read_mcd19_one <- function(sat = "terra", daynum, filepath, load_year){
-
+read_mcd19_one <- function(sat = "terra", daynum, filepath, load_year,
+                           ref_uid = 'idM21pair0',
+                           columns = c("overpass_index", "Optical_Depth_047",
+                                       "AOD_Uncertainty", "Column_WV", "AOD_QA",
+                                       "RelAZ", "idM21pair0", "overpass_time")){
+  columns = unique(c(ref_uid, columns))
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
   mcd_file = file.path(filepath, paste0('mcd19_conus_', choose, '_', load_year,
                                         daynum, '.fst'))
   if(file.exists(mcd_file)){
-    dt = read.fst(mcd_file, as.data.table = TRUE,
-                  columns = c("overpass_index", "Optical_Depth_047",
-                              "AOD_Uncertainty", "Column_WV", "AOD_QA", "RelAZ",
-                              "idM21pair0", "overpass_time"))
-
+    dt = read.fst(mcd_file, as.data.table = TRUE, columns = columns)
     dt[, sat := choose]
     #setnames(dt, "idM21pair0", "nearest_refgrid") # rename for join later
     #setkey(dt, nearest_refgrid, join_time)
-    setkey(dt, idM21pair0, overpass_time)
+    if('overpass_time' %in% columns){
+      setkeyv(dt, c(ref_uid, 'overpass_time'))
+    } else {
+      setkeyv(dt, ref_uid)
+    }
     dt
   } else {
     NULL
@@ -601,7 +607,8 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
     # read the satellite-day MCD19A2 FST, subsetting to cells needed for prediction
     mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
                          filepath = file.path(mcd19path, this_year),
-                         load_year = this_year)[idM21pair0 %in% rgDT$idM21pair0]
+                         load_year = this_year,
+                         columns = 'Optical_Depth_047')[idM21pair0 %in% rgDT$idM21pair0]
     if(!is.null(mcd)){
       # single cell variables
       mcd[, dayint:= as.integer(as.Date(overpass_time))]
