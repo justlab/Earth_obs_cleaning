@@ -364,7 +364,7 @@ read_mcd19_one <- function(sat = "terra", daynum, filepath, load_year,
                            columns = c("overpass_index", "Optical_Depth_047",
                                        "AOD_Uncertainty", "Column_WV", "AOD_QA",
                                        "RelAZ", "idM21pair0", "overpass_time")){
-  columns = unique(c(ref_uid, columns))
+  columns = unique(c(ref_uid, 'overpass_time', columns))
   if (sat != "terra") choose = "A" else choose = "T" # load terra by default
   mcd_file = file.path(filepath, paste0('mcd19_conus_', choose, '_', load_year,
                                         daynum, '.fst'))
