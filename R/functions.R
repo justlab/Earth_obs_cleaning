@@ -620,7 +620,7 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
     mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
                          filepath = file.path(mcd19path, this_year),
                          load_year = this_year,
-                         columns = 'Optical_Depth_047')[idM21pair0 %in% rgDT$idM21pair0]
+                         columns = c('Optical_Depth_047', 'AOD_QA'))[idM21pair0 %in% rgDT$idM21pair0]
     if(!is.null(mcd)){
       # single cell variables
       mcd[, dayint:= as.integer(as.Date(overpass_time))]
