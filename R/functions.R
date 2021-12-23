@@ -619,8 +619,7 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
     # read the satellite-day MCD19A2 FST, subsetting to cells needed for prediction
     mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
                          filepath = file.path(mcd19path, this_year),
-                         load_year = this_year,
-                         columns = c('Optical_Depth_047', 'AOD_QA'))[idM21pair0 %in% rgDT$idM21pair0]
+                         load_year = this_year)[idM21pair0 %in% rgDT$idM21pair0]
     if(!is.null(mcd)){
       # single cell variables
       mcd[, dayint:= as.integer(as.Date(overpass_time))]
