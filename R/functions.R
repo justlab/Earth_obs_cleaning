@@ -537,6 +537,8 @@ cv_reporting <- function(cv){
   )
 }
 
+# Prediction ####
+
 #' Prepare prediction table
 #'
 #' @param pred_bbox sf bbox or named numeric vector conforming to st_bbox spec:
@@ -734,8 +736,19 @@ adjust_mcd19 = function(data, preds){
 #' @param refgrid_path FST with coordinates of all raster cells in the area of interest
 #' @param data the data.table that was used as input to prediction function
 #' @param preds numeric vector of predictions
+#' @param pred_dates vector of dates that were predicted
+#' @param date_index single number indicating which date to map, index in pred_dates
 #' @return vertically stacked ggplots comparing original and adjusted MCD19A2 AOD
-ggplot_orig_vs_adj = function(refgrid_path, data, preds){
+ggplot_orig_vs_adj = function(refgrid_path, data, preds, pred_dates, date_index){
+  # XXX replace this date subset logic with list iteration in predinput target later
+  map_dayint = as.integer(pred_dates[date_index])
+  rows_per_date = nrow(data)/length(pred_dates)
+  # this allows order of dates within data table to not match order of pred_dates, but that shouldn't happen
+  order_dayint = which.min(abs(c(1:length(pred_dates)*rows_per_date) - max(which(data$dayint == map_dayint))))
+  start_sub = rows_per_date * order_dayint - rows_per_date + 1
+  data = data[start_sub:(rows_per_date * order_dayint)]
+  preds = preds[start_sub:(rows_per_date * order_dayint)]
+
   data = adjust_mcd19(data, preds)
   rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
                 as.data.table = TRUE)
@@ -743,7 +756,8 @@ ggplot_orig_vs_adj = function(refgrid_path, data, preds){
   orig = simple.pred.map(data, fillvar = 'MCD19_AOD_470nm')
   adj = simple.pred.map(data, fillvar = 'MCD19_adjust')
   aps = cowplot::align_plots(orig, adj, align = 'v')
-  cowplot::plot_grid(plotlist = aps, ncol = 1)
+  title = ggdraw() + draw_label(as.character(pred_dates[date_index]))
+  cowplot::plot_grid(plotlist = list(title, aps), ncol = 1)
 }
 
 # adapted from CONUS_air:plots.R
