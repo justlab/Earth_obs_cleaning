@@ -763,8 +763,22 @@ simple.pred.map = function(preds, fillvar, xvar = 'x', yvar = 'y',
 #' @param refgrid_path FST with coordinates of all raster cells in the area of interest
 #' @param data the data.table that was used as input to prediction function
 #' @param preds numeric vector of predictions
+#' @param pred_dates
+#' @param date_index
+#' @param maxpixels resample raster version of predictions to approxmimately
+#'   this many pixels and force the display in mapshot of this resolution
 #' @return mapview object with a layer for the original and adjusted MCD19A2 AOD
-mapshot_orig_vs_adj = function(refgrid_path, data, preds){
+mapshot_orig_vs_adj = function(refgrid_path, data, preds, pred_dates, date_index,
+                               use_jenks = FALSE, maxpixels = NULL){
+  # XXX replace this date subset logic with list iteration in predinput target later
+  map_dayint = as.integer(pred_dates[date_index])
+  rows_per_date = nrow(data)/length(pred_dates)
+  # this allows order of dates within data table to not match order of pred_dates, but that shouldn't happen
+  order_dayint = which.min(abs(c(1:length(pred_dates)*rows_per_date) - max(which(data$dayint == map_dayint))))
+  start_sub = rows_per_date * order_dayint - rows_per_date + 1
+  data = data[start_sub:(rows_per_date * order_dayint)]
+  preds = preds[start_sub:(rows_per_date * order_dayint)]
+
   data = adjust_mcd19(data, preds)
   rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
                 as.data.table = TRUE)
@@ -772,7 +786,13 @@ mapshot_orig_vs_adj = function(refgrid_path, data, preds){
   data = data[, .(x, y, MCD19_AOD_470nm, MCD19_adjust)]
   ras = rasterFromXYZ(data, crs = crs_sinu)
 
-  ub = unified_breaks(ras, n_classes = 10, viridis::inferno)
+  # resample raster
+  if(!is.null(maxpixels)){
+    mapviewOptions(georaster = TRUE, mapview.maxpixels = maxpixels)
+    ras = sampleRegular(ras, maxpixels, asRaster = TRUE)
+  }
+
+  ub = unified_breaks(ras, n_classes = 10, viridis::inferno, use_jenks = use_jenks)
   get_mapview = function(i){
     mapview::mapview(ras[[i]], na.color = '#AAAAAA00', alpha.regions = 1,
                      col.regions = ub[[i]]$colors,
@@ -781,9 +801,11 @@ mapshot_orig_vs_adj = function(refgrid_path, data, preds){
   if(!dir.exists(here('Intermediate/mapshot'))) dir.create(here('Intermediate/mapshot'), recursive = T)
   mapshot_path = here('Intermediate/mapshot',
                       paste0('orig_adj_MCD19_',
-                             targets:::digest_obj64(list(refgrid_path, data, preds)),
+                             targets:::digest_obj64(list(refgrid_path, data, preds, maxpixels)),
                              '.html'))
   mapshot(maps[[1]] + maps[[2]], url = mapshot_path)
+  out_size_MB = file.size(mapshot_path)/1024^2
+  if(out_size_MB>500) warning('The output file', mapshot_path, 'is', round(out_size_MB,0), 'MiB in size')
   mapshot_path
 }
 
@@ -796,10 +818,19 @@ mapshot_orig_vs_adj = function(refgrid_path, data, preds){
 #' @return list with length equal to count of raster layers. Each item contains
 #'   \code{$breaks}: numeric vector of class breaks, and \code{$colors} a
 #'   character vector of hex-encoded colors.
-unified_breaks = function(ras, n_classes, color_func){
+unified_breaks = function(ras, n_classes, color_func, use_jenks = FALSE){
   rrange = range(ras[], na.rm = TRUE)
-  full_breaks = seq(rrange[1], rrange[2],
-                    (rrange[2]-rrange[1])/n_classes)
+  if(use_jenks == TRUE){
+    if(n_classes < 2) stop('cannot use n_classes < 2 with use_jenks = TRUE')
+    # get all raster data into a single vector, removing NA values
+    datavec = base::Reduce(c, as.data.table(ras[])[!is.na(get(names(ras)[1]))])
+    nb1 = rgeoda::natural_breaks(k = n_classes, df = as.data.table(datavec))
+    full_breaks = c(min(datavec), nb1, max(datavec))
+    rm(datavec)
+  } else {
+    full_breaks = seq(rrange[1], rrange[2],
+                      (rrange[2]-rrange[1])/n_classes)
+  }
   colors = color_func(n_classes)
 
   breaks_by_layer = function(layernum, ras, full_breaks, colors){

@@ -158,8 +158,10 @@ set1_targets = list(
       # Map Predictions ####
       tar_target(preds_ggplot, ggplot_orig_vs_adj(refgrid_path, predinput, pred_out),
                  packages = c('ggplot2', 'cowplot', 'data.table', 'fst')),
-      tar_target(preds_mapshot, mapshot_orig_vs_adj(refgrid_path, predinput, pred_out),
-                 packages = c('mapview', 'raster', 'data.table', 'fst', 'here'),
+      tar_target(preds_mapshot, mapshot_orig_vs_adj(refgrid_path, predinput, pred_out,
+                                                    pred_dates, date_index = 1,
+                                                    use_jenks = TRUE, maxpixels = 2e6),
+                 packages = c('mapview', 'raster', 'data.table', 'fst', 'here', 'rgeoda'),
                  format = 'file')
     )
   )
