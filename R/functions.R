@@ -236,12 +236,14 @@ calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0', aoiname = 'con
 #' Assumes square matrix with odd number of rows & columns. The width (and
 #' height) will be 2x the radius plus one cell.
 #'
-#' @param radius distance, in kilometers, from center cell to classify as
-#'   inside circle
+#' @param radius distance, in kilometers, from center cell to classify as inside
+#'   circle
 #' @param cellsize dimensions of raster cells in meters. Pixels assumed square.
+#' @param matrix if TRUE, return a logical matrix. If FALSE (default), return a
+#'   data.table with two columns.
 #' @return a data table with offsets from the central cell that are within the
 #'   specified radius
-circle_mat = function(radius, cellsize = 926.6254){
+circle_mat = function(radius, cellsize = 926.6254, matrix = FALSE){
   radius = radius * 1000
   width = ceiling(radius/cellsize*2+1)
   if(width%%2 == 0) width <- width + 1 # ensure odd row and column count
@@ -250,12 +252,17 @@ circle_mat = function(radius, cellsize = 926.6254){
   center_val = median(circle_df$mrow) # assuming square matrix
   circle_df$dist_cells = sqrt((circle_df$mrow - center_val)^2 + (circle_df$mcol - center_val)^2)
   circle_df$circ = ifelse(circle_df$dist_cells * cellsize <= radius, TRUE, FALSE)
-  #circle_mat = matrix(circle_df$circ, height, width)
 
-  setDT(circle_df)
-  circle_df[, offset_x := mcol - center_val]
-  circle_df[, offset_y := mrow - center_val]
-  circle_df[circ == TRUE, .(offset_x, offset_y)]
+  if(matrix == TRUE){
+    circle_mat = matrix(circle_df$circ, height, width)
+    circle_mat
+  } else {
+    setDT(circle_df)
+    circle_df[, offset_x := mcol - center_val]
+    circle_df[, offset_y := mrow - center_val]
+    circle_df[circ == TRUE, .(offset_x, offset_y)]
+    circle_df
+  }
 }
 
 #' Roll join a single day of AERONET data to nearest MCD19A2 overpass and calculate derived
@@ -573,7 +580,7 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
     # mark which cells to predict
     rgDT[x_sinu >= pred_bbox$xmin & x_sinu <= pred_bbox$xmax &
          y_sinu >= pred_bbox$ymin & y_sinu <= pred_bbox$ymax,
-         do_preds := TRUE]
+       do_preds := TRUE]
   } else {
     rgDT = refgrid
     rgDT[, do_preds := TRUE]
