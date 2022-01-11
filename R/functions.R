@@ -231,6 +231,24 @@ calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0', aoiname = 'con
   refgrid[, c('tile', 'col', 'row', 'aoi_tile_h', 'aoi_tile_v') := NULL]
 }
 
+# Return a reference raster with the extent of the FST reference grid instead of
+# the reference raster TIF.
+# This will be compatiable with `aoiname = 'conus'`, but would require further
+# cropping to use with other AOIs.
+crop_refras_mcd <- function(refgrid_path, mcd19path, process_years,
+                            ref_uid = 'idM21pair0', aoiname = 'conus'){
+  if(!aoiname %in% c('conus', 'nemia')) stop('Only CONUS region has been implemented')
+  # get the mcd19 file for the first date in the first year
+  mcdDT = read_fst(list.files(file.path(mcd19path, process_years[1]), '*.fst',
+                              full.names = TRUE)[1],
+                   as.data.table = TRUE, columns = ref_uid)
+  rg = read_fst(refgrid_path, as.data.table = TRUE,
+                columns = c(ref_uid, 'x_sinu', 'y_sinu', 'cell_index'))
+  setkeyv(mcdDT, ref_uid)
+  rasterFromXYZ(rg[mcdDT, c('x_sinu', 'y_sinu', 'cell_index'), with = FALSE],
+                crs = crs_sinu)
+}
+
 #' Return a matrix classifying cells as being within a distance from the center.
 #'
 #' Assumes square matrix with odd number of rows & columns. The width (and
