@@ -652,19 +652,7 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
 
       # buffered variables
       buff_vars = buff_mcd19_raster(mcd, buffers_km)
-      ## Old data.table focal stats:
-      # buff_vars = Reduce(merge,
-      #                    # for each buffer radius:
-      #                    lapply(buffers_km,
-      #                           FUN = function(buff_size){
-      #                             # for each cell in AOI:
-      #                             cdf = circle_mat(buff_size)
-      #                             rbindlist(mclapply(rgDT[do_preds == TRUE, idM21pair0],
-      #                                       FUN = buff_mcd19_vals,
-      #                                       mcd = mcd, rgDT = rgDT,
-      #                                       cdf = cdf, buff_size = buff_size,
-      #                                       mc.cores = get.threads()), fill = TRUE)
-      #}))
+
       # join single cell variables to buffered variables
       setkey(buff_vars, idM21pair0)
       buff_vars

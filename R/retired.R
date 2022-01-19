@@ -46,6 +46,23 @@ buff_mcd19_vals <- function(cellid, cdf, buff_size, mcd, rgDT){
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# removed from gather_mcd19_day(), replaced with call to buff_mcd19_raster()
+
+# Old data.table focal stats:
+buff_vars = Reduce(merge,
+                   # for each buffer radius:
+                   lapply(buffers_km,
+                          FUN = function(buff_size){
+                            # for each cell in AOI:
+                            cdf = circle_mat(buff_size)
+                            rbindlist(mclapply(rgDT[do_preds == TRUE, idM21pair0],
+                                      FUN = buff_mcd19_vals,
+                                      mcd = mcd, rgDT = rgDT,
+                                      cdf = cdf, buff_size = buff_size,
+                                      mc.cores = get.threads()), fill = TRUE)
+}))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #' Calculate grid X,Y positions from the top left of the most northwestern tile
 #' over CONUS
