@@ -272,7 +272,7 @@ circle_mat = function(radius, cellsize = 926.6254, matrix = FALSE){
   circle_df$circ = ifelse(circle_df$dist_cells * cellsize <= radius, TRUE, FALSE)
 
   if(matrix == TRUE){
-    circle_mat = matrix(circle_df$circ, height, width)
+    circle_mat = matrix(as.numeric(circle_df$circ), height, width)
     circle_mat
   } else {
     setDT(circle_df)
@@ -579,12 +579,14 @@ cv_reporting <- function(cv){
 #'   year.
 #' @param sat input "terra" or "aqua"
 pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path,
-                        aoiname, sat, dates){
+                        mcd_refras, aoiname, sat, dates){
   if(uniqueN(year(dates)) > 1) stop('More than one year in the prediction date range')
   dates = sort(dates)
 
-  # Get an area of interest grid including border cells needed for buffered calculations
-  refgrid = calc_XY_offsets(refgrid_path, aoiname = aoiname)
+  # # Get an area of interest grid including border cells needed for buffered calculations
+  # refgrid = calc_XY_offsets(refgrid_path, aoiname = aoiname)
+  refgrid = read_fst(refgrid_path, as.data.table = TRUE,
+                     columns = c('idM21pair0', 'x_sinu', 'y_sinu', 'cell_index'))
 
   if(!is.null(pred_bbox)){
     pred_bbox = st_bbox(pred_bbox)
@@ -603,8 +605,8 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
     rgDT = refgrid
     rgDT[, do_preds := TRUE]
   }
-
-  setkey(rgDT, cell_x, cell_y)
+  rm(refgrid)
+  #setkey(rgDT, cell_x, cell_y)
 
   # Calculate buffered values around a single cell
   buff_mcd19_vals <- function(cellid, cdf, buff_size, mcd, rgDT){
@@ -639,6 +641,61 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
                paste0('diff_AOD', buff_size, 'km'), 'idM21pair0'))
   }
 
+  # return a data.table with columns calculated for focal windows of specified width
+  # agg_level: factor to aggregate AOD raster for use in wider focal buffers
+  # agg_thresh: minimum width of focal radius in cells to use the aggregated raster
+  buff_mcd19_raster = function(mcd, buffers_km, agg_level = 10, agg_thresh = 9){
+    # rasterize
+    mcd_aod = rast(mcd[, .(x_sinu, y_sinu, MCD19_AOD_470nm)], type = 'xyz', crs = crs_sinu)
+    mcd_nna = !is.na(mcd_aod)
+    mcd_res = res(mcd_aod)[1]
+    # aggregate (for use below in loop)
+    mcd_agg_aod = terra::aggregate(mcd_aod, fact = agg_level, fun = 'mean', na.rm = TRUE)
+    mcd_agg_nna = terra::aggregate(mcd_nna, fact = agg_level, fun = 'mean', na.rm = TRUE)
+
+    focal_list = list()
+    # loop over buffers, with if statement checking agg_thresh for whether to use aggregated raster
+    for(radius in buffers_km){
+      # buffers should be in km, resolution should be in m
+      if(radius * 1000 / agg_level / mcd_res < agg_thresh){
+        # for high res:
+        filter_matrix = circle_mat(radius, cellsize = mcd_res, matrix = TRUE)
+        # focal
+        focal_aod = terra::focal(mcd_aod, w = filter_matrix, fun = 'mean', na.rm = TRUE)
+        focal_nna = terra::focal(mcd_nna, w = filter_matrix, fun = 'mean', na.rm = TRUE)
+      } else {
+        # for low res:
+        filter_matrix = circle_mat(radius, cellsize = mcd_res * agg_level, matrix = TRUE)
+        # focal
+        focal_aod_agg = terra::focal(mcd_agg_aod, w = filter_matrix, fun = 'mean', na.rm = TRUE)
+        focal_nna_agg = terra::focal(mcd_agg_nna, w = filter_matrix, fun = 'mean', na.rm = TRUE)
+        # disagg
+        focal_aod = terra::disagg(focal_aod_agg, agg_level) %>% terra::crop(., mcd_aod)
+        focal_nna = terra::disagg(focal_nna_agg, agg_level) %>% terra::crop(., mcd_aod)
+      }
+      names(focal_aod) <- paste0('Mean_AOD', radius, 'km')
+      names(focal_nna) <- paste0('pNonNAAOD', radius, 'km')
+
+      focal_list[[names(focal_aod)]] <- focal_aod
+      focal_list[[names(focal_nna)]] <- focal_nna
+    }
+    # stack all 4 focal layers with the reference raster
+    focal_list[['cell_index']] <- rast(mcd_refras)
+    fstack = rast(focal_list)
+    # convert to DT
+    fDT = setDT(as.data.frame(fstack))
+    # join to refgrid to get the cell id (idM21pair0) column
+    setkey(fDT, cell_index)
+    setkey(mcd, cell_index)
+    mcd_join = fDT[mcd, ]
+    setcolorder(mcd_join, names(mcd))
+    # calc diffAOD for each buffer
+    for(radius in buffers_km){
+      mcd_join[, c(paste0('diff_AOD', radius, 'km')) := MCD19_AOD_470nm - get(paste0('Mean_AOD', radius, 'km'))]
+    }
+    mcd_join
+  }
+
   # Prepare MCD19A2 predictors for one day
   gather_mcd19_day <- function(this_date){
     this_year = year(this_date)
@@ -646,33 +703,38 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
     # read the satellite-day MCD19A2 FST, subsetting to cells needed for prediction
     mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
                          filepath = file.path(mcd19path, this_year),
-                         load_year = this_year)[idM21pair0 %in% rgDT$idM21pair0]
+                         load_year = this_year)#[idM21pair0 %in% rgDT$idM21pair0]
     if(!is.null(mcd)){
+      # join to refgrid DT
+      mcd = rgDT[mcd, nomatch = 0]
       # single cell variables
       mcd[, dayint:= as.integer(as.Date(overpass_time))]
       create_qc_vars(mcd)
       setnames(mcd, "Optical_Depth_047", "MCD19_AOD_470nm")
 
       # buffered variables
-      buff_vars = Reduce(merge,
-                         # for each buffer radius:
-                         lapply(buffers_km,
-                                FUN = function(buff_size){
-                                  # for each cell in AOI:
-                                  cdf = circle_mat(buff_size)
-                                  rbindlist(mclapply(rgDT[do_preds == TRUE, idM21pair0],
-                                            FUN = buff_mcd19_vals,
-                                            mcd = mcd, rgDT = rgDT,
-                                            cdf = cdf, buff_size = buff_size,
-                                            mc.cores = get.threads()), fill = TRUE)
-      }))
+      buff_vars = buff_mcd19_raster(mcd, buffers_km)
+      ## Old data.table focal stats:
+      # buff_vars = Reduce(merge,
+      #                    # for each buffer radius:
+      #                    lapply(buffers_km,
+      #                           FUN = function(buff_size){
+      #                             # for each cell in AOI:
+      #                             cdf = circle_mat(buff_size)
+      #                             rbindlist(mclapply(rgDT[do_preds == TRUE, idM21pair0],
+      #                                       FUN = buff_mcd19_vals,
+      #                                       mcd = mcd, rgDT = rgDT,
+      #                                       cdf = cdf, buff_size = buff_size,
+      #                                       mc.cores = get.threads()), fill = TRUE)
+      #}))
       # join single cell variables to buffered variables
       setkey(buff_vars, idM21pair0)
-      mcd[buff_vars]
+      buff_vars
     } else {
       NULL
     }
   }
+
   dt = rbindlist(lapply(dates, FUN = gather_mcd19_day))
   if(nrow(dt) == 0){
     dt = data.table(NA) # avoid error of writing NULL DT to FST
