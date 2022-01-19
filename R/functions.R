@@ -47,10 +47,6 @@ station_cell_ids = function(stations_sf, refgrid_path, refras_path){
   stations_sf
 }
 
-# most basic variables to read
-vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Name",
-           "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
-           "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 #' Load Aeronet AOD measurement data from text files sourced from downloaded
 #' \code{tar.gz} file. Only load the data for the specified stations.
 #'
@@ -77,7 +73,7 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
 
     # data_path is a single file path
     read_aod <- function(data_path, date_start = NULL, date_end = NULL){
-      dt <- fread(data_path, select =  c(vars0,vars_aod,vars_wv))
+      dt <- fread(data_path, select =  c(vars0, vars_aod, vars_wv))
       dt[, stn_time := as.POSIXct(paste(`Date(dd:mm:yyyy)`, `Time(hh:mm:ss)`),
                                   format = "%d:%m:%Y %H:%M:%S", tz = "UTC")]
       dt[, c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)") := NULL]

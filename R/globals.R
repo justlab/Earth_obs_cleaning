@@ -20,6 +20,11 @@ n_vars = 10
 
 set.seed(1234)
 
+# basic AERONET variables to read
+vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Name",
+           "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
+           "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
+
 # temporary AOI for testing prediction table preparation
 library(sf)
 crs_sinu = '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs'
