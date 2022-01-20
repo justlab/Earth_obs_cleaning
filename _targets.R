@@ -49,6 +49,8 @@ region_values = list(regions = aoiname)
 date_table = dates_year(process_years)
 sat_values = list(sat = sats)
 buffers_km = c(10, 30, 90, 270)
+agg_level = 10
+agg_thresh = 9
 features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
              "Column_WV", "RelAZ", "qa_best",
              do.call(paste0, expand.grid(
@@ -153,7 +155,9 @@ set1_targets = list(
           mcd_refras = mcd_refras,
           aoiname = regions,
           sat = sat,
-          dates = pred_dates),
+          dates = pred_dates,
+          agg_level = agg_level,
+          agg_thresh = agg_thresh),
         pattern = map(pred_dates),
         format = 'fst_dt',
         storage = 'worker'),

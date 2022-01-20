@@ -552,8 +552,13 @@ cv_reporting <- function(cv){
 #' @param dates vector of dates to make predictions for. Must be within the same
 #'   year.
 #' @param sat input "terra" or "aqua"
+#' @param agg_level how much to aggregate the input MODIS AOD to use for large
+#'   focal radii
+#' @param agg_thresh use the aggregated AOD when `(radius * 1000 / agg_level / mcd_res) > agg_thresh`,
+#'   where `radius` is in km, and `mcd_res` (resolution of input AOD) is
+#'   in meters.
 pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path,
-                        mcd_refras, aoiname, sat, dates){
+                        mcd_refras, aoiname, sat, dates, agg_level, agg_thresh){
   if(uniqueN(year(dates)) > 1) stop('More than one year in the prediction date range')
   dates = sort(dates)
 
@@ -582,7 +587,7 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
   # return a data.table with columns calculated for focal windows of specified width
   # agg_level: factor to aggregate AOD raster for use in wider focal buffers
   # agg_thresh: minimum width of focal radius in cells to use the aggregated raster
-  buff_mcd19_raster = function(mcd, buffers_km, agg_level = 10, agg_thresh = 9){
+  buff_mcd19_raster = function(mcd, buffers_km){
     # rasterize
     mcd_aod = rast(mcd[, .(x_sinu, y_sinu, MCD19_AOD_470nm)], type = 'xyz', crs = crs_sinu)
     mcd_nna = !is.na(mcd_aod)
