@@ -89,6 +89,8 @@ set1_targets = list(
     tar_target(mcd_refras,
                crop_refras_mcd(refgrid_path, mcd19path, process_years,
                                aoiname = regions)),
+    tar_target(ref_agg_lookup,
+               make_agg_lookup(mcd_refras, agg_level, refgrid_path)),
 
     # Load AERONET data ####
     tar_target(all_dates,
