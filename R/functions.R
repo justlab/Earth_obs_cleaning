@@ -293,19 +293,22 @@ circle_mat = function(radius, cellsize = 926.6254, matrix = FALSE){
   }
 }
 
-#' Roll join a single day of AERONET data to nearest MCD19A2 overpass and calculate derived
-#' values from MCD19A2 within specified distances from the AERONET station.
+#' Roll join a single day of AERONET data to nearest MCD19A2 overpass and
+#' calculate derived values from MCD19A2 within specified distances from the
+#' AERONET station.
 #'
-#' @param aer_data A single day of AERONET observations (provided by \code{tar_group_by})
-#' @param nearby_cells
+#' @param aer_data A single day of AERONET observations
 #' @param sat input "terra" or "aqua"
 #' @param buffers_km vector of buffer radii in kilometers
-#' @param rolldiff_limit
+#' @param aer_stn data table of AERONET station names and reference unique ID
+#'   for satellite AOD cells
 #' @param mcd19path path to MCD19A2 FST files
-derive_mcd19_vars = function(aer_data, nearby_cells, sat,
-                             buffers_km = c(10, 30, 90, 270),
-                             rolldiff_limit = as.difftime(30, units = 'mins'),
-                             aer_stn, mcd19path){
+#' @param ref_agg_lookup data table output of `make_agg_lookup()`
+#' @param rolldiff_limit maximum time between the AERONET and satellite
+#'   observations
+derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, mcd19path, refgrid_path,
+                             ref_agg_lookup, agg_level, agg_thresh, ref_uid = 'idM21pair0',
+                             rolldiff_limit = as.difftime(30, units = 'mins')){
   setDT(aer_data)
 
   t1 = Sys.time()
@@ -323,6 +326,10 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
                        filepath = file.path(mcd19path, this_year),
                        load_year = this_year)
   if(!is.null(mcd)){
+    mcd[, dayint := as.integer(as.Date(overpass_time))]
+    create_qc_vars(mcd)
+    setnames(mcd, 'Optical_Depth_047', 'MCD19_AOD_470nm')
+
     # roll join will update value of the time column in X to the value of the time
     # column in i. Copy AERONET's stn_time to a column with the same name as
     # MCD19's time column so we can compare the time difference afterwards using
@@ -335,37 +342,85 @@ derive_mcd19_vars = function(aer_data, nearby_cells, sat,
     # Only keep AERONET to MCD19A2 joins with difference of 30 minutes or less
     rj[, rj_difftime := overpass_time - stn_time]
     rj = rj[rj_difftime <= rolldiff_limit, ]
-    rj = rj[!is.na(Optical_Depth_047), ]
+    rj = rj[!is.na(MCD19_AOD_470nm), ]
 
-    # 3. Derived Values using nearby MCD19 cells
-    nearby_cells = nearby_cells[Site_Name %in% rj$Site_Name]
-    setnames(nearby_cells, "idM21pair0", "nearby_cellid", skip_absent=TRUE)
-    # join every MODIS cell ID within 270km (default) from station
-    rjbuff = rj[nearby_cells, allow.cartesian = TRUE,
-                on = c(Site_Name = 'Site_Name')]
+    # TODO: HANDLE RJ REDUCED TO ZERO ROWS?
 
-    # join mcd19 AOD values (only) to the cells in the distance buffers
-    # note the join only uses idM21pair0 because this function processes one date at a time
-    # if that ever changes, will need to add date to the `on` vector
-    setnames(mcd, c('idM21pair0', 'Optical_Depth_047'),
-                  c('nearby_cellid', 'nearby_mcd_aod'))
-    mcd = mcd[, .(nearby_cellid, nearby_mcd_aod)]
-    setkey(mcd, nearby_cellid)
-    setkey(rjbuff, nearby_cellid)
-    rjbuff_vals = mcd[rjbuff]
+    # 3. Derived values from focal statistics on satellite AOD
+    # Get cell coordinates
+    refgrid = read_fst(refgrid_path, as.data.table = TRUE,
+                       columns = c(ref_uid, 'x_sinu', 'y_sinu'))
+    mcd[refgrid, c('x_sinu', 'y_sinu') := .(x_sinu, y_sinu)]
 
-    calc_buff_vals <- function(distx){
-      d_summary = rjbuff_vals[site_dist <= distx * 1000,
-                              .(nonmissing = mean(!is.na(nearby_mcd_aod)),
-                                AOD_buffer_mean = mean(nearby_mcd_aod, na.rm = T)),
-                              by = idM21pair0]
-      setnames(d_summary, c("nonmissing", "AOD_buffer_mean"),
-               paste0(c("pNonNAAOD", "Mean_AOD"), distx, "km"))
-      setkey(d_summary, idM21pair0)
+    # Rasterize satellite AOD
+    mcd_aod = rast(mcd[, .(x_sinu, y_sinu, MCD19_AOD_470nm)], type = 'xyz', crs = crs_sinu)
+    mcd_nna = !is.na(mcd_aod)
+    mcd_res = res(mcd_aod)[1]
+    # aggregate (for use below in loop)
+    mcd_agg_aod = terra::aggregate(mcd_aod, fact = agg_level, fun = 'mean', na.rm = TRUE)
+    mcd_agg_nna = terra::aggregate(mcd_nna, fact = agg_level, fun = 'mean', na.rm = TRUE)
+
+    filter_matrices = list()
+    use_agg = list()
+    for(radius in buffers_km){
+      if(radius * 1000 / agg_level / mcd_res < agg_thresh){
+        # use original resolution
+        use_agg[[paste0('r', radius)]] <- FALSE
+        this_mat = circle_mat(radius, cellsize = mcd_res, matrix = TRUE)
+        this_mat[this_mat == 0] <- NA
+        filter_matrices[[paste0('r', radius)]] <- this_mat
+      } else {
+        # use aggregated resolution
+        use_agg[[paste0('r', radius)]] <- TRUE
+        this_mat = circle_mat(radius, cellsize = mcd_res * agg_level, matrix = TRUE)
+        this_mat[this_mat == 0] <- NA
+        filter_matrices[[paste0('r', radius)]] <- this_mat
+      }
     }
-    new_vars = Reduce(merge, lapply(buffers_km, calc_buff_vals))
-    rj_newvars = new_vars[rj]
-    rm(new_vars, rj, rjbuff_vals, mcd)
+    rm(radius)
+    setkeyv(ref_agg_lookup, ref_uid)
+
+    # Calculate focal statistics for each unique cell containing an AERONET station
+    # returns a data.table to merge (send unique values in case any stations in same cell)
+    station_focal <- function(cell_uid){
+      focal_list = list(ref_uid = cell_uid)
+      # buffers should be in km, resolution should be in m
+      for(radius in buffers_km){
+        filter_mat = filter_matrices[[paste0('r', radius)]]
+        focw = ncol(filter_mat)  # width of focal matrix (assumed square matrix)
+        radw = (focw - 1) / 2    # width of the radius in cells, without central cell
+        # Extract matrix of AOD values around station
+        if(use_agg[[paste0('r', radius)]] == FALSE){
+          crid = ref_agg_lookup[get(ref_uid) == cell_uid, cell_row] # central row id
+          ccid = ref_agg_lookup[get(ref_uid) == cell_uid, cell_col] # central column id
+          erows = (crid - radw):(crid + radw)
+          ecols = (ccid - radw):(ccid + radw)
+          aodmat = as.matrix(mcd_aod[erows, ecols, drop = FALSE], wide = TRUE)
+          nnamat = as.matrix(mcd_nna[erows, ecols, drop = FALSE], wide = TRUE)
+        } else {
+          crid = ref_agg_lookup[get(ref_uid) == cell_uid, agg_cell_row] # central row id
+          ccid = ref_agg_lookup[get(ref_uid) == cell_uid, agg_cell_col] # central column id
+          erows = (crid - radw):(crid + radw)
+          ecols = (ccid - radw):(ccid + radw)
+          aodmat = as.matrix(mcd_agg_aod[erows, ecols, drop = FALSE], wide = TRUE)
+          nnamat = as.matrix(mcd_agg_nna[erows, ecols, drop = FALSE], wide = TRUE)
+        }
+        # BUG: need to handle different array sizes
+        mult_aod = aodmat * filter_mat
+        mult_nna = nnamat * filter_mat
+        focal_list[[paste0('Mean_AOD', radius, 'km')]] <- mean(mult_aod, na.rm = TRUE)
+        focal_list[[paste0('pNonNAAOD', radius, 'km')]] <- mean(mult_nna, na.rm = TRUE)
+      }
+      setDT(focal_list)
+      setnames(focal_list, 'ref_uid', ref_uid)
+      focal_list
+    }
+    # TODO:
+    # call station_focal for every unique ref_uid value
+    # rbindlist
+    # merge/join with rj table by ref_uid
+
+
 
     # difference between central cell MCD19 AOD and mean AOD in buffers
     for(distx in buffers_km){
