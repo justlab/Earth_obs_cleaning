@@ -341,7 +341,7 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, mcd19path, refg
 
     # Only keep AERONET to MCD19A2 joins with difference of 30 minutes or less
     rj[, rj_difftime := overpass_time - stn_time]
-    rj = rj[rj_difftime <= rolldiff_limit, ]
+    rj = rj[abs(rj_difftime) <= rolldiff_limit, ]
     rj = rj[!is.na(MCD19_AOD_470nm), ]
 
     # TODO: HANDLE RJ REDUCED TO ZERO ROWS?
