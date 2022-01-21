@@ -50,7 +50,7 @@ date_table = dates_year(process_years)
 sat_values = list(sat = sats)
 buffers_km = c(10, 30, 90, 270)
 agg_level = 10
-agg_thresh = 9
+agg_thresh = 3
 features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
              "Column_WV", "RelAZ", "qa_best",
              do.call(paste0, expand.grid(
