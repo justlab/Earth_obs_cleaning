@@ -121,6 +121,7 @@ set1_targets = list(
                                 sat = sat,
                                 aer_stn = aer_nospace,
                                 mcd19path = mcd19path,
+                                refgrid_path = refgrid_path,
                                 ref_agg_lookup = ref_agg_lookup,
                                 agg_level = agg_level,
                                 agg_thresh = agg_thresh),
@@ -168,6 +169,7 @@ set1_targets = list(
       # need a specific target from the static branches of tar_map above:
       # the matching trained year model for the date chosen in pred_dates
       tar_target(pred_out, run_preds(predinput, model_file_2008)),
+
       # Map Predictions ####
       tar_target(preds_ggplot, ggplot_orig_vs_adj(refgrid_path, predinput, pred_out,
                                                   pred_dates, date_index = 1),
