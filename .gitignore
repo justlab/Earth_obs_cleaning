@@ -9,5 +9,3 @@ Intermediate/
 meta/
 _targets.yaml
 *.html
-renv/*
-!renv/activate.R
