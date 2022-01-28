@@ -46,9 +46,14 @@
     "Just.universal": {
       "Package": "Just.universal",
       "Version": "0.0.0.9000",
-      "Source": "Repository",
-      "Repository": null,
-      "Hash": "6881cb4498459924c95b66b8bc68d30d",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "justlab",
+      "RemoteRepo": "Just_universal",
+      "RemoteRef": "master",
+      "RemoteSha": "33293347e99eff7de541fb4f2dae1dbcc602034b",
+      "Hash": "fd28a4e8fd1256c2fc1d4a4f13a52a9e",
       "Requirements": [
         "DBI",
         "RSQLite",
