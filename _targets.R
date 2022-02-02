@@ -5,7 +5,6 @@ library(future)
 # plan(callr)
 #plan(multicore)
 plan(multisession)
-options(xgb.threads = 8) # used by xgboost_cv_RFE
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Configuration ####
