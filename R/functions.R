@@ -106,6 +106,13 @@ dates_year <- function(years){
   tibble::tibble(year = years, dates = dates)
 }
 
+dates_year_list <- function(years){
+  dates = lapply(years, function(y) seq.Date(as.Date(paste0(y, '-01-01')),
+                                            as.Date(paste0(y, '-12-31')), 1))
+  names(dates) <- years
+  dates
+}
+
 #' Assign a month index from 1970-01-01 to all observation dates.
 #'
 #' Month indexes are used to batch the extraction of training data into chunks and increase targets throughput.
@@ -505,6 +512,7 @@ create_qc_vars <- function(dt){
 prepare_dt <- function(dt, date_range = NULL){
   setnames(dt, "Optical_Depth_047", "MCD19_AOD_470nm", skip_absent=TRUE)
   if(!is.null(date_range)){
+    if(class(date_range) == 'list') date_range = date_range[[1]]
     dt = dt[aer_date %in% date_range, ]
   }
   # The dependent variable: diff_AOD = MCD19 - AERONET = Optical_Depth_047 - AOD_470nm
@@ -783,7 +791,7 @@ dart_full <- function(
   progress = TRUE
 ){
   xgb_threads <- get.threads()
-
+  first_date = min(data_train$aer_date)
   data_train = data_train[, c(features, y_var), with = F]
 
   xdc_out <- xgboost.dart.cvtune(
@@ -826,7 +834,12 @@ dart_full <- function(
        y_preds = preds,
        shap_pred = shap_pred,
        shap_bias = shap_bias,
-       model_out_path = model_out_path)
+       model_out_path = model_out_path,
+       first_date = first_date)
+}
+
+model_file_table = function(years, model_info_list){
+  data.table(years = years, lapply(model_info_list, `[[`, 'model_out_path'))
 }
 
 #' Predict the difference between MCD19 and AERONET

@@ -77,6 +77,9 @@ set1_targets = list(
              fread(aer_stn_path, col.names = c('Site_Name', 'lon', 'lat', 'elevm')),
              format = 'fst_dt'),
 
+  tar_target(dates_byyear,
+             dates_year_list(process_years)),
+
   # Area of interest ####
   tar_map( # region mapping
     values = region_values,
@@ -131,24 +134,27 @@ set1_targets = list(
                  storage = 'worker'),
 
       # Model ####
-      tar_map( # date range (year) mapping
-        unlist = FALSE,
-        values = date_table,
-        names = 'year',
-        tar_target(traindata,
-                   prepare_dt(mcd19_vars, date_range = dates),
-                   format = 'fst_dt'),
-        tar_target(initial_cv,
-                   initial_cv_dart(traindata,
-                     y_var = "diff_AOD",
-                     features = features,
-                     stn_var = "Site_Name")),
-        tar_target(full_model, dart_full(traindata,
-                                           y_var = "diff_AOD",
-                                           features = features)),
-        tar_target(model_file, full_model$model_out_path,
-                   format = 'file')
-      ),
+      tar_target(traindata,
+                 prepare_dt(mcd19_vars, date_range = dates_byyear),
+                 pattern = map(dates_byyear),
+                 iteration = 'list'),
+      tar_target(initial_cv,
+                 initial_cv_dart(traindata,
+                                 y_var = "diff_AOD",
+                                 features = features,
+                                 stn_var = "Site_Name"),
+                 pattern = map(traindata),
+                 iteration = 'list'),
+      tar_target(full_model, dart_full(traindata,
+                                       y_var = "diff_AOD",
+                                       features = features),
+                 pattern = map(traindata),
+                 iteration = 'list'),
+      tar_target(model_file_table,
+                 data.table(years = process_years,
+                            file_path = lapply(full_model, `[[`, 'model_out_path'),
+                            first_date = lapply(full_model, `[[`, 'first_date'))),
+
       # later, move within year mapping
       # Prediction ####
       tar_target(pred_dates, c(as.Date('2008-01-16'), as.Date('2008-01-17'))),
