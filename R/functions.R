@@ -154,7 +154,7 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
   # choose non-NA and >0 AOD
   d <- d[!is.na(aod) & aod > 0]
   # ids for wavelengths observed on one side of 470nm
-  obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside ==T, obs]
+  obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside == TRUE, obs]
   # the predict part:
   d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(
     log(aod) ~ log(exact_wv) + I((log(exact_wv))^2)),
@@ -163,7 +163,7 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
   aer_data_wPred <- d2[aer_data]
   # set NA: At least 4 observations wanted for exterpolation
   aer_data_wPred[N_NAAOD<4 & obs%in%obs_os, AOD_470nm:=NA]
-  # remove unncessary variables:
+  # remove unnecessary variables:
   aer_data_wPred <- aer_data_wPred[,-c(vars_aod_sub, vars_wv), with = F]
 
   # attach nearest_refgrid (also called idM21pair0 in many our script) to Aer Site_Name
