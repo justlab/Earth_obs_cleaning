@@ -1841,10 +1841,16 @@
     },
     "raster": {
       "Package": "raster",
-      "Version": "3.5-11",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "6a546739cc335285ca43025c54e3f557",
+      "Version": "3.5-15",
+      "Source": "CRAN",
+      "Repository": "CRAN",
+      "RemoteType": "standard",
+      "RemotePkgRef": "raster",
+      "RemoteRef": "raster",
+      "RemoteRepos": "https://cran.rstudio.com",
+      "RemotePkgPlatform": "source",
+      "RemoteSha": "3.5-15",
+      "Hash": "70cf51235e017702ed77427797572ef0",
       "Requirements": [
         "Rcpp",
         "sp",
@@ -1916,6 +1922,22 @@
         "Rcpp",
         "plyr",
         "stringr"
+      ]
+    },
+    "rgdal": {
+      "Package": "rgdal",
+      "Version": "1.5-28",
+      "Source": "CRAN",
+      "Repository": "CRAN",
+      "RemoteType": "standard",
+      "RemotePkgRef": "rgdal",
+      "RemoteRef": "rgdal",
+      "RemoteRepos": "https://cran.rstudio.com",
+      "RemotePkgPlatform": "source",
+      "RemoteSha": "1.5-28",
+      "Hash": "0f625c5c628af2955aef2c561413ee30",
+      "Requirements": [
+        "sp"
       ]
     },
     "rgeoda": {
@@ -2072,7 +2094,7 @@
       "Package": "sf",
       "Version": "1.0-5",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Hash": "200bfddf8f0ca222a7edfd2d64425fb9",
       "Requirements": [
         "DBI",
@@ -2310,10 +2332,16 @@
     },
     "terra": {
       "Package": "terra",
-      "Version": "1.4-22",
-      "Source": "Repository",
+      "Version": "1.5-17",
+      "Source": "CRAN",
       "Repository": "CRAN",
-      "Hash": "7fe33699810538d4a17e954edf3ef84a",
+      "RemoteType": "standard",
+      "RemotePkgRef": "terra",
+      "RemoteRef": "terra",
+      "RemoteRepos": "https://cran.rstudio.com",
+      "RemotePkgPlatform": "source",
+      "RemoteSha": "1.5-17",
+      "Hash": "6c9f036bad848c41d12be5071b72fa53",
       "Requirements": [
         "Rcpp"
       ]
