@@ -606,13 +606,13 @@ initial_cv_dart <- function(
 #'   satellites.
 #' @return data.table summarizing CV statistics for each year and satellite
 cv_summary <- function(cv_list){
+  cv_list = unlist(cv_list, recursive = FALSE)
   output = vector(mode = "list", length = length(cv_list))
   for(i in 1:length(cv_list)){
-    cv_name = names(cv_list)[[i]]
     cv = cv_list[[i]]
     stats = cv_reporting(cv)
-    stats$sat <- str_extract(cv_name, 'terra|aqua')
-    stats$year <- substr(cv_name, 12, 15)
+    stats$sat <- str_extract(names(cv_list)[[i]], 'terra|aqua')
+    stats$year <- cv$mDT_wPred[1, year(aer_date)]
     output[[i]] <- stats
   }
   outDT = rbindlist(lapply(output, as.data.table))
