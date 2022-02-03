@@ -1,34 +1,56 @@
-# This will run the workflow in _targets.R in stages:
-# The first part has parallelism managed by targets and future.
-
-# The second part for models is run sequentially by targets, since XGBoost
-# uses OpenMP and all cores by default to parallelize work.
+# This runs the workflow in _targets.R in stages, running some parts in
+# parallel using future, and others parts sequentially.
+# Portions running XGBoost are run sequentially because it uses OpenMP for
+# parallelism, and running multiple XGBoost jobs would overload the available cores.
 
 library(targets)
 
-# 1. Prepare predictors ####
-# mcd19_vars_aqua_conus prepares IVs for the training side, runs for all years in `process_years`
-# predinput_aqua_conus prepares IVs for the prediction side, runs for dates in `pred_dates`
-end_part1 = c('mcd19_vars_aqua_conus', 'predinput_aqua_conus')
-message('Starting part 1 using parallel futures at ', Sys.time())
+# Check the progress of the current batch of targets before starting the next.
+check_progress = function(finished_part, check_targets){
+  message('Finished part ', finished_part, ' at ', Sys.time())
+  message('Checking status of part ', finished_part, ' before starting part ',
+          finished_part + 1, '...')
+  outdated = tar_outdated(!!check_targets)
 
-tar_make_future(names = !!end_part1,
-                workers = 8L)
-message('Finished part 1 at ', Sys.time())
+  if(length(outdated) > 0){
+    stop('The following targets from part ', finished_part,
+         ' need to complete before running part ', finished_part + 1, ':\n',
+         paste('  ', sort(outdated), collapse = '\n'))
+  } else {
+    message('Part ', finished_part, ' complete.')
+  }
+}
 
-# check if first part has completed successfully
-message('Checking status of part 1 before starting part 2...')
-outdated = tar_outdated(!!end_part1)
-unfinished = grep(paste0(end_part1, collapse = '|'), outdated)
+# 1. Prepare training data, parallel ####
+# training runs for all years in `process_years`.
+future_workers = 8L
+end_part1 = c('traindata_aqua_conus', 'traindata_terra_conus')
+message('Part 1: Preparing training data using ', future_workers, ' workers at ',
+        Sys.time())
+tar_make_future(names = !!end_part1, workers = future_workers)
+check_progress(1, end_part1)
 
-if(any(unfinished)){
-  stop('Aborting workflow. The following targets from part 1 need to complete before running part 2:\n',
-       paste('  ', sort(outdated[unfinished]), collapse = '\n'))}
+# 2. Train full model and Generate CV report for all years, serial ####
+message('Part 2: Generating CV report and training full models at ', Sys.time())
+end_part2 = c('initial_cv_report', 'full_model_aqua_conus', 'full_model_terra_conus')
+tar_make(names = !!end_part2)
+check_progress(2, end_part2)
 
-# 2. Train full model, prepare CONUS prediction table, run predictions ####
-message('Starting part 2 sequentially at ', Sys.time())
-tar_make(names = pred_out_aqua_conus)
-message('Finished part 2 at ', Sys.time())
+# 3. Prepare CONUS prediction inputs, parallel ####
+# Predictions run for dates in `pred_dates`.
+# An error will be thrown if trying to predict for a date in a year that has not
+# had a model trained.
+message('Part 3: Preparing CONUS prediction inputs using ', future_workers,
+        ' workers at ', Sys.time())
+end_part3 = c('predinput_aqua_conus', 'predinput_terra_conus')
+tar_make_future(names = !!end_part3, workers = future_workers)
+check_progress(3, end_part3)
 
-# # 3. Generate CV report for all years
-# tar_make(names = initial_cv_report)
+# 4. Run predictions, serial ####
+message('Part 4: Running CONUS predictions at ', Sys.time())
+end_part4 = c('pred_out_aqua_conus', 'pred_out_terra_conus')
+tar_make(names = !!end_part4)
+#check_progress(4, end_part4)
+message('Finished part 4 at ', Sys.time())
+
+# 5. Visulize predictions ####
