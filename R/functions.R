@@ -607,23 +607,33 @@ initial_cv_dart <- function(
 #' @return data.table summarizing CV statistics for each year and satellite
 cv_summary <- function(cv_list){
   cv_list = unlist(cv_list, recursive = FALSE)
-  output = vector(mode = "list", length = length(cv_list))
+  stats_list = vector(mode = "list", length = length(cv_list))
+  difftimes_list = vector(mode = "list", length = length(cv_list))
   for(i in 1:length(cv_list)){
     cv = cv_list[[i]]
     stats = cv_reporting(cv)
     stats$sat <- str_extract(names(cv_list)[[i]], 'terra|aqua')
     stats$year <- cv$mDT_wPred[1, year(aer_date)]
-    output[[i]] <- stats
+    stats_list[[i]] <- stats
+    difftimes_list[[i]] <- summary(as.numeric(abs(cv$mDT_wPred$rj_difftime)))
   }
-  outDT = rbindlist(lapply(output, as.data.table))
-  outDT[, MAE_pct_change :=
+  # prediction summary stats
+  statsDT = rbindlist(lapply(stats_list, as.data.table))
+  statsDT[, MAE_pct_change :=
           paste0(round((MAE_uncorr-MAE_corr)/MAE_uncorr, 2) * 100, '%')]
-  outDT[, MAD_pct_change :=
+  statsDT[, MAD_pct_change :=
           paste0(round((MAD_mcd19-MAD_aodhat)/MAD_mcd19, 2) * 100, '%')]
-  setkey(outDT, sat, year)
-  setcolorder(outDT, c('sat', 'year',
+  setcolorder(statsDT, c('sat', 'year',
                        'MAE_uncorr', 'MAE_corr', 'MAE_pct_change',
                        'rmse', 'MAD_mcd19', 'MAD_aodhat', 'MAD_pct_change'))
+  # difftime distribution
+  difftimeDT = rbindlist(lapply(difftimes_list, function(x) as.list(x)))
+  difftimeDT[, c('sat', 'year') := statsDT[, .(sat, year)]]
+  setcolorder(difftimeDT, c('sat', 'year'))
+
+  setkey(statsDT, sat, year)
+  setkey(difftimeDT, sat, year)
+  list(stats = statsDT, difftimes = difftimeDT)
 }
 
 #' Calculate CV statistics on a single \code{initial_cv_dart()} output list object

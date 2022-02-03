@@ -1,8 +1,6 @@
 ---
 title: "Initial CV Report"
 output: html_document
-params:
-  cv_names: none
 ---
 
 ```{r setup, include=FALSE}
@@ -11,12 +9,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r basics, echo=FALSE}
 library(targets)
+library(DT)
 ```
 
 
 ```{r table_cv_results, echo=FALSE}
-tar_load(cv_summary_table)
-DT::datatable(cv_summary_table, 
+tar_load(cv_summary_tables)
+DT::datatable(cv_summary_tables$stat, 
               rownames = FALSE,
               fillContainer = FALSE,
               autoHideNavigation = TRUE,
@@ -24,9 +23,19 @@ DT::datatable(cv_summary_table,
                              autoWidth = TRUE))
 ```
 
-Raw console print:
+AERONET & MCD19 observation time difference distribution
+```{r table_difftime_distribution, echo=FALSE}
+DT::datatable(cv_summary_tables$difftimes, 
+              rownames = FALSE,
+              fillContainer = FALSE,
+              autoHideNavigation = TRUE,
+              options = list(pageLength = 50,
+                             autoWidth = TRUE))
+```
+
+Raw console print of summary stats:
 ```{r dt_raw, echo=FALSE}
-cv_summary_table
+cv_summary_tables
 ```
 
 
