@@ -642,6 +642,25 @@ cv_reporting <- function(cv){
 
 # Prediction ####
 
+#' Create a data.table with every prediction date and the corresponding trained
+#' XGBoost model to use.
+#'
+model_files_by_date <- function(mft, pred_dates){
+  mft = mft[, .(year, file_path)]
+  dt = data.table(pred_date = pred_dates)
+  dt[, year := year(pred_date)]
+  outdt = mft[dt, on = 'year', nomatch = 0]
+
+  missing_dates = !pred_dates %in% outdt$pred_date
+  if(any(missing_dates)){
+    missing_years = paste(unique(year(pred_dates[missing_dates])), collapse = ', ')
+    stop('Requested predictions in ', missing_years,
+         ' but no model has been trained for those years.')
+  } else {
+    outdt
+  }
+}
+
 #' Prepare prediction table
 #'
 #' @param pred_bbox sf bbox or named numeric vector conforming to st_bbox spec:
@@ -663,6 +682,8 @@ cv_reporting <- function(cv){
 #'   in meters.
 pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path,
                         mcd_refras, aoiname, sat, dates, agg_level, agg_thresh){
+  if('data.frame' %in% class(dates)) dates = dates$pred_date
+
   if(uniqueN(year(dates)) > 1) stop('More than one year in the prediction date range')
   dates = sort(dates)
 
@@ -777,7 +798,8 @@ pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path
     # remove unncessary columns
     dt = dt[, c('idM21pair0', features), with = FALSE]
   }
-  dt
+  # remove NA values for satellite AOD
+  dt[!is.na(MCD19_AOD_470nm), ]
 }
 
 #' Train a full model using DART and 2-fold CV to select hyperparameters from
@@ -839,15 +861,27 @@ dart_full <- function(
 }
 
 model_file_table = function(years, model_info_list){
-  data.table(years = years, lapply(model_info_list, `[[`, 'model_out_path'))
+  data.table(year = years, lapply(model_info_list, `[[`, 'model_out_path'))
 }
 
 #' Predict the difference between MCD19 and AERONET
 #'
-run_preds = function(data, model_file){
+#' @param file_table is a data.frame containing the years, path to the model file, and prediction dates
+run_preds = function(data, file_table){
+  data_ref = data[, .(pred_date = as.Date(dayint, '1970-01-01'), idM21pair0)]
   data[, idM21pair0 := NULL]
-  model = xgboost::xgb.load(model_file)
-  predict(model, as.matrix(data))
+
+  # if the input data contains more than one year, run one model at a time
+  outlist = list()
+  for(pred_year in unique(file_table$year)){
+    model_file = file_table[year == pred_year, first(file_path)]
+    model = xgboost::xgb.load(model_file)
+    predvec = predict(model, as.matrix(data[year(data_ref$pred_date) == pred_year]))
+    predDT = data_ref[year(pred_date) == pred_year]
+    predDT[, pred := predvec]
+    outlist[[length(outlist) + 1]] <- predDT
+  }
+  rbindlist(outlist)
 }
 
 #' Adjust MCD19 AOD values using predicted difference between MCD19 and AERONET.

@@ -150,31 +150,34 @@ set1_targets = list(
                  pattern = map(traindata),
                  iteration = 'list'),
       tar_target(model_file_table,
-                 data.table(years = process_years,
+                 data.table(year = process_years,
                             file_path = lapply(full_model, `[[`, 'model_out_path'),
                             first_date = lapply(full_model, `[[`, 'first_date'))),
 
-      # later, move within year mapping
       # Prediction ####
       tar_target(pred_dates, c(as.Date('2008-01-16'), as.Date('2008-01-17'))),
-      tar_target(predinput, pred_inputs(
-          pred_bbox = NULL,
-          features = features,
-          buffers_km = buffers_km,
-          refgrid_path = refgrid_path,
-          mcd19path = mcd19path,
-          mcd_refras = mcd_refras,
-          aoiname = regions,
-          sat = sat,
-          dates = pred_dates,
-          agg_level = agg_level,
-          agg_thresh = agg_thresh),
-        pattern = map(pred_dates),
-        format = 'fst_dt',
-        storage = 'worker'),
+      tar_target(pred_files,
+                 model_files_by_date(model_file_table, pred_dates)),
+
+      tar_target(predinput,
+                 pred_inputs(
+                  pred_bbox = NULL,
+                  features = features,
+                  buffers_km = buffers_km,
+                  refgrid_path = refgrid_path,
+                  mcd19path = mcd19path,
+                  mcd_refras = mcd_refras,
+                  aoiname = regions,
+                  sat = sat,
+                  dates = pred_files,
+                  agg_level = agg_level,
+                  agg_thresh = agg_thresh),
+                pattern = map(pred_files),
+                format = 'fst_dt',
+                storage = 'worker'),
       # need a specific target from the static branches of tar_map above:
       # the matching trained year model for the date chosen in pred_dates
-      tar_target(pred_out, run_preds(predinput, model_file_2008)),
+      tar_target(pred_out, run_preds(predinput, pred_files)),
 
       # Map Predictions ####
       tar_target(preds_ggplot, ggplot_orig_vs_adj(refgrid_path, predinput, pred_out,
