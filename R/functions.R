@@ -616,8 +616,14 @@ cv_summary <- function(cv_list){
     output[[i]] <- stats
   }
   outDT = rbindlist(lapply(output, as.data.table))
+  outDT[, MAE_pct_change :=
+          paste0(round((MAE_uncorr-MAE_corr)/MAE_uncorr, 2) * 100, '%')]
+  outDT[, MAD_pct_change :=
+          paste0(round((MAD_mcd19-MAD_aodhat)/MAD_mcd19, 2) * 100, '%')]
   setkey(outDT, sat, year)
-  setcolorder(outDT)
+  setcolorder(outDT, c('sat', 'year',
+                       'MAE_uncorr', 'MAE_corr', 'MAE_pct_change',
+                       'rmse', 'MAD_mcd19', 'MAD_aodhat', 'MAD_pct_change'))
 }
 
 #' Calculate CV statistics on a single \code{initial_cv_dart()} output list object
@@ -629,11 +635,11 @@ cv_reporting <- function(cv){
   dt[, aod_hat := MCD19_AOD_470nm - diff_AOD_pred]
 
   list(
-    mae_uncorrected = round(dt[, mae(MCD19_AOD_470nm, AOD_470nm)],3),
-    mae_corrected   = round(dt[, mae(aod_hat, AOD_470nm)],3),
+    MAE_uncorr = round(dt[, mae(MCD19_AOD_470nm, AOD_470nm)],3),
+    MAE_corr   = round(dt[, mae(aod_hat, AOD_470nm)],3),
     rmse = round(cv$rmse_all_folds,3),
-    mad_MCD19  = round(mad(dt$MCD19_AOD_470nm),3),
-    mad_aodhat = round(mad(dt$aod_hat),3),
+    MAD_mcd19  = round(mad(dt$MCD19_AOD_470nm),3),
+    MAD_aodhat = round(mad(dt$aod_hat),3),
     stn_count = dt[, uniqueN(stn)],
     train_N = dt[, .N]
   )
