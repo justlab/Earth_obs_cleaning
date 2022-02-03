@@ -615,7 +615,7 @@ cv_summary <- function(cv_list){
     stats$sat <- str_extract(names(cv_list)[[i]], 'terra|aqua')
     stats$year <- cv$mDT_wPred[1, year(aer_date)]
     stats_list[[i]] <- stats
-    difftimes_list[[i]] <- summary(as.numeric(abs(cv$mDT_wPred$rj_difftime)))
+    difftimes_list[[i]] <- round(summary(as.numeric(abs(cv$mDT_wPred$rj_difftime))),0)
   }
   # prediction summary stats
   statsDT = rbindlist(lapply(stats_list, as.data.table))
