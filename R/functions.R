@@ -217,11 +217,11 @@ cells_in_buffer = function(stations, refgrid_path, dist_km = 270){
 #' This will be compatiable with `aoiname = 'conus'`, but would require further
 #' cropping to use with other AOIs.
 #'
-crop_refras_mcd <- function(refgrid_path, mcd19path, process_years,
+crop_refras_mcd <- function(refgrid_path, mcd19path,
                             ref_uid = 'idM21pair0', aoiname = 'conus'){
   if(!aoiname %in% c('conus', 'nemia')) stop('Only CONUS region has been implemented')
-  # get the mcd19 file for the first date in the first year
-  mcdDT = read_fst(list.files(file.path(mcd19path, process_years[1]), '*.fst',
+  # get the mcd19 file for the first date in an arbitrary year
+  mcdDT = read_fst(list.files(file.path(mcd19path, 2010), '*.fst',
                               full.names = TRUE)[1],
                    as.data.table = TRUE, columns = ref_uid)
   rg = read_fst(refgrid_path, as.data.table = TRUE,

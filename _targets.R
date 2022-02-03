@@ -90,8 +90,7 @@ set1_targets = list(
                cells_in_buffer(aer, refgrid_path),
                format = 'fst_dt'),
     tar_target(mcd_refras,
-               crop_refras_mcd(refgrid_path, mcd19path, process_years,
-                               aoiname = regions)),
+               crop_refras_mcd(refgrid_path, mcd19path, aoiname = regions)),
     tar_target(ref_agg_lookup,
                make_agg_lookup(mcd_refras, agg_level, refgrid_path)),
 
