@@ -4,6 +4,7 @@
 # parallelism, and running multiple XGBoost jobs would overload the available cores.
 
 library(targets)
+Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 
 # Check the progress of the current batch of targets before starting the next.
 check_progress = function(finished_part, check_targets){
