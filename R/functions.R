@@ -635,8 +635,7 @@ cv_reporting <- function(cv){
     mad_MCD19  = round(mad(dt$MCD19_AOD_470nm),3),
     mad_aodhat = round(mad(dt$aod_hat),3),
     stn_count = dt[, uniqueN(stn)],
-    train_N = dt[, .N],
-    mean_daily_overpass = round(dt[, mean(overpass_index), by = aer_date][, mean(V1)],3)
+    train_N = dt[, .N]
   )
 }
 
