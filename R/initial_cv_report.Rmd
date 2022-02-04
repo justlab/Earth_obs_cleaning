@@ -12,7 +12,15 @@ library(targets)
 library(DT)
 ```
 
+```{r git_check, echo=FALSE}
+commit = substr(system('git rev-parse HEAD', intern = TRUE), 1, 8)
+uncommitted = if(length(system('git diff-index HEAD --', intern = TRUE))>0) 
+  'with uncommitted changes' else ''
+```
 
+Git commit: `r commit` `r uncommitted`
+
+### 5 fold CV summary statistics
 ```{r table_cv_results, echo=FALSE}
 tar_load(cv_summary_tables)
 DT::datatable(cv_summary_tables$stat, 
@@ -23,7 +31,7 @@ DT::datatable(cv_summary_tables$stat,
                              autoWidth = TRUE))
 ```
 
-AERONET & MCD19 observation time difference distribution
+### AERONET & MCD19 observation time difference distribution, in seconds
 ```{r table_difftime_distribution, echo=FALSE}
 DT::datatable(cv_summary_tables$difftimes, 
               rownames = FALSE,
@@ -33,8 +41,9 @@ DT::datatable(cv_summary_tables$difftimes,
                              autoWidth = TRUE))
 ```
 
-Raw console print of summary stats:
+### Raw console print of above tables:
 ```{r dt_raw, echo=FALSE}
+options(max.print = 1000)
 cv_summary_tables
 ```
 
