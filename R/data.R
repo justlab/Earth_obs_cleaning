@@ -9,6 +9,7 @@ library(jsonlite)
 library(mapview)
 library(sf)
 fvec = list.files('~/qnap_geo/MCD19A2/HDF/2010.01.31', pattern = '.hdf$', full.names = TRUE)
+hdf_root = '/home/rushj03/qnap_geo/MCD19A2/HDF'
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Orbit Info ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####
@@ -37,6 +38,80 @@ bin_overpasses <- function(hdf_paths){
     oDT[sat == this_sat, overpass_bin := findInterval(orbit_time, cuts)]
   }
   oDT[, .(tile, sat, layer_index, overpass_bin, orbit_time, hdf)]
+}
+
+# Data Loading ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####
+
+#' Stack the requested subdataset layers, disaggregating coarser resolution
+#' rasters to the finest resolution.
+#'
+#' @param hdf_path full path to a single HDF of satellite data.
+#' @param load_sds character vector of which subdatasets to load.
+#' @param load_layers numeric vector of indices of layers to load within
+#'   subdatasets (which correspond to desired overpasses).
+#' @param time_layer_value POSIXct time. Optional. If provided, will add a numeric layer
+#'   to the raster containing the time as seconds since 1970.
+stack_and_disagg <- function(hdf_path, load_sds, load_layers, time_layer_value = NULL){
+  bysds = lapply(load_sds, FUN = rast, x = hdf_path, lyrs = load_layers)
+  # Disaggregate the coarser layer (RelAZ in MCD19A2) to the finer layers' resolution.
+  # This method assumes square pixels.
+  resvec = sapply(bysds, function(x) res(x)[1])
+  disagg_level = round(resvec / min(resvec))
+  for(i in which(disagg_level > 1)){
+    bysds[[i]] <- disagg(bysds[[i]], disagg_level[i])
+  }
+  names(bysds) <- load_sds
+  if(!is.null(time_layer_value)){
+    if(!'POSIXct' %in% class(time_layer_value)) stop('Provide the time as a POSIXct object')
+    newindex = length(bysds)+1
+    bysds[[newindex]] <- init(bysds[[1]], as.numeric(time_layer_value))
+    names(bysds[[newindex]]) <- 'overpass_time'
+  }
+  rast(bysds)
+}
+
+#' Get all overpass mosaics by date.
+#'
+#' File organization is expected to match USGS server organization (see
+#' parameters). This function does not return wrapped/packed `terra` rasters, so
+#' should not be used for a target. It should be used within another target
+#' where the output remains in memory.
+#' @param hdf_root Path to directory containing date subdirectories formatted
+#'   YYYY.MM.DD. The date subdirectories contain the satellite HDFs.
+#' @param load_date Date object for date to load.
+#' @param load_sat 'A' for Aqua or 'T' for Terra. Default Aqua.
+#' @param load_sds character vector of which subdatasets to load. All layers
+#'   (overpasses) will be loaded for each of the subdatasets. The default
+#'   subdatasets are set to the those being used for MCD19A2.
+get_daily_overpasses <- function(hdf_root, load_date, load_sat = c('A', 'T'),
+  load_sds = c('Optical_Depth_047', 'AOD_Uncertainty', 'Column_WV', 'AOD_QA', 'RelAZ')){
+  load_sat = match.arg(load_sat)
+
+  hdf_paths = list.files(file.path(hdf_root, format(load_date, '%Y.%m.%d')),
+                         pattern = '\\.hdf$', full.names = TRUE)
+  dt = bin_overpasses(hdf_paths)
+  dt = dt[sat == load_sat]
+
+  # outer loop by overpass_bin
+  merge_overpass = function(bin){
+    obdt = dt[overpass_bin == bin]
+    # loop by tile
+    tlist = vector(mode = 'list', length = nrow(obdt))
+    for(i in 1:nrow(obdt)){
+      trow = obdt[i]
+      tlist[[i]] <- stack_and_disagg(trow$hdf, load_sds, trow$layer_index,
+                                     time_layer_value = trow$orbit_time)
+    }
+    obin <- terra::merge(sprc(tlist))
+  }
+  olist = lapply(unique(dt$overpass_bin), merge_overpass)
+  # olist = mclapply(unique(dt$overpass_bin), merge_overpass, mc.cores = 6)
+  olist
+}
+
+#' Convert a single SpatRaster (stack of all layers) to data.table
+overpass_to_table <- function(sr){
+  setDT(as.data.frame(sr, xy = TRUE, na.rm = FALSE))
 }
 
 # Mapping ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####
