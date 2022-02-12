@@ -8,7 +8,7 @@ library(stringr)
 library(jsonlite)
 library(mapview)
 library(sf)
-fvec = list.files('~/qnap_geo/MCD19A2/HDF/2010.01.31', pattern = '.hdf$', full.names = TRUE)
+#fvec = list.files('~/qnap_geo/MCD19A2/HDF/2010.01.31', pattern = '.hdf$', full.names = TRUE)
 hdf_root = '/home/rushj03/qnap_geo/MCD19A2/HDF'
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -111,7 +111,9 @@ get_daily_overpasses <- function(hdf_root, load_date, load_sat = c('A', 'T'),
 
 #' Convert a single SpatRaster (stack of all layers) to data.table
 overpass_to_table <- function(sr){
-  setDT(as.data.frame(sr, xy = TRUE, na.rm = FALSE))
+  dt = setDT(as.data.frame(sr, xy = TRUE, na.rm = FALSE))
+  setnames(dt, c('x', 'y'), c('x_sinu', 'y_sinu'))
+  dt
 }
 
 # Mapping ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####

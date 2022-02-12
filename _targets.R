@@ -35,6 +35,7 @@ tar_option_set(
 tar_config_set(store = '/data-belle/cache/aod_targets/')
 
 source('R/globals.R')
+source('R/data.R')
 source('R/drake_funcs.R')
 source('R/functions.R')
 source('R/xgboost_cv_RFE.R')

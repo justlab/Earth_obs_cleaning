@@ -309,11 +309,11 @@ circle_mat = function(radius, cellsize = 926.6254, matrix = FALSE){
 #' @param buffers_km vector of buffer radii in kilometers
 #' @param aer_stn data table of AERONET station names and reference unique ID
 #'   for satellite AOD cells
-#' @param mcd19path path to MCD19A2 FST files
+#' @param hdf_path path to MCD19A2 HDF files
 #' @param ref_agg_lookup data table output of `make_agg_lookup()`
 #' @param rolldiff_limit maximum time between the AERONET and satellite
 #'   observations
-derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, mcd19path, refgrid_path,
+derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_path,
                              ref_agg_lookup, agg_level, agg_thresh, ref_uid = 'idM21pair0',
                              rolldiff_limit = as.difftime(30, units = 'mins')){
   setDT(aer_data)
@@ -322,13 +322,12 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, mcd19path, refg
   # 1. Get date & julian date
   if(aer_data[, uniqueN(aer_date)] > 1) stop('Use tar_group_by and pattern=map to send one date at a time to derive_mcd19_vars')
   this_date = aer_data[1, aer_date]
-  this_daynum = format(this_date, '%j')
-  this_year = year(this_date)
 
-  # 2. Roll Join
-  mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
-                       filepath = file.path(mcd19path, this_year),
-                       load_year = this_year)
+  # 2. Roll Join AERONET to satellite AOD
+  day_op = get_daily_overpasses(hdf_root, this_date, sat)
+  mcd = overpass_to_table(day_op[[3]]) # use a single overpass for testing
+  rm(day_op)
+
   if(!is.null(mcd)){
     setnames(mcd, 'Optical_Depth_047', 'MCD19_AOD_470nm')
 
@@ -348,10 +347,6 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, mcd19path, refg
 
     if(nrow(rj) > 0){
       # 3. Derived values from focal statistics on satellite AOD
-      # Get cell coordinates
-      refgrid = read_fst(refgrid_path, as.data.table = TRUE,
-                         columns = c(ref_uid, 'x_sinu', 'y_sinu'))
-      mcd[refgrid, c('x_sinu', 'y_sinu') := .(x_sinu, y_sinu)]
 
       # Rasterize satellite AOD
       mcd_aod = rast(mcd[, .(x_sinu, y_sinu, MCD19_AOD_470nm)], type = 'xyz', crs = crs_sinu)
