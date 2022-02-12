@@ -11,16 +11,18 @@ library(sf)
 fvec = list.files('~/qnap_geo/MCD19A2/HDF/2010.01.31', pattern = '.hdf$', full.names = TRUE)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Orbit Info ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####
+
 #' Extract orbit times from HDFs
-orbit_info <- function(hdfpath){
-  md = fromJSON(describe(hdfpath, options = 'json'))
+orbit_info <- function(hdf_path){
+  md = fromJSON(describe(hdf_path, options = 'json'))
   ocount = as.numeric(md$metadata[[1]]$Orbit_amount)
   otimes = str_split(md$metadata[[1]]$Orbit_time_stamp, '  ')[[1]][1:ocount]
-  list(tile = rep(str_extract(hdfpath, 'h[:digit:][:digit:]v[:digit:][:digit:]'), ocount),
+  list(tile = rep(str_extract(hdf_path, 'h[:digit:][:digit:]v[:digit:][:digit:]'), ocount),
        layer_index = 1:ocount,
        sat = str_sub(otimes, -1),
        orbit_time = as.POSIXct(str_sub(otimes, 1, nchar(otimes)-1), tz = 'UTC', format = '%Y%j%H%M'),
-       hdf = hdfpath)
+       hdf = hdf_path)
 }
 
 #' Make a DT of orbits binned by time for every tile in a day
@@ -37,11 +39,13 @@ bin_overpasses <- function(hdf_paths){
   oDT[, .(tile, sat, layer_index, overpass_bin, orbit_time, hdf)]
 }
 
+# Mapping ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####
+
 #' Make a raster with overpass bins for a day (used for map only)
-hdf_layer_as_binary <- function(hdfpath, layer_index, overpass_bin,
+hdf_layer_as_binary <- function(hdf_path, layer_index, overpass_bin,
                                 sd_name = c('AOD_QA', 'Optical_Depth_047')){
   sd_name = match.arg(sd_name)
-  r1 = rast(hdfpath, subds = sd_name, lyrs = layer_index)
+  r1 = rast(hdf_path, subds = sd_name, lyrs = layer_index)
   set.values(r1, overpass_bin, cells = which(!is.na(r1[])))
   r1
 }
@@ -72,22 +76,22 @@ mapview_overpasses <- function(hdf_paths, map_sat = c('A', 'T')){
   dt = bin_overpasses(hdf_paths)
   dt = dt[sat == map_sat]
 
-  mlist = vector(mode = 'list', length = length(unique(dt$overpass_bin)))
+  olist = vector(mode = 'list', length = length(unique(dt$overpass_bin)))
   for(bin in unique(dt$overpass_bin)){
     obdt = dt[overpass_bin == bin]
-    rlist = vector(mode = 'list', length = nrow(obdt))
+    tlist = vector(mode = 'list', length = nrow(obdt))
     for(i in 1:nrow(obdt)){
       trow = obdt[i]
-      rlist[[i]] <- hdf_layer_as_binary(trow$hdf, trow$layer_index, trow$overpass_bin,
+      tlist[[i]] <- hdf_layer_as_binary(trow$hdf, trow$layer_index, trow$overpass_bin,
                                          sd_name = 'AOD_QA')
     }
-    obin <- terra::merge(sprc(rlist))
-    mlist[[bin]] <- obin
+    obin <- terra::merge(sprc(tlist))
+    olist[[bin]] <- obin
   }
   # Overpasses are sequential east to west, where they overlap, the value will
   # be the mean of the two overpasses. This method works for CONUS, but breaks
   # down closer to the poles where there are more overlapping overpasses!
-  omos = terra::mosaic(sprc(mlist), fun = 'mean')
+  omos = terra::mosaic(sprc(olist), fun = 'mean')
 
   # Tile boundaries to overlay on raster
   tb = tile_boundaries(hdf_paths)
@@ -104,4 +108,3 @@ mapview_overpasses <- function(hdf_paths, map_sat = c('A', 'T')){
           na.color = '#BEBEBE00', method = 'ngb', col.regions = sel_colors) +
     mapview(tb, alpha.regions = 0, color = 'black', legend = FALSE)
 }
-
