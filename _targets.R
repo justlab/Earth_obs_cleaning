@@ -121,7 +121,7 @@ set1_targets = list(
                                 derive_mcd19_vars,
                                 buffers_km = buffers_km,
                                 sat = sat,
-                                aer_stn = aer_nospace,
+                                aer_stn = aer,
                                 mcd19path = mcd19path,
                                 refgrid_path = refgrid_path,
                                 ref_agg_lookup = ref_agg_lookup,

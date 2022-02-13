@@ -139,17 +139,18 @@ filter_aer_bydate <- function(aer_data, dates){
 #' interpolating to wavelength 470 nm, input as 0.47
 #'
 #' @param aer_data the dataset contains all the AOD measurements and exact wavelengths
+#' @param aer_stns simple feature collection of station locations
 #' @return dataset of aer_data with pred, also with `nearest_refgrid` next to Site_Name
-interpolate_aod <- function(aer_data, aer_nearest_2){
-  keepcols = grep('1020|1640', names(aer_data), invert = T)
+interpolate_aod <- function(aer_data, aer_stns){
+  keepcols = grep('1020|1640', names(aer_data), invert = TRUE)
   aer_data <- aer_data[, ..keepcols]
-  aer_data[,obs:=.I]
+  aer_data[, obs:= .I]
   setkey(aer_data, obs)
-  vars_wv <- grep("Exact_Wavelengths_of_AOD", names(aer_data), value = T)
-  vars_aod_sub <- grep("AOD_", names(aer_data), value = T)
-  aer_data$N_NAAOD <- rowSums(!is.na(aer_data[,..vars_aod_sub]))
+  vars_wv <- grep("Exact_Wavelengths_of_AOD", names(aer_data), value = TRUE)
+  vars_aod_sub <- grep("AOD_", names(aer_data), value = TRUE)
+  aer_data$N_NAAOD <- rowSums(!is.na(aer_data[, ..vars_aod_sub]))
   # create long-format data
-  d <- melt(aer_data[, c(vars_aod_sub, vars_wv, "obs"), with = F],
+  d <- melt(aer_data[, c(vars_aod_sub, vars_wv, "obs"), with = FALSE],
             measure = list(vars_aod_sub, vars_wv), value.name = c("aod", "exact_wv"))
   # choose non-NA and >0 AOD
   d <- d[!is.na(aod) & aod > 0]
@@ -162,17 +163,19 @@ interpolate_aod <- function(aer_data, aer_nearest_2){
   setkey(d2, obs)
   aer_data_wPred <- d2[aer_data]
   # set NA: At least 4 observations wanted for exterpolation
-  aer_data_wPred[N_NAAOD<4 & obs%in%obs_os, AOD_470nm:=NA]
+  aer_data_wPred[N_NAAOD < 4 & obs %in% obs_os, AOD_470nm := NA]
   # remove unnecessary variables:
-  aer_data_wPred <- aer_data_wPred[,-c(vars_aod_sub, vars_wv), with = F]
+  aer_data_wPred <- aer_data_wPred[, -c(vars_aod_sub, vars_wv), with = FALSE]
 
-  # attach nearest_refgrid (also called idM21pair0 in many our script) to Aer Site_Name
+  # join station locations to observations
   setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
   setkey(aer_data_wPred, Site_Name)
-  aer_sites <- as.data.table(aer_nearest_2)[,c("Site_Name", "idM21pair0"), with = F]
+  aer_sites = as.data.table(aer_stns)
+  aer_sites[, c('x_sinu', 'y_sinu') := as.data.table(st_coordinates(geometry))]
+  aer_sites = aer_sites[, .(Site_Name, x_sinu, y_sinu)]
   setkey(aer_sites, Site_Name)
   aer_data_wPred <- aer_sites[aer_data_wPred]
-  setkey(aer_data_wPred, idM21pair0, stn_time)
+  setkey(aer_data_wPred, Site_Name, stn_time)
   aer_data_wPred
 }
 
