@@ -87,4 +87,39 @@ calc_XY_offsets <- function(refgrid_path, ref_uid = 'idM21pair0', aoiname = 'con
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# lookups between original and aggregated resolutions now done with Terra
 
+#' Return a data.table that assoicates cells of the original AOD resolution and
+#' the aggregated resolution.
+#'
+#' Contains columns with the reference cell ID from the pair function (provided
+#' as `ref_uid` parameter), cell ID from the original reference raster
+#' (`cell_index`), cell ID from the newly created raster (`cell_index_new`), the
+#' row and column of the raster (`cell_row`, `cell_col`), and columns for the
+#' aggregated version of the raster (`agg_cell_index`, `agg_cell_row`,
+#' `agg_cell_col`).
+#'
+make_agg_lookup <- function(mcd_refras, agg_level, refgrid_path, ref_uid = 'idM21pair0'){
+  # create and stack reference rasters
+  sr_refras = rast(mcd_refras)
+  agg_cellids <- terra::aggregate(sr_refras, fact = agg_level)
+  agg_cellids[] <- 1:ncell(agg_cellids)
+  names(agg_cellids) <- 'agg_cell_index'
+  agg_cellids[['agg_cell_row']] <- rowFromCell(agg_cellids, 1:ncell(agg_cellids))
+  agg_cellids[['agg_cell_col']] <- colFromCell(agg_cellids, 1:ncell(agg_cellids))
+  disagg_cellids = terra::disagg(agg_cellids, fact = agg_level) %>%
+    terra::crop(., sr_refras)
+  rm(agg_cellids)
+  sr_refras[['cell_index_new']] <- 1:ncell(sr_refras)
+  sr_refras[['cell_row']] <- rowFromCell(sr_refras, 1:ncell(sr_refras))
+  sr_refras[['cell_col']] <- colFromCell(sr_refras, 1:ncell(sr_refras))
+  stacked = rast(list(sr_refras, disagg_cellids))
+  rm(sr_refras, disagg_cellids)
+
+  # convert to data.table and join ref_uid
+  ref_agg = setDT(as.data.frame(stacked))
+  rg = read_fst(refgrid_path, as.data.table = TRUE,
+                columns = c(ref_uid, 'cell_index'))
+  ref_agg[rg, c(ref_uid) := get(ref_uid), on = 'cell_index']
+  ref_agg
+}

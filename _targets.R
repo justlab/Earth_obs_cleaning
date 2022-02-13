@@ -91,8 +91,6 @@ set1_targets = list(
                format = 'fst_dt'),
     tar_target(mcd_refras,
                crop_refras_mcd(refgrid_path, mcd19path, aoiname = regions)),
-    tar_target(ref_agg_lookup,
-               make_agg_lookup(mcd_refras, agg_level, refgrid_path)),
 
     # Load AERONET data ####
     tar_target(all_dates,
@@ -124,7 +122,6 @@ set1_targets = list(
                                 aer_stn = aer,
                                 mcd19path = mcd19path,
                                 refgrid_path = refgrid_path,
-                                ref_agg_lookup = ref_agg_lookup,
                                 agg_level = agg_level,
                                 agg_thresh = agg_thresh),
                  pattern = map(aer_bymonth),

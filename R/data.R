@@ -29,6 +29,8 @@ orbit_info <- function(hdf_path){
 #' Make a DT of orbits binned by time for every tile in a day
 bin_overpasses <- function(hdf_paths){
   oDT = rbindlist(lapply(hdf_paths, FUN = orbit_info))
+  oDT[sat == 'A', sat := 'aqua']
+  oDT[sat == 'T', sat := 'terra']
   setkey(oDT, sat, orbit_time)
   oDT[, time_lag := data.table::shift(.SD, 1), by = sat, .SDcols = 'orbit_time']
   oDT[, time_diff := orbit_time - time_lag]
@@ -83,30 +85,37 @@ stack_and_disagg <- function(hdf_path, load_sds, load_layers, time_layer_value =
 #' @param load_sds character vector of which subdatasets to load. All layers
 #'   (overpasses) will be loaded for each of the subdatasets. The default
 #'   subdatasets are set to the those being used for MCD19A2.
-get_daily_overpasses <- function(hdf_root, load_date, load_sat = c('A', 'T'),
+get_daily_overpasses <- function(hdf_root, load_date, load_sat = sats,
   load_sds = c('Optical_Depth_047', 'AOD_Uncertainty', 'Column_WV', 'AOD_QA', 'RelAZ')){
   load_sat = match.arg(load_sat)
 
   hdf_paths = list.files(file.path(hdf_root, format(load_date, '%Y.%m.%d')),
                          pattern = '\\.hdf$', full.names = TRUE)
-  dt = bin_overpasses(hdf_paths)
-  dt = dt[sat == load_sat]
+  if(length(hdf_paths) > 0){
+    dt = bin_overpasses(hdf_paths)
+    dt = dt[sat == load_sat]
 
-  # outer loop by overpass_bin
-  merge_overpass = function(bin){
-    obdt = dt[overpass_bin == bin]
-    # loop by tile
-    tlist = vector(mode = 'list', length = nrow(obdt))
-    for(i in 1:nrow(obdt)){
-      trow = obdt[i]
-      tlist[[i]] <- stack_and_disagg(trow$hdf, load_sds, trow$layer_index,
-                                     time_layer_value = trow$orbit_time)
+    # outer loop by overpass_bin
+    merge_overpass = function(bin){
+      obdt = dt[overpass_bin == bin]
+      # loop by tile
+      tlist = vector(mode = 'list', length = nrow(obdt))
+      for(i in 1:nrow(obdt)){
+        trow = obdt[i]
+        tlist[[i]] <- stack_and_disagg(trow$hdf, load_sds, trow$layer_index,
+                                       time_layer_value = trow$orbit_time)
+        # rename AOD layer
+        names(tlist[[i]])[1] <- 'MCD19_AOD_470nm'
+      }
+      obin <- terra::merge(sprc(tlist))
     }
-    obin <- terra::merge(sprc(tlist))
+    olist = lapply(unique(dt$overpass_bin), merge_overpass)
+    # in limited testing, parallel does work
+    # olist = mclapply(unique(dt$overpass_bin), merge_overpass, mc.cores = 6)
+    olist
+  } else {
+    NULL
   }
-  olist = lapply(unique(dt$overpass_bin), merge_overpass)
-  # olist = mclapply(unique(dt$overpass_bin), merge_overpass, mc.cores = 6)
-  olist
 }
 
 #' Convert a single SpatRaster (stack of all layers) to data.table
