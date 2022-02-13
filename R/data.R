@@ -1,17 +1,5 @@
 # load HDFs of MCD19A2
 
-# FOR TESTING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-library(targets)
-library(data.table)
-library(terra)
-library(stringr)
-library(jsonlite)
-library(mapview)
-library(sf)
-#fvec = list.files('~/qnap_geo/MCD19A2/HDF/2010.01.31', pattern = '.hdf$', full.names = TRUE)
-hdf_root = '/home/rushj03/qnap_geo/MCD19A2/HDF'
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 # Orbit Info ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####
 
 #' Extract orbit times from HDFs

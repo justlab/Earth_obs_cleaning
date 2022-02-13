@@ -294,7 +294,7 @@ get_focal_extent = function(x, c1, r1, radw){
 #' @param ref_agg_lookup data table output of `make_agg_lookup()`
 #' @param rolldiff_limit maximum time between the AERONET and satellite
 #'   observations
-derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_path,
+derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
                              agg_level, agg_thresh,
                              rolldiff_limit = as.difftime(30, units = 'mins')){
   sv_aer = vect(aer_stn)
