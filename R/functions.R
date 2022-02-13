@@ -119,7 +119,7 @@ dates_year_list <- function(years){
 #' @param aer_data AERONET observation data
 #' @return data.table of AERONET observation data with a monthid column added
 assign_monthid <- function(aer_data){
-  start = as.Date('1970-01-01')
+  start = as.Date('1970-01-01') - 1
   aer_data[, monthid := as.period(as.Date(aer_date) - start) %/% months(1)]
   aer_data
 }
