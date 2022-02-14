@@ -336,10 +336,10 @@
     },
     "brew": {
       "Package": "brew",
-      "Version": "1.0-6",
+      "Version": "1.0-7",
       "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "92a5f887f9ae3035ac7afde22ba73ee9",
+      "Repository": "CRAN",
+      "Hash": "38875ea52350ff4b4c03849fc69736c8",
       "Requirements": []
     },
     "brio": {
@@ -639,13 +639,12 @@
     },
     "dplyr": {
       "Package": "dplyr",
-      "Version": "1.0.7",
+      "Version": "1.0.8",
       "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "36f1ae62f026c8ba9f9b5c9a08c03297",
+      "Repository": "CRAN",
+      "Hash": "ef47665e64228a17609d6df877bf86f2",
       "Requirements": [
         "R6",
-        "ellipsis",
         "generics",
         "glue",
         "lifecycle",
@@ -760,10 +759,21 @@
     },
     "fst": {
       "Package": "fst",
-      "Version": "0.9.6",
+      "Version": "0.9.8",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "028dd1a72730b8960602812c29190d10",
+      "Hash": "34637e000c63c3de8d8aafceb82fd082",
+      "Requirements": [
+        "Rcpp",
+        "fstcore"
+      ]
+    },
+    "fstcore": {
+      "Package": "fstcore",
+      "Version": "0.9.8",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "e3f33e578f19436cc08196f79aaebcd7",
       "Requirements": [
         "Rcpp"
       ]
@@ -1289,10 +1299,10 @@
     },
     "lme4": {
       "Package": "lme4",
-      "Version": "1.1-27.1",
+      "Version": "1.1-28",
       "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "c995b0405ce0894d6fe52b3e08ea9085",
+      "Repository": "CRAN",
+      "Hash": "15b3e9b19ecd9c2ea0d6a3d32248063c",
       "Requirements": [
         "MASS",
         "Matrix",
@@ -1722,10 +1732,10 @@
     },
     "quantreg": {
       "Package": "quantreg",
-      "Version": "5.87",
+      "Version": "5.88",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "6ff772765d1f6821d8eaf4cc82b3a671",
+      "Hash": "b7d49f60ce945abad300246d4766326a",
       "Requirements": [
         "Matrix",
         "MatrixModels",
@@ -1835,10 +1845,10 @@
     },
     "rlang": {
       "Package": "rlang",
-      "Version": "1.0.0",
+      "Version": "1.0.1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "ec923a35ba44bc86fbf95dacaccf65da",
+      "Hash": "3bf0219f19d9f5b3c682acbb3546a151",
       "Requirements": []
     },
     "rmarkdown": {
@@ -1964,10 +1974,10 @@
     },
     "sf": {
       "Package": "sf",
-      "Version": "1.0-5",
+      "Version": "1.0-6",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "200bfddf8f0ca222a7edfd2d64425fb9",
+      "Hash": "9b7b141f7844870dda255584d62775a9",
       "Requirements": [
         "DBI",
         "Rcpp",
@@ -2019,10 +2029,10 @@
     },
     "shinyWidgets": {
       "Package": "shinyWidgets",
-      "Version": "0.6.3",
+      "Version": "0.6.4",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "89b90f439e5a824f8bcbadd082106902",
+      "Hash": "02fba70d7c5c1ab0754d9c0108c029eb",
       "Requirements": [
         "bslib",
         "htmltools",
@@ -2131,10 +2141,10 @@
     },
     "svglite": {
       "Package": "svglite",
-      "Version": "2.0.0",
+      "Version": "2.1.0",
       "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "8fb6188960bf0f90996ce52f9c2106ac",
+      "Repository": "CRAN",
+      "Hash": "68dfdf211af6aa4e5f050f064f64d401",
       "Requirements": [
         "cpp11",
         "systemfonts"
@@ -2150,10 +2160,10 @@
     },
     "systemfonts": {
       "Package": "systemfonts",
-      "Version": "1.0.3",
+      "Version": "1.0.4",
       "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "5be9fcf8ef6763e8cb13ab009e273a1d",
+      "Repository": "CRAN",
+      "Hash": "90b28393209827327de889f49935140a",
       "Requirements": [
         "cpp11"
       ]
@@ -2184,10 +2194,10 @@
       "RemoteUsername": "ropensci",
       "RemoteRepo": "targets",
       "RemoteRef": "HEAD",
-      "RemoteSha": "adb07d977842d04bd0bc95af96ac06044524d7c2",
+      "RemoteSha": "8bf16cb21104382a2a1b810e47a1c916263a82cc",
       "RemoteHost": "api.github.com",
       "Remotes": "MarkEdmondson1234/googleCloudStorageR,",
-      "Hash": "58c6d8ac2b4471ad1dd57219d17d9a46",
+      "Hash": "aa1314d68c4a9f6a53ec8bbedc0ceb88",
       "Requirements": [
         "R6",
         "base64url",
@@ -2336,10 +2346,10 @@
     },
     "units": {
       "Package": "units",
-      "Version": "0.7-2",
+      "Version": "0.8-0",
       "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "e0f85712d5371ab2841f63cdb33fe0f0",
+      "Repository": "CRAN",
+      "Hash": "6c374b265ba437f8d384ec7a313edd96",
       "Requirements": [
         "Rcpp"
       ]
