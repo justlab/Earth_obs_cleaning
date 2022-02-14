@@ -46,7 +46,7 @@ source('R/xgboost_cv_RFE.R')
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #process_years = 2003:2019
-process_years = c(2003, 2004, 2010, 2011, 2018, 2019)
+process_years = c(2003)
 region_values = list(regions = aoiname)
 date_table = dates_year(process_years)
 sat_values = list(sat = sats)
@@ -127,8 +127,7 @@ set1_targets = list(
                                 hdf_root = hdf_root,
                                 agg_level = agg_level,
                                 agg_thresh = agg_thresh),
-                 #pattern = map(aer_bymonth),
-                 pattern = slice(aer_bymonth, index = 1:5),
+                 pattern = map(aer_bymonth),
                  format = 'fst_dt',
                  storage = 'worker'),
 
