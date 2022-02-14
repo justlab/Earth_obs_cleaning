@@ -417,10 +417,14 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
       }
     }
     outDT = rbindlist(lapply(day_op, overpass_stats), fill = TRUE)
-    outDT = outDT[!is.na(Site_Name)]
-    if('V1' %in% names(outDT)) outDT[, V1 := NULL]
-    outDT
-  } else {
+    if(ncol(outDT) > 1){
+      outDT = outDT[!is.na(Site_Name)]
+      if('V1' %in% names(outDT)) outDT[, V1 := NULL]
+      outDT
+    } else { # no RJ results for any overpass on this day
+      data.table(NA)
+    }
+  } else { # failure to return any overpasses
     data.table(NA)
   }
 }
