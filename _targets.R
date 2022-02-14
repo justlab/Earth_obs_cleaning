@@ -17,7 +17,7 @@ tar_option_set(
                'terra',
                'jsonlite',
                # 'log4r',
-               'data.table',
+               'tibble',
                'fst',
                'sf',
                'magrittr',
@@ -28,7 +28,7 @@ tar_option_set(
                'Just.universal',
                'xgboost',
                'parallel',
-               'tibble'),
+               'data.table'),
   format = 'qs',
   workspace_on_error = TRUE,
   error = 'abridge')
@@ -45,7 +45,8 @@ source('R/xgboost_cv_RFE.R')
 # Targets ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-process_years = 2003:2019
+#process_years = 2003:2019
+process_years = c(2003, 2010, 2019)
 region_values = list(regions = aoiname)
 date_table = dates_year(process_years)
 sat_values = list(sat = sats)
@@ -122,11 +123,12 @@ set1_targets = list(
                                 derive_mcd19_vars,
                                 buffers_km = buffers_km,
                                 sat = sat,
-                                aer_stn = aer,
+                                aer_stn = as.data.table(aer),
                                 hdf_root = hdf_root,
                                 agg_level = agg_level,
                                 agg_thresh = agg_thresh),
-                 pattern = map(aer_bymonth),
+                 #pattern = map(aer_bymonth),
+                 pattern = slice(aer_bymonth, index = 1:5),
                  format = 'fst_dt',
                  storage = 'worker'),
 

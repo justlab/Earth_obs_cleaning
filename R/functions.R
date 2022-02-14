@@ -297,6 +297,7 @@ get_focal_extent = function(x, c1, r1, radw){
 derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
                              agg_level, agg_thresh,
                              rolldiff_limit = as.difftime(30, units = 'mins')){
+  aer_stn = st_sf(aer_stn) # testing whether passing in a DT version avoids error with vctrs package
   sv_aer = vect(aer_stn)
   setDT(aer_data)
   aer_data = interpolate_aod(aer_data, aer_stn)
