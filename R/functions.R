@@ -157,9 +157,12 @@ interpolate_aod <- function(aer_data, aer_stns){
   # ids for wavelengths observed on one side of 470nm
   obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside == TRUE, obs]
   # the predict part:
-  d2 <- d[, by = obs, .(AOD_470nm = exp(predict(lm(
-    log(aod) ~ log(exact_wv) + I((log(exact_wv))^2)),
-    newdata = data.frame(exact_wv = 0.47))))] # notice to put 0.47 not 470
+  d2 <- d[, by = obs,
+     {m = lm(log(aod) ~ log(exact_wv) + I((log(exact_wv))^2))
+      if (m$rank == length(coef(m)))
+        # Only use the model if it's full-rank.
+          list(AOD_470nm = exp(predict(m,
+              data.frame(exact_wv = 0.47))))}] # notice to put 0.47 not 470
   setkey(d2, obs)
   aer_data_wPred <- d2[aer_data]
   # set NA: At least 4 observations wanted for exterpolation
