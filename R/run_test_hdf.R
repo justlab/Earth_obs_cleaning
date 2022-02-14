@@ -32,8 +32,8 @@ message('Part 1: Preparing training data using ', future_workers, ' workers at '
 tar_make_future(names = !!end_part1, workers = future_workers)
 check_progress(1, end_part1)
 
-# # 2. Generate CV report for all years, serial ####
-# message('Part 2: Generating CV report at ', Sys.time())
-# end_part2 = c('initial_cv_report')
-# tar_make(names = !!end_part2)
-# check_progress(2, end_part2)
+# 2. Generate CV report for all years, serial ####
+message('Part 2: Generating CV report at ', Sys.time())
+end_part2 = c('initial_cv_report')
+tar_make(names = !!end_part2)
+check_progress(2, end_part2)
