@@ -32,85 +32,134 @@ bin_overpasses <- function(hdf_paths){
 
 # Data Loading ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####
 
-#' Stack the requested subdataset layers, disaggregating coarser resolution
-#' rasters to the finest resolution.
-#'
-#' @param hdf_path full path to a single HDF of satellite data.
-#' @param load_sds character vector of which subdatasets to load.
-#' @param load_layers numeric vector of indices of layers to load within
-#'   subdatasets (which correspond to desired overpasses).
-#' @param time_layer_value POSIXct time. Optional. If provided, will add a numeric layer
-#'   to the raster containing the time as seconds since 1970.
-stack_and_disagg <- function(hdf_path, load_sds, load_layers, time_layer_value = NULL){
-  bysds = lapply(load_sds, FUN = rast, x = hdf_path, lyrs = load_layers)
-  # Disaggregate the coarser layer (RelAZ in MCD19A2) to the finer layers' resolution.
-  # This method assumes square pixels.
-  resvec = sapply(bysds, function(x) res(x)[1])
-  disagg_level = round(resvec / min(resvec))
-  for(i in which(disagg_level > 1)){
-    bysds[[i]] <- disagg(bysds[[i]], disagg_level[i])
-  }
-  names(bysds) <- load_sds
-  if(!is.null(time_layer_value)){
-    if(!'POSIXct' %in% class(time_layer_value)) stop('Provide the time as a POSIXct object')
-    newindex = length(bysds)+1
-    bysds[[newindex]] <- init(bysds[[1]], as.numeric(time_layer_value))
-    names(bysds[[newindex]]) <- 'overpass_time'
-  }
-  rast(bysds)
+#' Get numeric indices for requested HDF subdatasets
+get_sd_ids <- function(hdf_path){
+  md = fromJSON(describe(hdf_path, options = 'json'))
+  md = md$metadata$SUBDATASETS
+  md = md[grep('DESC', names(md))]
+  ids = as.integer(str_extract(names(md), '(?<=SUBDATASET_).*(?=_DESC)'))
+  sd_names = str_extract(md, '(?<=] ).*(?= g)')
+  data.table(id = ids, sdname = sd_names)
 }
 
-#' Get all overpass mosaics by date.
+#' Create a list of SpatRasters from a list of paths to VRTs.
+#'
+#' @param op_vrts is the list of VRTs by subdatset from `get_overpasses_vrts()`,
+#'   subset to this overpass
+#' @param opDT data.table from `bin_overpasses()`, subset to this overpass
+#' @param with_time create a mosaic of single-cell rasters representing the
+#'   overpass time per HDF tile.
+#' @return a list with the same length as there are unique raster resolutions
+#'   among the subdatasets. For MCD19A2, it will be a list of length three when
+#'   `with_time = TRUE`. The first item contains 4 rasterized VRTs for the high
+#'   resolution subdatasets, then 1 raster with lower res, and finally 1 time
+#'   raster with a single cell per HDF tile. These terra SpatRaster objects can
+#'   not be serialized as-is, since they are pointers. They must be consumed by
+#'   the same process.
+rasterize_vrts <- function(op_vrts, opDT, with_time = TRUE){
+
+  # rasterize the subdatasets and group by resolution
+  ras_by_res = list()
+  vrt_rasters = lapply(op_vrts, rast)
+  resvec = sapply(vrt_rasters, function(x) res(x)[1])
+  for(this_res in unique(resvec)){
+    ras_by_res[[paste0('r', floor(this_res))]] <-
+      rast(vrt_rasters[which(resvec == this_res)])
+  }
+
+  if(with_time){
+    # Create time rasters by tile
+    time_rasters = list()
+    for(t in 1:nrow(opDT)){
+      r1 = rast(opDT[t, hdf], subds = 1, lyrs = 1)
+      time_rasters[[t]] <- rast(ext(r1), crs = crs(r1), nrows = 1, ncols = 1,
+                                vals = as.numeric(opDT[t, orbit_time]),
+                                names = 'overpass_time')
+    }
+    time_merged = terra::merge(sprc(time_rasters))
+    ras_by_res[['time']] <- time_merged
+  }
+  ras_by_res
+}
+
+#' Get all overpass mosaics as VRTs by date.
 #'
 #' File organization is expected to match USGS server organization (see
-#' parameters). This function does not return wrapped/packed `terra` rasters, so
-#' should not be used for a target. It should be used within another target
-#' where the output remains in memory.
+#' parameters).
 #' @param hdf_root Path to directory containing date subdirectories formatted
 #'   YYYY.MM.DD. The date subdirectories contain the satellite HDFs.
-#' @param load_date Date object for date to load.
-#' @param load_sat 'A' for Aqua or 'T' for Terra. Default Aqua.
+#' @param binDT data.table from `bin_overpasses()`
+#' @param load_sat 'aqua' or 'terra'. Default 'aqua'.
+#' @param vrt_path directory to store overpass VRTs that reference HDF files.
 #' @param load_sds character vector of which subdatasets to load. All layers
 #'   (overpasses) will be loaded for each of the subdatasets. The default
 #'   subdatasets are set to the those being used for MCD19A2.
-get_daily_overpasses <- function(hdf_root, load_date, load_sat = sats,
+#' @return paths to VRTs in a nested list by overpass and subdataset for this date
+get_overpasses_vrts <- function(hdf_paths, binDT, load_sat = sats, vrt_path,
   load_sds = c('Optical_Depth_047', 'AOD_Uncertainty', 'Column_WV', 'AOD_QA', 'RelAZ')){
   load_sat = match.arg(load_sat)
+  binDT = binDT[sat == load_sat]
 
-  hdf_paths = list.files(file.path(hdf_root, format(load_date, '%Y.%m.%d')),
-                         pattern = '\\.hdf$', full.names = TRUE)
-  if(length(hdf_paths) > 0){
-    dt = bin_overpasses(hdf_paths)
-    dt = dt[sat == load_sat]
+  sdids = get_sd_ids(hdf_paths[1]) # assuming identical for all HDFs
+  sdids = sdids[sdname %in% load_sds]
 
-    # outer loop by overpass_bin
-    merge_overpass = function(bin){
-      obdt = dt[overpass_bin == bin]
-      # loop by tile
-      tlist = vector(mode = 'list', length = nrow(obdt))
-      for(i in 1:nrow(obdt)){
-        trow = obdt[i]
-        tlist[[i]] <- stack_and_disagg(trow$hdf, load_sds, trow$layer_index,
-                                       time_layer_value = trow$orbit_time)
-        # rename AOD layer
-        names(tlist[[i]])[1] <- 'MCD19_AOD_470nm'
-      }
-      obin <- terra::merge(sprc(tlist))
+  # list of all overpasses
+  op_vrts = list()
+  for(op_id in unique(binDT$overpass_bin)){
+    # list of subdatasets in this overpass
+    sd_vrts = list()
+    for(sd_row in 1:nrow(sdids)){
+      sd_vrts[[sd_row]] <- custom_vrt_day(load_sat, sdids[sd_row, id],
+                                          sdids[sd_row, sdname], binDT,
+                                          op_id, vrt_path)
     }
-    olist = lapply(unique(dt$overpass_bin), merge_overpass)
-    # in limited testing, parallel does work
-    # olist = mclapply(unique(dt$overpass_bin), merge_overpass, mc.cores = 6)
-    olist
-  } else {
-    NULL
+    names(sd_vrts) <- sdids$sdname
+    op_vrts[[paste0('op_bin_', op_id)]] <- sd_vrts
   }
+  op_vrts
 }
 
-#' Convert a single SpatRaster (stack of all layers) to data.table
-overpass_to_table <- function(sr){
-  dt = setDT(as.data.frame(sr, xy = TRUE, na.rm = FALSE))
-  setnames(dt, c('x', 'y'), c('x_sinu', 'y_sinu'))
-  dt
+#' Create a directory to store overpass VRTs
+prepare_vrt_directory <- function(base_path){
+  vrt_path = file.path(base_path, 'vrts')
+  if(!dir.exists(vrt_path)) dir.create(vrt_path)
+  vrt_path
+}
+
+# lyrs being a vector from the layer_index column from bin_overpasses
+
+#' Create VRT files for a single overpass and single subdataset that references
+#' the appropriate layer in multiple HDF files.
+#'
+#' @details tested with system GDAL 3.0.4 released 2020-01-28
+#' @param this_sat 'aqua' or 'terra'.
+#' @param sdnum numeric index of the HDF subdataset.
+#' @param sdname name of the HDF subdataset.
+#' @param binDT data.table from `bin_overpasses()`.
+#' @param op_bin overpass bin number.
+#' @param vrt_path directory to store overpass VRTs that reference HDF files.
+custom_vrt_day <- function(this_sat, sdnum, sdname, binDT, op_bin, vrt_path){
+  binDT = binDT[overpass_bin == op_bin & sat == this_sat, ]
+  oldwd = getwd()
+  hdf_path = dirname(binDT$hdf[1])
+  setwd(vrt_path)
+  this_date = as.Date(binDT[1, orbit_time])
+  vrtname = paste(this_sat, this_date, sdname, op_bin, 'vrt', sep = '.')
+  # write VRT with all SourceBands to 1
+  system2('gdalbuildvrt', paste('-b 1', '-sd', sdnum, '-overwrite', vrtname,
+                                paste(binDT$hdf, collapse = ' ')),
+          stdout = NULL)
+
+  # edit each tile in the output VRT's SourceBands to match specified overpass
+  newbands = paste0('      <SourceBand>', binDT$layer_index, '</SourceBand>')
+  vrt = readLines(vrtname)
+  matches = grep('      <SourceBand>1</SourceBand>', vrt)
+  for(i in 1:length(matches)){
+    vrt[matches[i]] <- newbands[i]
+  }
+  writeLines(vrt, vrtname)
+  setwd(oldwd)
+  file.path(vrt_path, vrtname)
 }
 
 # Mapping ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####

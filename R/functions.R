@@ -289,16 +289,21 @@ get_focal_extent = function(x, c1, r1, radw){
 #' AERONET station.
 #'
 #' @param aer_data A single day of AERONET observations
-#' @param sat input "terra" or "aqua"
+#' @param load_sat input "terra" or "aqua"
 #' @param buffers_km vector of buffer radii in kilometers
 #' @param aer_stn data table of AERONET station names and reference unique ID
 #'   for satellite AOD cells
-#' @param hdf_path path to MCD19A2 HDF files
-#' @param ref_agg_lookup data table output of `make_agg_lookup()`
+#' @param hdf_root path to MCD19A2 HDF files
+#' @param agg_level how much to aggregate the input MODIS AOD to use for large
+#'   focal radii
+#' @param agg_thresh use the aggregated AOD when `(radius * 1000 / agg_level / mcd_res) > agg_thresh`,
+#'   where `radius` is in km, and `mcd_res` (resolution of input AOD) is
+#'   in meters.
+#' @param vrt_path directory to store overpass VRTs that reference HDF files.
 #' @param rolldiff_limit maximum time between the AERONET and satellite
 #'   observations
-derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
-                             agg_level, agg_thresh,
+derive_mcd19_vars = function(aer_data, load_sat, buffers_km, aer_stn, hdf_root,
+                             agg_level, agg_thresh, vrt_path,
                              rolldiff_limit = as.difftime(30, units = 'mins')){
   aer_stn = st_sf(aer_stn) # testing whether passing in a DT version avoids error with vctrs package
   sv_aer = vect(aer_stn)
@@ -309,21 +314,45 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
   if(aer_data[, uniqueN(aer_date)] > 1) stop('Use tar_group_by and pattern=map to send one date at a time to derive_mcd19_vars')
   this_date = aer_data[1, aer_date]
 
-  # 2. Roll Join AERONET to satellite AOD
-  day_op = get_daily_overpasses(hdf_root, this_date, sat)
+  # 2. Join AERONET to satellite AOD
+  hdf_paths = list.files(file.path(hdf_root, format(this_date, '%Y.%m.%d')),
+                         pattern = '\\.hdf$', full.names = TRUE)
+  if(length(hdf_paths) > 0){
+    binDT = bin_overpasses(hdf_paths)
+    binDT = binDT[sat == load_sat]
 
-  # roll join will update value of the time column in X to the value of the time
-  # column in i. Copy AERONET's stn_time to a column with the same name as
-  # MCD19's time column so we can compare the time difference afterwards using
-  # meaningful column names.
-  setnames(aer_data, 'stn_time', 'overpass_time')
-  aer_data[, stn_time := overpass_time]
+    day_op = get_overpasses_vrts(hdf_paths, binDT, load_sat, vrt_path)
 
-  if(length(day_op) > 0){
+    # lapply by overpass, which are the groups in day_op
+    day_rasters = mapply(FUN = rasterize_vrts,
+                         op_vrts = day_op,
+                         opDT = lapply(1:length(day_op), function(i) binDT[overpass_bin == i]),
+                         SIMPLIFY = FALSE)
+    rm(day_op)
+
+    # roll join will update value of the time column in X to the value of the time
+    # column in i. Copy AERONET's stn_time to a column with the same name as
+    # MCD19's time column so we can compare the time difference afterwards using
+    # meaningful column names.
+    setnames(aer_data, 'stn_time', 'overpass_time')
+    aer_data[, stn_time := overpass_time]
+
     # extract AOD overpass values by each overpass
     overpass_stats <- function(single_op){
-      op_vals = setDT(terra::extract(single_op, sv_aer, cells = TRUE))
+
+      # extract values from each raster for the overpass
+      op_vals = lapply(single_op, function(op){
+        # only record cell ID for the raster stack with AOD
+        if(length(grep('Optical_Depth', names(op))) > 0){
+          dt = setDT(terra::extract(op, sv_aer, cells = TRUE))
+        } else {
+          dt = setDT(terra::extract(op, sv_aer, cells = FALSE))
+        }
+        setkey(dt, ID)
+      })
+      op_vals = Reduce(merge.data.table, op_vals)
       op_vals[, Site_Name := aer_stn$Site_Name]
+      setnames(op_vals, 'Optical_Depth_047', 'MCD19_AOD_470nm')
       op_vals = op_vals[!is.na(MCD19_AOD_470nm)]
       op_vals[, overpass_time := as.POSIXct(overpass_time, tz = 'UTC', origin = '1970-01-01')]
 
@@ -331,15 +360,16 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
       setkey(op_vals, Site_Name, overpass_time)
       rj <- aer_data[op_vals, roll = 'nearest', nomatch = 0] # using keys to join
 
-      # Only roll joins with difference of 30 minutes or less
+      # Only keep roll joins within specified time difference limit
       rj[, rj_difftime := overpass_time - stn_time]
       rj = rj[abs(rj_difftime) <= rolldiff_limit, ]
 
       if(nrow(rj) > 0){
         # 3. Derived values from focal statistics on satellite AOD
 
-        # Rasterize satellite AOD
-        mcd_aod = single_op[['MCD19_AOD_470nm']]
+        # find the AOD layer in the list of rasters for the overpass
+        mcd_aod = single_op[unlist(lapply(single_op,
+          function(s) 'Optical_Depth_047' %in% names(s)))][[1]][['Optical_Depth_047']]
         mcd_nna = !is.na(mcd_aod)
         mcd_res = res(mcd_aod)[1] # assuming square pixels
         # Aggregate AOD raster for use in larger focal radii
@@ -353,15 +383,13 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
             # use original resolution
             use_agg[[paste0('r', radius)]] <- FALSE
             this_mat = circle_mat(radius, cellsize = mcd_res, matrix = TRUE)
-            this_mat[this_mat == 0] <- NA
-            filter_matrices[[paste0('r', radius)]] <- this_mat
           } else {
             # use aggregated resolution
             use_agg[[paste0('r', radius)]] <- TRUE
             this_mat = circle_mat(radius, cellsize = mcd_res * agg_level, matrix = TRUE)
-            this_mat[this_mat == 0] <- NA
-            filter_matrices[[paste0('r', radius)]] <- this_mat
           }
+          this_mat[this_mat == 0] <- NA
+          filter_matrices[[paste0('r', radius)]] <- this_mat
         }
         rm(radius)
 
@@ -384,7 +412,6 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
                                    extent = get_focal_extent(mcd_aod, ccid, crid, radw))
               aod_extract = crop(mcd_aod, filter_raster)
               nna_extract = crop(mcd_nna, filter_raster)
-              filter_crop = crop(filter_raster, aod_extract)
             } else {
               # aggregated AOD raster
               crid = rowFromCell(mcd_agg_aod, agg_cellid) # central row id
@@ -393,8 +420,8 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
                                    extent = get_focal_extent(mcd_agg_aod, ccid, crid, radw))
               aod_extract = crop(mcd_agg_aod, filter_raster)
               nna_extract = crop(mcd_agg_nna, filter_raster)
-              filter_crop = crop(filter_raster, aod_extract)
             }
+            filter_crop = crop(filter_raster, aod_extract)
             mult_aod = aod_extract * filter_crop
             mult_nna = nna_extract * filter_crop
             focal_list[[paste0('Mean_AOD', radius, 'km')]] <- mean(mult_aod[], na.rm = TRUE)
@@ -420,7 +447,7 @@ derive_mcd19_vars = function(aer_data, sat, buffers_km, aer_stn, hdf_root,
         data.table(NA)
       }
     }
-    outDT = rbindlist(lapply(day_op, overpass_stats), fill = TRUE)
+    outDT = rbindlist(lapply(day_rasters, overpass_stats), fill = TRUE)
     if(ncol(outDT) > 1){
       outDT = outDT[!is.na(Site_Name)]
       if('V1' %in% names(outDT)) outDT[, V1 := NULL]
