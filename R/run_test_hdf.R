@@ -24,7 +24,7 @@ check_progress = function(finished_part, check_targets){
 
 # 1. Prepare training data, parallel ####
 # training runs for all years in `process_years`.
-future_workers = 12L
+future_workers = 14L
 end_part1 = c('traindata_aqua_conus', 'traindata_terra_conus')
 message('Part 1: Preparing training data using ', future_workers, ' workers at ',
         Sys.time())
