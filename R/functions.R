@@ -941,30 +941,18 @@ run_preds = function(data, file_table, features){
 # Maps ####
 
 #' Compare adjusted AOD to original
-#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
-#' @param data the data.table that was used as input to prediction function
-#' @param preds numeric vector of predictions
-#' @param pred_dates vector of dates that were predicted
-#' @param date_index single number indicating which date to map, index in pred_dates
+#' @param data the data.table output of prediction
+#' @param viz_date the single date to visualize from the output predictions
+#' @param op_id the single overpass to visualize from the selected date
 #' @return vertically stacked ggplots comparing original and adjusted MCD19A2 AOD
-ggplot_orig_vs_adj = function(refgrid_path, data, preds, pred_dates, date_index){
-  # XXX replace this date subset logic with list iteration in predinput target later
-  map_dayint = as.integer(pred_dates[date_index])
-  rows_per_date = nrow(data)/length(pred_dates)
-  # this allows order of dates within data table to not match order of pred_dates, but that shouldn't happen
-  order_dayint = which.min(abs(c(1:length(pred_dates)*rows_per_date) - max(which(data$dayint == map_dayint))))
-  start_sub = rows_per_date * order_dayint - rows_per_date + 1
-  data = data[start_sub:(rows_per_date * order_dayint)]
-  preds = preds[start_sub:(rows_per_date * order_dayint)]
+ggplot_orig_vs_adj = function(data, viz_date, viz_op){
 
-  #data = adjust_mcd19(data, preds)
-  rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
-                as.data.table = TRUE)
-  data[rg, c('x', 'y') := .(x_sinu, y_sinu), on = 'idM21pair0']
+  data = data[pred_date == viz_date & op_id == viz_op,
+              .(x, y, MCD19_AOD_470nm, MCD19_adjust)]
   orig = simple.pred.map(data, fillvar = 'MCD19_AOD_470nm')
   adj = simple.pred.map(data, fillvar = 'MCD19_adjust')
   aps = cowplot::align_plots(orig, adj, align = 'v')
-  title = ggdraw() + draw_label(as.character(pred_dates[date_index]))
+  title = ggdraw() + draw_label(paste(as.character(viz_date), 'Overpass', viz_op))
   cowplot::plot_grid(plotlist = list(title, aps), ncol = 1)
 }
 
@@ -982,30 +970,17 @@ simple.pred.map = function(preds, fillvar, xvar = 'x', yvar = 'y',
 
 #' Interactively compare adjusted AOD to original
 #'
-#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
-#' @param data the data.table that was used as input to prediction function
-#' @param preds numeric vector of predictions
-#' @param pred_dates
-#' @param date_index
+#' @param data the data.table output of prediction
+#' @param viz_date the single date to visualize from the output predictions
+#' @param op_id the single overpass to visualize from the selected date
 #' @param maxpixels resample raster version of predictions to approxmimately
 #'   this many pixels and force the display in mapshot of this resolution
 #' @return mapview object with a layer for the original and adjusted MCD19A2 AOD
-mapshot_orig_vs_adj = function(refgrid_path, data, preds, pred_dates, date_index,
+mapshot_orig_vs_adj = function(data, viz_date, viz_op,
                                use_jenks = FALSE, maxpixels = NULL){
-  # XXX replace this date subset logic with list iteration in predinput target later
-  map_dayint = as.integer(pred_dates[date_index])
-  rows_per_date = nrow(data)/length(pred_dates)
-  # this allows order of dates within data table to not match order of pred_dates, but that shouldn't happen
-  order_dayint = which.min(abs(c(1:length(pred_dates)*rows_per_date) - max(which(data$dayint == map_dayint))))
-  start_sub = rows_per_date * order_dayint - rows_per_date + 1
-  data = data[start_sub:(rows_per_date * order_dayint)]
-  preds = preds[start_sub:(rows_per_date * order_dayint)]
 
-  #data = adjust_mcd19(data, preds)
-  rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
-                as.data.table = TRUE)
-  data[rg, c('x', 'y') := .(x_sinu, y_sinu), on = 'idM21pair0']
-  data = data[, .(x, y, MCD19_AOD_470nm, MCD19_adjust)]
+  data = data[pred_date == viz_date & op_id == viz_op,
+              .(x, y, MCD19_AOD_470nm, MCD19_adjust)]
   ras = rasterFromXYZ(data, crs = crs_sinu)
 
   # resample raster
@@ -1023,7 +998,7 @@ mapshot_orig_vs_adj = function(refgrid_path, data, preds, pred_dates, date_index
   if(!dir.exists(here('Intermediate/mapshot'))) dir.create(here('Intermediate/mapshot'), recursive = T)
   mapshot_path = here('Intermediate/mapshot',
                       paste0('orig_adj_MCD19_',
-                             targets:::digest_obj64(list(refgrid_path, data, preds, maxpixels)),
+                             targets:::digest_obj64(list(data, use_jenks, maxpixels)),
                              '.html'))
   mapshot(maps[[1]] + maps[[2]], url = mapshot_path)
   out_size_MB = file.size(mapshot_path)/1024^2

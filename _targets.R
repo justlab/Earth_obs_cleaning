@@ -33,6 +33,7 @@ tar_option_set(
   error = 'abridge')
 
 tar_config_set(store = '/data-belle/cache/aod_targets/')
+Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 
 source('R/globals.R')
 source('R/data.R')
@@ -177,17 +178,17 @@ set1_targets = list(
                 storage = 'worker'),
 
       tar_target(pred_out,
-                 run_preds(predinput, pred_files, features))#,
-#
-#       # Map Predictions ####
-#       tar_target(preds_ggplot, ggplot_orig_vs_adj(refgrid_path, predinput, pred_out,
-#                                                   pred_dates, date_index = 1),
-#                  packages = c('ggplot2', 'cowplot', 'data.table', 'fst')),
-#       tar_target(preds_mapshot, mapshot_orig_vs_adj(refgrid_path, predinput, pred_out,
-#                                                     pred_dates, date_index = 1,
-#                                                     use_jenks = TRUE, maxpixels = 2e6),
-#                  packages = c('mapview', 'raster', 'data.table', 'fst', 'here', 'rgeoda'),
-#                  format = 'file')
+                 run_preds(predinput, pred_files, features)),
+
+      # Map Predictions ####
+      tar_target(preds_ggplot,
+                 ggplot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3),
+                 packages = c('ggplot2', 'cowplot', 'data.table', 'fst')),
+      tar_target(preds_mapshot,
+                 mapshot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3,
+                                     use_jenks = TRUE, maxpixels = 2e6),
+                 packages = c('mapview', 'raster', 'data.table', 'fst', 'here', 'rgeoda'),
+                 format = 'file')
     )
   )
 )
