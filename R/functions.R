@@ -952,7 +952,7 @@ ggplot_orig_vs_adj = function(data, viz_date, viz_op){
   orig = simple.pred.map(data, fillvar = 'MCD19_AOD_470nm')
   adj = simple.pred.map(data, fillvar = 'MCD19_adjust')
   title = ggdraw() + draw_label(paste(as.character(viz_date), 'Overpass', viz_op))
-  cowplot::plot_grid(title, orig, adj, ncol = 1, align = 'v')
+  cowplot::plot_grid(title, orig, adj, ncol = 1, align = 'v', axis = 'r')
 }
 
 # adapted from CONUS_air:plots.R
