@@ -738,7 +738,7 @@ sf_to_ext <- function(sf, to_crs = NULL){
 #' @param agg_thresh use the aggregated AOD when `(radius * 1000 / agg_level /
 #'   mcd_res) > agg_thresh`, where `radius` is in km, and `mcd_res` (resolution
 #'   of input AOD) is in meters.
-#' @param aoi SpatExtent of the region the model was trained over
+#' @param aoi sf shape of the region the model was trained over.
 #' @param pred_bbox SpatExtent of the region to predict. If NULL, will crop
 #'   using the shape provided in `aoi`.
 pred_inputs <- function(features, buffers_km, hdf_root, vrt_path, load_sat,
@@ -775,11 +775,12 @@ pred_inputs <- function(features, buffers_km, hdf_root, vrt_path, load_sat,
   })
   rm(day_op)
 
+  aoi = sf_to_ext(aoi, crs_sinu)
   if(is.null(pred_bbox)) pred_bbox = aoi
 
   # Prepare predictors for each overpass
   op_to_table <- function(op_id){
-    raslist = day_rasters[op_id]
+    raslist = day_rasters[[op_id]]
     # note: hardcoded list item names (based on MCD19A2 resolution) and harcoded
     #   disaggregation factors
     r_relaz = terra::disagg(raslist$r4633, 5)
@@ -842,17 +843,15 @@ pred_inputs <- function(features, buffers_km, hdf_root, vrt_path, load_sat,
     # convert AOD_QA to qa_best
     create_qc_vars(rasDT)
 
-    if(nrow(rasDT) == 0){
-      # avoid error of writing NULL DT to FST
-      rasDT = data.table(NA)
-    } else {
-      # remove unncessary columns
-      rasDT = rasDT[, features, with = FALSE]
-    }
+    # avoid error of writing NULL DT to FST
+    if(nrow(rasDT) == 0) rasDT = data.table(NA)
+
     # overpass bin
     rasDT[, op_id := op_id]
   }
-  all_ops = rbindlist(lapply(1:length(day_rasters), op_to_table))
+  all_ops = rbindlist(lapply(1:length(day_rasters), op_to_table), fill = TRUE)
+  if('V1' %in% names(all_ops)) all_ops[, V1 := NULL]
+  all_ops
 }
 
 #' Train a full model using DART and 2-fold CV to select hyperparameters from
@@ -920,28 +919,23 @@ model_file_table = function(years, model_info_list){
 #' Predict the difference between MCD19 and AERONET
 #'
 #' @param file_table is a data.frame containing the years, path to the model file, and prediction dates
-run_preds = function(data, file_table){
-  data_ref = data[, .(pred_date = as.Date(dayint, '1970-01-01'), idM21pair0)]
-  data[, idM21pair0 := NULL]
+run_preds = function(data, file_table, features){
+  data = data[!is.na(MCD19_AOD_470nm)]
+  data[, pred_date := as.Date(dayint, '1970-01-01')]
 
-  # if the input data contains more than one year, run one model at a time
+  # if the input data contains more than one model, run one model at a time
   outlist = list()
-  for(pred_year in unique(file_table$year)){
-    model_file = file_table[year == pred_year, first(file_path)]
-    model = xgboost::xgb.load(model_file)
-    predvec = predict(model, as.matrix(data[year(data_ref$pred_date) == pred_year]))
-    predDT = data_ref[year(pred_date) == pred_year]
-    predDT[, pred := predvec]
-    outlist[[length(outlist) + 1]] <- predDT
+  for(pred_model in file_table[, unique(file_path)]){
+    model = xgboost::xgb.load(pred_model)
+    to_pred = data[pred_date %in% file_table[file_path == pred_model, pred_date], ]
+    predvec = predict(model, as.matrix(to_pred[, features, with = FALSE]))
+    # join predictions
+    outpred = data.table(to_pred[, .(x, y, pred_date, op_id, MCD19_AOD_470nm)], preds = predvec)
+    outpred[, MCD19_adjust := MCD19_AOD_470nm - preds]
+    rm(to_pred)
+    outlist[[length(outlist) + 1]] <- outpred
   }
-  rbindlist(outlist)
-}
-
-#' Adjust MCD19 AOD values using predicted difference between MCD19 and AERONET.
-#'
-#' @return data.table of adjusted AOD values in \code{MCD19_adjust} column
-adjust_mcd19 = function(data, preds){
-  data[, MCD19_adjust := MCD19_AOD_470nm - preds]
+  rbindlist(outlist, fill = TRUE)
 }
 
 # Maps ####
@@ -963,7 +957,7 @@ ggplot_orig_vs_adj = function(refgrid_path, data, preds, pred_dates, date_index)
   data = data[start_sub:(rows_per_date * order_dayint)]
   preds = preds[start_sub:(rows_per_date * order_dayint)]
 
-  data = adjust_mcd19(data, preds)
+  #data = adjust_mcd19(data, preds)
   rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
                 as.data.table = TRUE)
   data[rg, c('x', 'y') := .(x_sinu, y_sinu), on = 'idM21pair0']
@@ -1007,7 +1001,7 @@ mapshot_orig_vs_adj = function(refgrid_path, data, preds, pred_dates, date_index
   data = data[start_sub:(rows_per_date * order_dayint)]
   preds = preds[start_sub:(rows_per_date * order_dayint)]
 
-  data = adjust_mcd19(data, preds)
+  #data = adjust_mcd19(data, preds)
   rg = read_fst(refgrid_path, columns = c('idM21pair0', 'x_sinu', 'y_sinu'),
                 as.data.table = TRUE)
   data[rg, c('x', 'y') := .(x_sinu, y_sinu), on = 'idM21pair0']

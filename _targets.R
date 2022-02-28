@@ -3,7 +3,7 @@ library(tarchetypes)
 library(future)
 # library(future.callr)
 # plan(callr)
-#plan(multicore)
+# plan(multicore)
 plan(multisession)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,8 +89,6 @@ set1_targets = list(
     values = region_values,
     tar_target(buff,
                get_aoi_buffer(regions)),
-    tar_target(aoi_ext,
-               sf_to_ext(buff, crs_sinu)),
     tar_target(aer,
                select_stations(aer_stations, buff, refgrid_path, refras_path)),
     tar_target(nearby_cells,
@@ -172,13 +170,14 @@ set1_targets = list(
                   this_date = pred_files,
                   agg_level = agg_level,
                   agg_thresh = agg_thresh,
-                  aoi = aoi_ext,
+                  aoi = buff,
                   pred_bbox = NULL),
                 pattern = map(pred_files),
                 format = 'fst_dt',
                 storage = 'worker'),
 
-      tar_target(pred_out, run_preds(predinput, pred_files))#,
+      tar_target(pred_out,
+                 run_preds(predinput, pred_files, features))#,
 #
 #       # Map Predictions ####
 #       tar_target(preds_ggplot, ggplot_orig_vs_adj(refgrid_path, predinput, pred_out,
