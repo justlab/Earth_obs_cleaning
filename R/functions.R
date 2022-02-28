@@ -700,145 +700,165 @@ model_files_by_date <- function(mft, pred_dates){
   }
 }
 
-#' Prepare prediction table
+#' #' Given an input SF object, return a terra:::SpatExtent in a new CRS,
+#' #' optionally extended in all directions by `expand_distance`, using the units
+#' #' of the `new_crs`.
+#' get_aoi_ext <- function(shape, new_crs, expand_distance = 0){
+#'   shape = st_transform(shape, new_crs)
+#'   bbox = st_bbox(shape)
+#'   if(expand_distance != 0){
+#'     mod_box = st_bbox(c(xmin = -expand_distance, xmax = expand_distance,
+#'                         ymin = -expand_distance, ymax = expand_distance))
+#'     bbox = bbox + mod_box
+#'   }
+#'   ext(bbox$xmin, bbox$xmax, bbox$ymin, bbox$ymax)
+#' }
+
+#' Given an input SF object, return a terra:::SpatExtent, optionally extended in
+#' all directions by `expand_distance`. Optionally reproject to `to_crs`. If
+#' `to_crs` is provided, `expand_distance` must use the units of this new crs.
+#'
+bbox_to_ext <- function(sf_bbox, expand_distance = 0, to_crs = NULL){
+  if(!is.null(to_crs)){
+    if()
+  }
+  if(expand_distance != 0){
+    mod_box = st_bbox(c(xmin = -expand_distance, xmax = expand_distance,
+                        ymin = -expand_distance, ymax = expand_distance))
+    sf_bbox = sf_bbox + mod_box
+  }
+  ext(sf_bbox$xmin, sf_bbox$xmax, sf_bbox$ymin, sf_bbox$ymax)
+}
+
+#' Prepare prediction table. Will predict values for every overpass in the
+#' specified region and dates.
 #'
 #' @param pred_bbox sf bbox or named numeric vector conforming to st_bbox spec:
 #'   xmin, xmax, ymax, ymin. The rectangular spatial region to predict in. Must
-#'   be in MODIS sinusoidal CRS. If NULL, will operate on full CONUS.
+#'   be in MODIS sinusoidal CRS. If NULL, will crop using the shape provided in `aoi`.
+#' @param aoi SpatExtent of the region the model was trained over
 #' @param features character vector of column names to train on
 #' @param buffers_km vector of buffer radii in kilometers
-#' @param refgrid_path FST with coordinates of all raster cells in the area of
-#'   interest
-#' @param mcd19path path to MCD19A2 FST files
-#' @param aoiname the region the model was trained over ('conus' or 'nemia')
-#' @param dates vector of dates to make predictions for. Must be within the same
-#'   year.
+#' @param hdf_root path to MCD19A2 HDF files
+#' @param vrt_path directory to store overpass VRTs that reference HDF files.
+#' @param this_date single row of pred_files data frame including the prediction
+#'   date, year, and the corresponding XGBoost model file to use for predicting
+#'   that date.
 #' @param sat input "terra" or "aqua"
 #' @param agg_level how much to aggregate the input MODIS AOD to use for large
 #'   focal radii
-#' @param agg_thresh use the aggregated AOD when `(radius * 1000 / agg_level / mcd_res) > agg_thresh`,
-#'   where `radius` is in km, and `mcd_res` (resolution of input AOD) is
-#'   in meters.
-pred_inputs <- function(pred_bbox, features, buffers_km, refgrid_path, mcd19path,
-                        mcd_refras, aoiname, sat, dates, agg_level, agg_thresh){
-  if('data.frame' %in% class(dates)) dates = dates$pred_date
+#' @param agg_thresh use the aggregated AOD when `(radius * 1000 / agg_level /
+#'   mcd_res) > agg_thresh`, where `radius` is in km, and `mcd_res` (resolution
+#'   of input AOD) is in meters.
+pred_inputs <- function(features, buffers_km, hdf_root, vrt_path, load_sat,
+                        this_date, agg_level, agg_thresh, aoi, pred_bbox = NULL){
 
-  if(uniqueN(year(dates)) > 1) stop('More than one year in the prediction date range')
-  dates = sort(dates)
+  if('data.frame' %in% class(this_date)) this_date = this_date$pred_date
 
-  # Get an area of interest grid including border cells needed for buffered calculations
-  refgrid = read_fst(refgrid_path, as.data.table = TRUE,
-                     columns = c('idM21pair0', 'x_sinu', 'y_sinu', 'cell_index'))
-  if(!is.null(pred_bbox)){
-    pred_bbox = st_bbox(pred_bbox)
-    m_extend = max(buffers_km) * 1000
-    mod_box = st_bbox(c(xmin = -m_extend, xmax = m_extend,
-                        ymin = -m_extend, ymax = m_extend))
-    m_bbox = pred_bbox + mod_box
-    # subset to prediction area plus an extension to support focal operations
-    rgDT = refgrid[x_sinu >= m_bbox$xmin & x_sinu <= m_bbox$xmax &
-                   y_sinu >= m_bbox$ymin & y_sinu <= m_bbox$ymax]
-    # mark which cells to predict
-    rgDT[x_sinu >= pred_bbox$xmin & x_sinu <= pred_bbox$xmax &
-         y_sinu >= pred_bbox$ymin & y_sinu <= pred_bbox$ymax,
-       do_preds := TRUE]
-  } else {
-    rgDT = refgrid
-    rgDT[, do_preds := TRUE]
-  }
-  rm(refgrid)
+  # Get overpasses for the date
+  if(length(this_date)>1) stop('Unexpected this_dates vector longer than 1')
 
-  # return a data.table with columns calculated for focal windows of specified width
-  # agg_level: factor to aggregate AOD raster for use in wider focal buffers
-  # agg_thresh: minimum width of focal radius in cells to use the aggregated raster
-  buff_mcd19_raster = function(mcd, buffers_km){
-    # rasterize
-    mcd_aod = rast(mcd[, .(x_sinu, y_sinu, MCD19_AOD_470nm)], type = 'xyz', crs = crs_sinu)
-    mcd_nna = !is.na(mcd_aod)
-    mcd_res = res(mcd_aod)[1]
-    # aggregate (for use below in loop)
-    mcd_agg_aod = terra::aggregate(mcd_aod, fact = agg_level, fun = 'mean', na.rm = TRUE)
-    mcd_agg_nna = terra::aggregate(mcd_nna, fact = agg_level, fun = 'mean', na.rm = TRUE)
+  hdf_paths = list.files(file.path(hdf_root, format(this_date, '%Y.%m.%d')),
+                         pattern = '\\.hdf$', full.names = TRUE)
 
-    focal_list = list()
-    # loop over buffers, with if statement checking agg_thresh for whether to use aggregated raster
-    for(radius in buffers_km){
-      # buffers should be in km, resolution should be in m
-      if(radius * 1000 / agg_level / mcd_res < agg_thresh){
-        # for high res:
-        filter_matrix = circle_mat(radius, cellsize = mcd_res, matrix = TRUE)
-        # focal
-        focal_aod = terra::focal(mcd_aod, w = filter_matrix, fun = 'mean', na.rm = TRUE)
-        focal_nna = terra::focal(mcd_nna, w = filter_matrix, fun = 'mean', na.rm = TRUE)
-      } else {
-        # for low res:
-        filter_matrix = circle_mat(radius, cellsize = mcd_res * agg_level, matrix = TRUE)
-        # focal
-        focal_aod_agg = terra::focal(mcd_agg_aod, w = filter_matrix, fun = 'mean', na.rm = TRUE)
-        focal_nna_agg = terra::focal(mcd_agg_nna, w = filter_matrix, fun = 'mean', na.rm = TRUE)
-        # disagg
-        focal_aod = terra::disagg(focal_aod_agg, agg_level) %>% terra::crop(., mcd_aod)
-        focal_nna = terra::disagg(focal_nna_agg, agg_level) %>% terra::crop(., mcd_aod)
-      }
-      names(focal_aod) <- paste0('Mean_AOD', radius, 'km')
-      names(focal_nna) <- paste0('pNonNAAOD', radius, 'km')
-
-      focal_list[[names(focal_aod)]] <- focal_aod
-      focal_list[[names(focal_nna)]] <- focal_nna
-    }
-    # stack all 4 focal layers with the reference raster
-    focal_list[['cell_index']] <- rast(mcd_refras)
-    fstack = rast(focal_list)
-    # convert to DT
-    fDT = setDT(as.data.frame(fstack))
-    # join to refgrid to get the cell id (idM21pair0) column
-    setkey(fDT, cell_index)
-    setkey(mcd, cell_index)
-    mcd_join = fDT[mcd, ]
-    setcolorder(mcd_join, names(mcd))
-    # calc diffAOD for each buffer
-    for(radius in buffers_km){
-      mcd_join[, c(paste0('diff_AOD', radius, 'km')) := MCD19_AOD_470nm - get(paste0('Mean_AOD', radius, 'km'))]
-    }
-    mcd_join
+  if(length(hdf_paths) == 0){
+    stop('Unhandled case where all HDFs missing for date ', this_date)
   }
 
-  # Prepare MCD19A2 predictors for one day
-  gather_mcd19_day <- function(this_date){
-    this_year = year(this_date)
-    this_daynum = format(this_date, '%j')
-    # read the satellite-day MCD19A2 FST, subsetting to cells needed for prediction
-    mcd = read_mcd19_one(sat = sat, daynum = this_daynum,
-                         filepath = file.path(mcd19path, this_year),
-                         load_year = this_year)#[idM21pair0 %in% rgDT$idM21pair0]
-    if(!is.null(mcd)){
-      # join to refgrid DT
-      mcd = rgDT[mcd, nomatch = 0]
-      # single cell variables
-      mcd[, dayint := as.integer(as.Date(overpass_time))]
-      create_qc_vars(mcd)
-      setnames(mcd, "Optical_Depth_047", "MCD19_AOD_470nm")
+  binDT = bin_overpasses(hdf_paths)
+  binDT = binDT[sat == load_sat]
+  day_op = get_overpasses_vrts(hdf_paths, binDT, load_sat, vrt_path)
 
-      # buffered variables
-      buff_vars = buff_mcd19_raster(mcd, buffers_km)
+  # lapply by overpass, which are the groups in day_op
+  tryCatch({
+    day_rasters = mapply(FUN = rasterize_vrts,
+                         op_vrts = day_op,
+                         opDT = lapply(1:length(day_op), function(i) binDT[overpass_bin == i]),
+                         SIMPLIFY = FALSE)
+  }, error = function(e) {
+    emsg = paste0('this_date = ', this_date, '\n',
+                  'length(day_op) = ', length(day_op), '\n',
+                  'binDT[, uniqueN(overpass_bin)] = ', binDT[, uniqueN(overpass_bin)], '\n',
+                  'error = ', e)
+    stop(emsg)
+  })
+  rm(day_op)
 
-      # join single cell variables to buffered variables
-      setkey(buff_vars, idM21pair0)
-      buff_vars
+  if(is.null(pred_bbox)) pred_bbox = aoi
+
+  # XXX LOOP BY OVERPASS HERE
+  # XXX TEMPORARY TESTING WITH A SINGLE OP
+  raslist = day_rasters$op_bin_1
+
+  # note: hardcoded list item names (based on MCD19A2 resolution) and harcoded
+  #   disaggregation factors
+  r_relaz = terra::disagg(raslist$r4633, 5)
+  r_times = terra::disagg(raslist$time, 1200)
+  rstack = rast(list(raslist$r926, r_relaz, r_times))
+  rm(r_relaz, r_times)
+  # expand bbox to accomodate largest focal filter width
+  exp_bbox = bbox_to_ext(pred_bbox, max(buffers_km)*1000)
+  rstack = terra::crop(rstack, exp_bbox)
+  # keep a reference to the AOD layer for use in focal stats
+  ras_aod = rstack$Optical_Depth_047
+  aod_res = res(ras_aod)[1] # assuming square pixels
+  # non-NA AOD layer
+  ras_nna = !is.na(ras_aod)
+  # aggregate AOD and non-NA for focal use
+  agg_aod = terra::aggregate(ras_aod, fact = agg_level, fun = 'mean', na.rm = TRUE)
+  agg_nna = terra::aggregate(ras_nna, fact = agg_level, fun = 'mean', na.rm = TRUE)
+  # focal statistics
+  focal_list = list()
+  for(radius in buffers_km){
+    if(radius * 1000 / agg_level / aod_res < agg_thresh){
+      # use original resolution
+      this_mat = circle_mat(radius, cellsize = aod_res, matrix = TRUE)
+      foc_aod <- terra::focal(ras_aod, this_mat, fun = 'mean', na.rm = TRUE)
+      foc_nna <- terra::focal(ras_nna, this_mat, fun = 'mean', na.rm = TRUE)
+      focal_list[[paste0('Mean_AOD', radius, 'km')]]  <- foc_aod
+      focal_list[[paste0('pNonNAAOD', radius, 'km')]] <- foc_nna
     } else {
-      NULL
+      # use aggregated resolution
+      this_mat = circle_mat(radius, cellsize = aod_res * agg_level, matrix = TRUE)
+      foc_aod_agg <- terra::focal(agg_aod, this_mat, fun = 'mean', na.rm = TRUE)
+      foc_nna_agg <- terra::focal(agg_nna, this_mat, fun = 'mean', na.rm = TRUE)
+      fog_aod = terra::disagg(foc_aod_agg, agg_level)
+      fog_nna = terra::disagg(foc_nna_agg, agg_level)
+      rm(foc_nna_agg, foc_aod_agg)
+      focal_list[[paste0('Mean_AOD', radius, 'km')]]  <- foc_aod
+      focal_list[[paste0('pNonNAAOD', radius, 'km')]] <- foc_nna
     }
   }
+  rm(radius)
+  # stack focal results with the expanded crop above
+  rstack = rast(list(rstack, rast(focal_list)))
 
-  dt = rbindlist(lapply(dates, FUN = gather_mcd19_day))
-  if(nrow(dt) == 0){
-    dt = data.table(NA) # avoid error of writing NULL DT to FST
+  # crop to actual AOI
+  rstack = terra::crop(rstack, bbox_to_ext(pred_bbox))
+
+  # convert to data.table
+  rasDT = setDT(as.data.frame(rstack, na.rm = FALSE, xy = TRUE))
+  rasDT = rasDT[!is.na(Optical_Depth_047)]
+  setnames(rasDT, 'Optical_Depth_047', 'MCD19_AOD_470nm')
+  rasDT[, overpass_time := as.POSIXct(overpass_time, tz = 'UTC', origin = '1970-01-01')]
+  rasDT[, dayint := as.integer(as.Date(overpass_time))]
+
+  # calc diffAOD for each buffer
+  for(radius in buffers_km){
+    rasDT[, c(paste0('diff_AOD', radius, 'km')) := MCD19_AOD_470nm - get(paste0('Mean_AOD', radius, 'km'))]
+  }
+
+  # convert AOD_QA to qa_best
+  create_qc_vars(rasDT)
+
+  if(nrow(rasDT) == 0){
+    # avoid error of writing NULL DT to FST
+    rasDT = data.table(NA)
   } else {
     # remove unncessary columns
-    dt = dt[, c('idM21pair0', features), with = FALSE]
+    rasDT = rasDT[, features, with = FALSE]
   }
-  # remove NA values for satellite AOD
-  dt[!is.na(MCD19_AOD_470nm), ]
+  rasDT
 }
 
 #' Train a full model using DART and 2-fold CV to select hyperparameters from
