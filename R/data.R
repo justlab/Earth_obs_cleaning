@@ -84,10 +84,7 @@ rasterize_vrts <- function(op_vrts, opDT, with_time = TRUE){
 
 #' Get all overpass mosaics as VRTs by date.
 #'
-#' File organization is expected to match USGS server organization (see
-#' parameters).
-#' @param hdf_root Path to directory containing date subdirectories formatted
-#'   YYYY.MM.DD. The date subdirectories contain the satellite HDFs.
+#' @param hdf_paths character vector of paths to all HDF tiels for the date.
 #' @param binDT data.table from `bin_overpasses()`
 #' @param load_sat 'aqua' or 'terra'. Default 'aqua'.
 #' @param vrt_path directory to store overpass VRTs that reference HDF files.

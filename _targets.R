@@ -16,7 +16,6 @@ tar_option_set(
                'raster',
                'terra',
                'jsonlite',
-               # 'log4r',
                'tibble',
                'fst',
                'sf',
@@ -89,6 +88,8 @@ set1_targets = list(
     values = region_values,
     tar_target(buff,
                get_aoi_buffer(regions)),
+    tar_target(aoi_ext,
+               sf_to_ext(buff, crs_sinu)),
     tar_target(aer,
                select_stations(aer_stations, buff, refgrid_path, refras_path)),
     tar_target(nearby_cells,
@@ -156,28 +157,26 @@ set1_targets = list(
                             first_date = lapply(full_model, `[[`, 'first_date'))),
 
       # Prediction ####
-      tar_target(pred_dates, c(as.Date('2008-01-16'), as.Date('2008-01-17'))),
+      tar_target(pred_dates, c(as.Date('2003-03-16'), as.Date('2003-03-17'))),
       tar_target(pred_files,
                  model_files_by_date(model_file_table, pred_dates)),
 
       tar_target(predinput,
                  pred_inputs(
-                  pred_bbox = NULL,
                   features = features,
                   buffers_km = buffers_km,
-                  refgrid_path = refgrid_path,
-                  mcd19path = mcd19path,
-                  mcd_refras = mcd_refras,
-                  aoiname = regions,
-                  sat = sat,
-                  dates = pred_files,
+                  hdf_root = hdf_root,
+                  vrt_path = vrt_path,
+                  load_sat = sat,
+                  this_date = pred_files,
                   agg_level = agg_level,
-                  agg_thresh = agg_thresh),
+                  agg_thresh = agg_thresh,
+                  aoi = aoi_ext,
+                  pred_bbox = NULL),
                 pattern = map(pred_files),
                 format = 'fst_dt',
                 storage = 'worker'),
-      # need a specific target from the static branches of tar_map above:
-      # the matching trained year model for the date chosen in pred_dates
+
       tar_target(pred_out, run_preds(predinput, pred_files))#,
 #
 #       # Map Predictions ####
