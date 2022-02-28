@@ -123,3 +123,72 @@ make_agg_lookup <- function(mcd_refras, agg_level, refgrid_path, ref_uid = 'idM2
   ref_agg[rg, c(ref_uid) := get(ref_uid), on = 'cell_index']
   ref_agg
 }
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# No longer opening mcd19 FSTs output from MAIACprocessing project. Now opening
+# data from HDFs via VRTs.
+
+#' Open one day of MCD19A2 data from a FST file. Adds a column for the
+#' satellite.
+#'
+#' @param sat input "terra" or "aqua", if sat !="terra", load aqua
+#' @param daynum day number as character with padding to three digits, leading
+#'   zeroes
+#' @param filepath path to the year of MCD19A2 daily best overpasses as FST
+#'   files
+#' @return one day of MCD19A2 AOD data as a data.table, keyed by
+#'   \code{idM21pair0, overpass_time}
+read_mcd19_one <- function(sat = "terra", daynum, filepath, load_year,
+                           ref_uid = 'idM21pair0',
+                           columns = c("overpass_index", "Optical_Depth_047",
+                                       "AOD_Uncertainty", "Column_WV", "AOD_QA",
+                                       "RelAZ", "idM21pair0", "overpass_time")){
+  columns = unique(c(ref_uid, 'overpass_time', columns))
+  if (sat != "terra") choose = "A" else choose = "T" # load terra by default
+  mcd_file = file.path(filepath, paste0('mcd19_conus_', choose, '_', load_year,
+                                        daynum, '.fst'))
+  if(file.exists(mcd_file)){
+    dt = read.fst(mcd_file, as.data.table = TRUE, columns = columns)
+    dt[, sat := choose]
+    #setnames(dt, "idM21pair0", "nearest_refgrid") # rename for join later
+    #setkey(dt, nearest_refgrid, join_time)
+    if('overpass_time' %in% columns){
+      setkeyv(dt, c(ref_uid, 'overpass_time'))
+    } else {
+      setkeyv(dt, ref_uid)
+    }
+    dt
+  } else {
+    NULL
+  }
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# No longer looking up MCD19 data from data tables
+
+#' Get MODIS grid unique IDs (\code{idM21pair0}) for every cell within specified
+#' distance from AERONET stations.
+#'
+#' @param stations
+#' @param refgrid_path FST with coordinates of all raster cells in the area of interest
+#' @param dist_km Return cell IDs within this distance, in kilometers
+cells_in_buffer = function(stations, refgrid_path, dist_km = 270){
+  # set up so that function can either receive a single station (1 row) or
+  # multiple stations, allowing external parallelism from dynamic branching
+  gDT = read_fst(refgrid_path, as.data.table = TRUE, columns = c('idM21pair0', 'x_sinu', 'y_sinu'))
+
+  cells_by_station = function(rownum, gDT){
+    stn_coords = st_coordinates(stations[rownum, ])
+    subDT = gDT[x_sinu <= stn_coords[, 'X'] + dist_km * 1000 &
+                  x_sinu >= stn_coords[, 'X'] - dist_km * 1000 &
+                  y_sinu <= stn_coords[, 'Y'] + dist_km * 1000 &
+                  y_sinu >= stn_coords[, 'X'] - dist_km * 1000]
+    subDT[, Site_Name := stations[rownum, ]$Site_Name]
+    subDT[, site_dist := as.numeric(st_distance(st_as_sf(.SD[, .(x_sinu, y_sinu)],
+                                                         coords = c(1,2), crs = st_crs(stations)),
+                                                stations[rownum, ])[, 1])]
+    subDT[site_dist <= dist_km * 1000, .(Site_Name, idM21pair0, site_dist)]
+  }
+  # would exceed row maximum after ~8000 stations with 270km distance
+  rbindlist(lapply(1:nrow(stations), FUN = cells_by_station, gDT = gDT))
+}

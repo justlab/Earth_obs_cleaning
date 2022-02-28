@@ -92,9 +92,6 @@ set1_targets = list(
                get_aoi_buffer(regions)),
     tar_target(aer,
                select_stations(aer_stations, buff, refgrid_path, refras_path)),
-    tar_target(nearby_cells,
-               cells_in_buffer(aer, refgrid_path),
-               format = 'fst_dt'),
     tar_target(mcd_refras,
                crop_refras_mcd(refgrid_path, mcd19path, aoiname = regions)),
 
