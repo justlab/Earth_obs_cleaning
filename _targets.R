@@ -38,7 +38,7 @@ Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 source('R/globals.R')
 source('R/data.R')
 source('R/functions.R')
-source('R/xgboost_cv_RFE.R')
+source('R/xgboost_cv.R')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Targets ####
