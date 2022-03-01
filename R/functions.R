@@ -548,7 +548,6 @@ initial_cv_dart <- function(
 
   message("Run k-fold cv \n")
   cv_results <- run.k.fold.cv(k_fold = k_fold,
-                              run_param_cv = TRUE, # run DART to select hyperparameters
                               dataXY_df = mDT[, ..features],
                               by_var = by_var,
                               n_rounds = n_rounds,
