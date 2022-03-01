@@ -13,39 +13,6 @@ modify_aer_stns <- function(aer_stns0){
   return(aer_stns0)
 }
 
-#' get_aoi_buffer
-#' @param aoiname Either "conus" or "nemia" for the region to to use for selection buffer
-#' @return sf object of region buffer
-get_aoi_buffer <- function(aoiname){
-  switch(aoiname,
-    "conus" = buff <- get_conus_buff(),
-    "nemia" = buff <- get_nemia_buff(),
-    stop("Unsupported aoi name:", aoiname)
-  )
-  buff
-} 
-
-#' get_conus_buff
-#' @param conus_file location of the sf CONUS file no Great Lake -- rds file
-#' @return sf object of CONUS shapefile
-get_conus_buff <- function(conus_file = 
-  "/data-belle/LST/MODIS.LST.C6/derived/conus_GLakes_buff_sf_poly_201906.rds"){
-  readRDS(conus_file)
-}
-# "/data-belle/LST/MODIS.LST.C6/derived/conus_sf_noGLakes.rds"
-
-#' get_nemia_buff
-#' @param states_file US states shp file
-#' @return sf object of NEMIA shapfile
-get_nemia_buff <- function(states_file = "/data-belle/census/states/tl_2017_us_state.shp"){
-  # no longer using the old 2km buffer of NEMIA; this is same data source used for CONUS grid
-  states = st_read(states_file)
-  states = states[, c("STUSPS")]
-  nemia = states[states$STUSPS %in% c("ME", "NH", "VT", "MA", "CT", "RI", "NY", "PA", "NJ",
-                                      "DE", "MD", "DC", "VA", "WV"), ]
-  nemia = st_union(nemia)
-}
-
 #' Turn Aeronet station data.table into sf project
 #' @param aer_stns d.f of AERONET stations, "Site_Name", "lon", "lat", "elevm" 
 #' @param sf default to TRUE, make a sf object, if FALSE, make sp object 
