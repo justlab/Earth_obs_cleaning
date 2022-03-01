@@ -45,8 +45,7 @@ source('R/xgboost_cv_RFE.R')
 # Targets ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#process_years = 2003:2019
-process_years = 2003
+process_years = 2003:2019
 region_values = list(regions = aoiname)
 date_table = dates_year(process_years)
 sat_values = list(sat = sats)
