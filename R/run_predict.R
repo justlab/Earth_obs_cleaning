@@ -24,7 +24,7 @@ check_progress = function(finished_part, check_targets){
 
 # 1. Prepare training data, parallel ####
 # training runs for all years in `process_years`.
-future_workers = 10L
+future_workers = 14L
 end_part1 = c('traindata_aqua_conus', 'traindata_terra_conus')
 message('Part 1: Preparing training data using ', future_workers, ' workers at ',
         Sys.time())
@@ -39,8 +39,6 @@ check_progress(2, end_part2)
 
 # 3. Prepare CONUS prediction inputs, parallel ####
 # Predictions run for dates in `pred_dates`.
-# An error will be thrown if trying to predict for a date in a year that has not
-# had a model trained.
 message('Part 3: Preparing CONUS prediction inputs using ', future_workers,
         ' workers at ', Sys.time())
 end_part3 = c('predinput_aqua_conus', 'predinput_terra_conus')
@@ -51,7 +49,9 @@ check_progress(3, end_part3)
 message('Part 4: Running CONUS predictions at ', Sys.time())
 end_part4 = c('pred_out_aqua_conus', 'pred_out_terra_conus')
 tar_make(names = !!end_part4)
-#check_progress(4, end_part4)
+check_progress(4, end_part4)
 message('Finished part 4 at ', Sys.time())
 
 # 5. Visulize predictions ####
+message('Part 5: Visualizing selected dates at ', Sys.time())
+tar_make(preds_mapshot_aqua_conus, preds_mapshot_terra_conus)
