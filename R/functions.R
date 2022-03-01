@@ -494,6 +494,7 @@ prepare_dt <- function(dt, date_range = NULL){
 #' @param features character vector of column names to train on
 #' @param stn_var if binning by stations, provide the station column name
 #' @param day_var if binning by days, provide the day column name
+#' @param absolute whether to use absolute loss (rather than square loss)
 # Depends on functions in xgboost_cv_RFE.R
 initial_cv_dart <- function(
   data,
@@ -503,6 +504,7 @@ initial_cv_dart <- function(
   n_rounds = 100,
   stn_var = NULL,
   day_var = NULL,
+  absolute = FALSE,
   progress = TRUE
 ){
   xgb_threads <- get.threads()
@@ -552,6 +554,8 @@ initial_cv_dart <- function(
                               n_rounds = n_rounds,
                               y_var = y_var,
                               progress = progress,
+                              absolute = absolute,
+                              seed = (if (absolute) 400 else 1234),
                               index_train = index_train,
                               index_test = index_test,
                               xgb_threads = xgb_threads)
