@@ -824,8 +824,7 @@ dart_full <- function(
 
   # save the model
   # hash important input and output to create a unique name
-  model_out_path = file.path('Intermediate',
-                     paste0('full_model_dart_',
+  model_out_path = intermediate.path(paste0('full_model_dart_',
                             targets:::digest_obj64(list(data_train, features, y_var, param_dart)),
                             '.xgb'))
   xgboost::xgb.save(xdc_out$model, model_out_path)
@@ -936,8 +935,8 @@ mapshot_orig_vs_adj = function(data, viz_date, viz_op,
                      col.regions = ub[[i]]$colors,
                      at = ub[[i]]$breaks, layer.name = names(ras[[i]]))}
   maps = lapply(1:2, get_mapview)
-  if(!dir.exists(here('Intermediate/mapshot'))) dir.create(here('Intermediate/mapshot'), recursive = T)
-  mapshot_path = here('Intermediate/mapshot',
+  if(!dir.exists(intermediate.path('mapshot'))) dir.create(intermediate.path('mapshot'), recursive = T)
+  mapshot_path = intermediate.path('mapshot',
                       paste0('orig_adj_MCD19_',
                              targets:::digest_obj64(list(data, use_jenks, maxpixels)),
                              '.html'))

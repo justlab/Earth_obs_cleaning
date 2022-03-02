@@ -21,7 +21,6 @@ tar_option_set(
                'sf',
                'magrittr',
                'future',
-               'here',
                'ggplot2',
                'SHAPforxgboost',
                'Just.universal',
@@ -34,6 +33,8 @@ tar_option_set(
 
 tar_config_set(store = '/data-belle/cache/aod_targets/')
 Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
+intermediate.path = function(...)
+   file.path('/data-coco/AOD_CONUS/intermediate', ...)
 
 source('R/globals.R')
 source('R/data.R')
@@ -78,7 +79,7 @@ set1_targets = list(
   tar_target(hdf_root,
              file.path('/mnt/qnap_geo/MCD19A2/HDF')),
   tar_target(vrt_path,
-             prepare_vrt_directory(here::here('Intermediate'))),
+             prepare_vrt_directory(intermediate.path())),
 
   tar_target(dates_byyear,
              dates_year_list(process_years)),
@@ -185,7 +186,7 @@ set1_targets = list(
       tar_target(preds_mapshot,
                  mapshot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3,
                                      use_jenks = TRUE, maxpixels = 2e6),
-                 packages = c('mapview', 'raster', 'data.table', 'fst', 'here', 'rgeoda'),
+                 packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda'),
                  format = 'file')
     )
   )
