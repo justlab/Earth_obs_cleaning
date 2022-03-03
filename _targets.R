@@ -46,8 +46,11 @@ source('R/xgboost_cv.R')
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 process_years = 2003:2019
+all_dates = seq(
+    lubridate::make_date(min(process_years)),
+    lubridate::make_date(max(process_years), 12, 31),
+    by = 1)
 region_values = list(regions = aoiname)
-date_table = dates_year(process_years)
 sat_values = list(sat = sats)
 buffers_km = c(10, 30, 90, 270)
 agg_level = 10
@@ -81,9 +84,6 @@ set1_targets = list(
   tar_target(vrt_path,
              prepare_vrt_directory(intermediate.path())),
 
-  tar_target(dates_byyear,
-             dates_year_list(process_years)),
-
   # Area of interest ####
   tar_map( # region mapping
     values = region_values,
@@ -95,8 +95,6 @@ set1_targets = list(
                crop_refras_mcd(refgrid_path, mcd19path, aoiname = regions)),
 
     # Load AERONET data ####
-    tar_target(all_dates,
-               lubridate::as_date(unlist(date_table$dates))),
     tar_target(aer_nospace,
                sf::st_drop_geometry(aer)),
     tar_group_by(aer_bystation,
@@ -132,9 +130,7 @@ set1_targets = list(
 
       # Model ####
       tar_target(traindata,
-                 prepare_dt(mcd19_vars, date_range = dates_byyear),
-                 pattern = map(dates_byyear),
-                 iteration = 'list'),
+                 prepare_dt(mcd19_vars, date_range = all_dates)),
       tar_map(
         values = list(loss = c("l1", "l2")),
         tar_target(initial_cv,
@@ -143,7 +139,6 @@ set1_targets = list(
                                    y_var = "diff_AOD",
                                    features = features,
                                    stn_var = "Site_Name"),
-                   pattern = map(traindata),
                    iteration = 'list')),
       tar_target(full_model, dart_full(traindata,
                                        y_var = "diff_AOD",
