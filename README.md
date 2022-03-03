@@ -1,4 +1,4 @@
-# ML AOD CONUS
+# Earth_obs_cleaning
 
 Predict the difference between AERONET and MCD19A2 satellite AOD, and apply that prediction to improve remotely sensed AOD.
 

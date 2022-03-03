@@ -31,10 +31,10 @@ tar_option_set(
   workspace_on_error = TRUE,
   error = 'abridge')
 
-tar_config_set(store = '/data-belle/cache/aod_targets/')
+tar_config_set(store = '/data-coco/Earth_obs_cleaning/targets')
 Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 intermediate.path = function(...)
-   file.path('/data-coco/AOD_CONUS/intermediate', ...)
+   file.path('/data-coco/Earth_obs_cleaning/intermediate', ...)
 
 source('R/globals.R')
 source('R/data.R')
