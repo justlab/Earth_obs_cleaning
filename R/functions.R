@@ -96,7 +96,10 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
 
 #' Assign a month index from 1970-01-01 to all observation dates.
 #'
-#' Month indexes are used to batch the extraction of training data into chunks and increase targets throughput.
+#' These don't actually align with months of the calendar, but it
+#' doesn't matter because the separation into months is only for
+#' convenience of parallelization; the actual logic is per-day.
+#'
 #' @param aer_data AERONET observation data
 #' @return data.table of AERONET observation data with a monthid column added
 assign_monthid <- function(aer_data){
