@@ -980,12 +980,12 @@ get_aoi_buffer <- function(aoiname){
     stop("Unsupported aoi name:", aoiname)
   )
   buff
-} 
+}
 
 #' get_conus_buff
 #' @param conus_file location of the sf CONUS file no Great Lake -- rds file
 #' @return sf object of CONUS shapefile
-get_conus_buff <- function(conus_file = 
+get_conus_buff <- function(conus_file =
   "/data-belle/LST/MODIS.LST.C6/derived/conus_GLakes_buff_sf_poly_201906.rds"){
   readRDS(conus_file)
 }

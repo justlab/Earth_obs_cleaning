@@ -30,7 +30,7 @@ Git commit: `r commit` `r uncommitted`
 ### 5 fold CV summary statistics
 ```{r table_cv_results, echo=FALSE}
 tar_load(cv_summary_tables)
-DT::datatable(cv_summary_tables$stat, 
+DT::datatable(cv_summary_tables$stat,
               rownames = FALSE,
               fillContainer = FALSE,
               autoHideNavigation = TRUE,
@@ -40,7 +40,7 @@ DT::datatable(cv_summary_tables$stat,
 
 ### AERONET & MCD19 observation time difference distribution, in seconds
 ```{r table_difftime_distribution, echo=FALSE}
-DT::datatable(cv_summary_tables$difftimes, 
+DT::datatable(cv_summary_tables$difftimes,
               rownames = FALSE,
               fillContainer = FALSE,
               autoHideNavigation = TRUE,
@@ -53,5 +53,3 @@ DT::datatable(cv_summary_tables$difftimes,
 options(max.print = 1000)
 cv_summary_tables
 ```
-
-
