@@ -588,12 +588,13 @@ cv_reporting <- function(cv){
   mad = function(v1) mean(abs(v1 - median(v1)))
   dt[, aod_hat := MCD19_AOD_470nm - diff_AOD_pred]
 
+  r = function(x) round(x, 4)
   list(
-    MAE_uncorr = round(dt[, mae(MCD19_AOD_470nm, AOD_470nm)],3),
-    MAE_corr   = round(dt[, mae(aod_hat, AOD_470nm)],3),
-    rmse = round(cv$rmse_all_folds,3),
-    MAD_mcd19  = round(mad(dt$MCD19_AOD_470nm),3),
-    MAD_aodhat = round(mad(dt$aod_hat),3),
+    MAE_uncorr = r(dt[, mae(MCD19_AOD_470nm, AOD_470nm)]),
+    MAE_corr   = r(dt[, mae(aod_hat, AOD_470nm)]),
+    rmse = r(cv$rmse_all_folds),
+    MAD_mcd19  = r(mad(dt$MCD19_AOD_470nm)),
+    MAD_aodhat = r(mad(dt$aod_hat)),
     stn_count = dt[, uniqueN(stn)],
     train_N = dt[, .N]
   )
