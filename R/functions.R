@@ -549,7 +549,7 @@ initial_cv_dart <- function(
 #'
 #' @param cv_list list of all CV output objects; may include every year, both
 #'   satellites, and both objective functions
-#' @return data.table summarizing CV statistics for each year, loss, and satellite
+#' @return data.table summarizing CV statistics for each loss and satellite
 cv_summary <- function(cv_list){
   stats_list = vector(mode = "list", length = length(cv_list))
   difftimes_list = vector(mode = "list", length = length(cv_list))
@@ -558,7 +558,6 @@ cv_summary <- function(cv_list){
     stats = cv_reporting(cv)
     stats$sat <- str_extract(names(cv_list)[[i]], 'terra|aqua')
     stats$loss <- str_match(names(cv_list)[[i]], 'cv_(l[12])_')[,2]
-    stats$year <- cv$mDT_wPred[1, year(aer_date)]
     stats_list[[i]] <- stats
     difftimes_list[[i]] <- round(summary(as.numeric(abs(cv$mDT_wPred$rj_difftime))),0)
   }
@@ -568,16 +567,16 @@ cv_summary <- function(cv_list){
           paste0(round((MAE_uncorr-MAE_corr)/MAE_uncorr, 2) * 100, '%')]
   statsDT[, MAD_pct_change :=
           paste0(round((MAD_mcd19-MAD_aodhat)/MAD_mcd19, 2) * 100, '%')]
-  setcolorder(statsDT, c('sat', 'year', 'loss',
+  setcolorder(statsDT, c('sat', 'loss',
                        'MAE_uncorr', 'MAE_corr', 'MAE_pct_change',
                        'rmse', 'MAD_mcd19', 'MAD_aodhat', 'MAD_pct_change'))
   # difftime distribution
   difftimeDT = rbindlist(lapply(difftimes_list, function(x) as.list(x)))
-  difftimeDT[, c('sat', 'year', 'loss') := statsDT[, .(sat, year, loss)]]
-  setcolorder(difftimeDT, c('sat', 'year', 'loss'))
+  difftimeDT[, c('sat', 'loss') := statsDT[, .(sat, loss)]]
+  setcolorder(difftimeDT, c('sat', 'loss'))
 
-  setkey(statsDT, sat, year, loss)
-  setkey(difftimeDT, sat, year, loss)
+  setkey(statsDT, sat, loss)
+  setkey(difftimeDT, sat, loss)
   list(stats = statsDT, difftimes = difftimeDT)
 }
 
