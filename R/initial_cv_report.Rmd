@@ -13,9 +13,16 @@ library(DT)
 ```
 
 ```{r git_check, echo=FALSE}
-commit = substr(system('git rev-parse HEAD', intern = TRUE), 1, 8)
-uncommitted = if(length(system('git diff-index HEAD --', intern = TRUE))>0) 
-  'with uncommitted changes' else ''
+{
+s = function(cmd) suppressWarnings(system(cmd,
+    intern = TRUE, ignore.stderr = TRUE))
+commit = substr(s('git rev-parse HEAD'), 1, 8)
+uncommitted = ''
+if (!length(commit))
+   commit = 'unknown'
+else if(length(s('git diff-index HEAD --'))>0)
+   uncommitted = 'with uncommitted changes'
+}
 ```
 
 Git commit: `r commit` `r uncommitted`
