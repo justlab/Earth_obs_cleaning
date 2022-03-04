@@ -52,7 +52,7 @@ source('R/xgboost_cv.R')
 # Targets ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-process_years = 2003:2019
+process_years = 2000:2020
 all_dates = seq(
     lubridate::make_date(min(process_years)),
     lubridate::make_date(max(process_years), 12, 31),
