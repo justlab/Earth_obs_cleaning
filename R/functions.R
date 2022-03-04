@@ -241,6 +241,16 @@ get_focal_extent = function(x, c1, r1, radw){
   ext(c(sort(c(xn, xx))), sort(c(yn, yx)))
 }
 
+derive_mcd19_vars = function(aer_data, n.workers, ...)
+  {aer_data[, chunk := match(aer_date, sort(unique(aer_date))) %% n.workers]
+   future::plan("multicore", workers = n.workers)
+   rbindlist(future.apply::future_lapply(
+       split(aer_data, by = "chunk"),
+       future.seed = 789L,
+       function(chunk)
+           chunk[, by = aer_date, .SDcols = colnames(chunk),
+               derive_mcd19_vars_1day(.SD, ...)]))}
+
 #' Roll join a single day of AERONET data to nearest MCD19A2 overpass and
 #' calculate derived values from MCD19A2 within specified distances from the
 #' AERONET station.
@@ -259,15 +269,15 @@ get_focal_extent = function(x, c1, r1, radw){
 #' @param vrt_path directory to store overpass VRTs that reference HDF files.
 #' @param rolldiff_limit maximum time between the AERONET and satellite
 #'   observations
-derive_mcd19_vars = function(aer_data, load_sat, buffers_km, aer_stn, hdf_root,
-                             agg_level, agg_thresh, vrt_path,
-                             rolldiff_limit = as.difftime(30, units = 'mins')){
+derive_mcd19_vars_1day = function(aer_data, load_sat, buffers_km, aer_stn, hdf_root,
+                                  agg_level, agg_thresh, vrt_path,
+                                  rolldiff_limit = as.difftime(30, units = 'mins')){
   # 1. Prepare AERONET data
   aer_stn = st_sf(aer_stn) # testing whether passing in a DT version avoids error with vctrs package
   sv_aer = vect(aer_stn)
   setDT(aer_data)
   if(nrow(aer_data) == 0){
-    return(data.table(NA))
+    return(data.table())
   }
   aer_data = interpolate_aod(aer_data, aer_stn)
 
@@ -279,13 +289,13 @@ derive_mcd19_vars = function(aer_data, load_sat, buffers_km, aer_stn, hdf_root,
                          pattern = '\\.hdf$', full.names = TRUE)
 
   if(length(hdf_paths) == 0){
-    return(data.table(NA))
+    return(data.table())
   }
   # 2. Join AERONET to satellite AOD
   binDT = bin_overpasses(hdf_paths)
   binDT = binDT[sat == load_sat]
   if(nrow(binDT) == 0){
-    return(data.table(NA))
+    return(data.table())
   }
 
   day_op = get_overpasses_vrts(hdf_paths, binDT, load_sat, vrt_path)
@@ -419,17 +429,10 @@ derive_mcd19_vars = function(aer_data, load_sat, buffers_km, aer_stn, hdf_root,
     } else {
       # This will create an extra "V1" column in rowbound final target with all NAs,
       # but it gets around the error of writing NULL to FST format
-      data.table(NA)
+      data.table()
     }
   }
-  outDT = rbindlist(lapply(day_rasters, overpass_stats), fill = TRUE)
-  if(ncol(outDT) > 1){
-    outDT = outDT[!is.na(Site_Name)]
-    if('V1' %in% names(outDT)) outDT[, V1 := NULL]
-    outDT
-  } else { # no RJ results for any overpass on this day
-    data.table(NA)
-  }
+  rbindlist(lapply(day_rasters, overpass_stats), fill = TRUE)
 }
 
 create_qc_vars <- function(dt){

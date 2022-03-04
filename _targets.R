@@ -36,6 +36,8 @@ Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 intermediate.path = function(...)
    file.path('/data-coco/Earth_obs_cleaning/intermediate', ...)
 
+n.workers = 22L
+
 source('R/globals.R')
 source('R/data.R')
 source('R/functions.R')
@@ -97,36 +99,25 @@ set1_targets = list(
     # Load AERONET data ####
     tar_target(aer_nospace,
                sf::st_drop_geometry(aer)),
-    tar_group_by(aer_bystation,
-                 aer_nospace, Site_Name),
     tar_target(aer_data,
-               get_stn_data(aod_dir = aer_files_path, stations = aer_bystation),
-               pattern = map(aer_bystation)),
+               get_stn_data(aod_dir = aer_files_path, stations = aer_nospace)),
     tar_target(aer_filtered,
                filter_aer_bydate(aer_data, all_dates),
                format = 'fst_dt'),
-    tar_target(aer_months,
-               assign_monthid(aer_filtered),
-               format = 'fst_dt'),
-    tar_group_by(aer_bymonth,
-                 aer_months, monthid),
 
     # Load MCD19A2 AOD ####
     tar_map( # sat mapping
       values = sat_values,
-      tar_target(mcd19_vars,
-                 purrr::map_dfr(aer_bymonth %>% split(.$aer_date),
-                                .f = derive_mcd19_vars,
-                                load_sat = sat,
-                                buffers_km = buffers_km,
-                                aer_stn = as.data.table(aer),
-                                hdf_root = hdf_root,
-                                agg_level = agg_level,
-                                agg_thresh = agg_thresh,
-                                vrt_path = vrt_path),
-                 pattern = map(aer_bymonth),
-                 format = 'fst_dt',
-                 storage = 'worker'),
+      tar_target(mcd19_vars, derive_mcd19_vars(aer_filtered,
+                                               n.workers = n.workers,
+                                               load_sat = sat,
+                                               buffers_km = buffers_km,
+                                               aer_stn = as.data.table(aer),
+                                               hdf_root = hdf_root,
+                                               agg_level = agg_level,
+                                               agg_thresh = agg_thresh,
+                                               vrt_path = vrt_path),
+                 format = 'fst_dt'),
 
       # Model ####
       tar_target(traindata,
