@@ -608,25 +608,6 @@ cv_reporting <- function(cv){
 
 # Prediction ####
 
-#' Create a data.table with every prediction date and the corresponding trained
-#' XGBoost model to use.
-#'
-model_files_by_date <- function(mft, pred_dates){
-  mft = mft[, .(year, file_path)]
-  dt = data.table(pred_date = pred_dates)
-  dt[, year := year(pred_date)]
-  outdt = mft[dt, on = 'year', nomatch = 0]
-
-  missing_dates = !pred_dates %in% outdt$pred_date
-  if(any(missing_dates)){
-    missing_years = paste(unique(year(pred_dates[missing_dates])), collapse = ', ')
-    stop('Requested predictions in ', missing_years,
-         ' but no model has been trained for those years.')
-  } else {
-    outdt
-  }
-}
-
 #' #' Given an input SF object, return a terra:::SpatExtent in a new CRS,
 #' #' optionally extended in all directions by `expand_distance`, using the units
 #' #' of the `new_crs`.
@@ -656,9 +637,7 @@ sf_to_ext <- function(sf, to_crs = NULL){
 #' @param buffers_km vector of buffer radii in kilometers
 #' @param hdf_root path to MCD19A2 HDF files
 #' @param vrt_path directory to store overpass VRTs that reference HDF files.
-#' @param this_date single row of pred_files data frame including the prediction
-#'   date, year, and the corresponding XGBoost model file to use for predicting
-#'   that date.
+#' @param this_date a date to make predictions for
 #' @param sat input "terra" or "aqua"
 #' @param agg_level how much to aggregate the input MODIS AOD to use for large
 #'   focal radii
@@ -669,9 +648,8 @@ sf_to_ext <- function(sf, to_crs = NULL){
 #' @param pred_bbox SpatExtent of the region to predict. If NULL, will crop
 #'   using the shape provided in `aoi`.
 pred_inputs <- function(features, buffers_km, hdf_root, vrt_path, load_sat,
-                        this_date, agg_level, agg_thresh, aoi, pred_bbox = NULL){
-
-  if('data.frame' %in% class(this_date)) this_date = this_date$pred_date
+                        this_date, agg_level, agg_thresh, aoi,
+                        pred_bbox = NULL){
 
   # Get overpasses for the date
   if(length(this_date)>1) stop('Unexpected this_dates vector longer than 1')
@@ -770,15 +748,12 @@ pred_inputs <- function(features, buffers_km, hdf_root, vrt_path, load_sat,
     # convert AOD_QA to qa_best
     create_qc_vars(rasDT)
 
-    # avoid error of writing NULL DT to FST
-    if(nrow(rasDT) == 0) rasDT = data.table(NA)
-
-    # overpass bin
-    rasDT[, op_id := op_id]
+    if (nrow(rasDT))
+        # overpass bin
+        rasDT[, op_id := op_id]
+    rasDT
   }
-  all_ops = rbindlist(lapply(1:length(day_rasters), op_to_table), fill = TRUE)
-  if('V1' %in% names(all_ops)) all_ops[, V1 := NULL]
-  all_ops
+  rbindlist(fill = TRUE, lapply(1:length(day_rasters), op_to_table))
 }
 
 #' Train a full model using DART and 2-fold CV to select hyperparameters from
@@ -843,25 +818,18 @@ model_file_table = function(years, model_info_list){
 }
 
 #' Predict the difference between MCD19 and AERONET
-#'
-#' @param file_table is a data.frame containing the years, path to the model file, and prediction dates
-run_preds = function(data, file_table, features){
+run_preds = function(data, full_model, features){
   data = data[!is.na(MCD19_AOD_470nm)]
   data[, pred_date := as.Date(dayint, '1970-01-01')]
 
   # if the input data contains more than one model, run one model at a time
   outlist = list()
-  for(pred_model in file_table[, unique(file_path)]){
-    model = xgboost::xgb.load(pred_model)
-    to_pred = data[pred_date %in% file_table[file_path == pred_model, pred_date], ]
-    predvec = predict(model, as.matrix(to_pred[, features, with = FALSE]))
-    # join predictions
-    outpred = data.table(to_pred[, .(x, y, pred_date, op_id, MCD19_AOD_470nm)], preds = predvec)
-    outpred[, MCD19_adjust := MCD19_AOD_470nm - preds]
-    rm(to_pred)
-    outlist[[length(outlist) + 1]] <- outpred
-  }
-  rbindlist(outlist, fill = TRUE)
+  model = xgboost::xgb.load(full_model$model_out_path)
+  predvec = predict(model, as.matrix(data[, features, with = FALSE]))
+  # join predictions
+  outpred = data.table(data[, .(x, y, pred_date, op_id, MCD19_AOD_470nm)], preds = predvec)
+  outpred[, MCD19_adjust := MCD19_AOD_470nm - preds]
+  outpred
 }
 
 # Maps ####
