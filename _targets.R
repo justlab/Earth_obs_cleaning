@@ -35,6 +35,9 @@ tar_config_set(store = '/data-coco/Earth_obs_cleaning/targets')
 Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 intermediate.path = function(...)
    file.path('/data-coco/Earth_obs_cleaning/intermediate', ...)
+aer_files_path = '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/'
+  # This isn't a dynamic file because it would slow down all `targets`
+  # operations.
 
 n.workers = 22L
 
@@ -68,9 +71,6 @@ set1_targets = list(
              '/data-coco/mcd19/fst/conus_full'),
   tar_target(aer_stn_path,
              '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt',
-             format = 'file'),
-  tar_target(aer_files_path,
-             '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/',
              format = 'file'),
   tar_target(refgrid_path,
              '/data-belle/LST/MYD21A1/derived/conus_grid_2020.fst',
