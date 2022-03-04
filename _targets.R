@@ -35,9 +35,11 @@ tar_config_set(store = '/data-coco/Earth_obs_cleaning/targets')
 Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 intermediate.path = function(...)
    file.path('/data-coco/Earth_obs_cleaning/intermediate', ...)
+
+# For speed, the following aren't dynamic files.
 aer_files_path = '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/'
-  # This isn't a dynamic file because it would slow down all `targets`
-  # operations.
+mcd19path = '/data-coco/mcd19/fst/conus_full'
+hdf_root = '/mnt/qnap_geo/MCD19A2/HDF'
 
 n.workers = 22L
 
@@ -67,8 +69,6 @@ features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
                paste0(buffers_km, "km"))))
 
 set1_targets = list(
-  tar_target(mcd19path,
-             '/data-coco/mcd19/fst/conus_full'),
   tar_target(aer_stn_path,
              '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt',
              format = 'file'),
@@ -81,8 +81,6 @@ set1_targets = list(
   tar_target(aer_stations,
              fread(aer_stn_path, col.names = c('Site_Name', 'lon', 'lat', 'elevm')),
              format = 'fst_dt'),
-  tar_target(hdf_root,
-             file.path('/mnt/qnap_geo/MCD19A2/HDF')),
   tar_target(vrt_path,
              prepare_vrt_directory(intermediate.path())),
 
