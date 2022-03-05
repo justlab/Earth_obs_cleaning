@@ -569,13 +569,13 @@ cv_summary <- function(cv_list){
   }
   # prediction summary stats
   statsDT = rbindlist(lapply(stats_list, as.data.table))
-  statsDT[, MAE_pct_change :=
+  statsDT[, MAE_change :=
           paste0(round((MAE_uncorr-MAE_corr)/MAE_uncorr, 2) * 100, '%')]
-  statsDT[, MAD_pct_change :=
+  statsDT[, MAD_change :=
           paste0(round((MAD_mcd19-MAD_aodhat)/MAD_mcd19, 2) * 100, '%')]
   setcolorder(statsDT, c('sat', 'loss',
-                       'MAE_uncorr', 'MAE_corr', 'MAE_pct_change',
-                       'rmse', 'MAD_mcd19', 'MAD_aodhat', 'MAD_pct_change'))
+                       'MAE_uncorr', 'MAE_corr', 'MAE_change',
+                       'rmse', 'MAD_mcd19', 'MAD_aodhat', 'MAD_change'))
   # difftime distribution
   difftimeDT = rbindlist(lapply(difftimes_list, function(x) as.list(x)))
   difftimeDT[, c('sat', 'loss') := statsDT[, .(sat, loss)]]
@@ -602,7 +602,8 @@ cv_reporting <- function(cv){
     MAD_mcd19  = r(mad(dt$MCD19_AOD_470nm)),
     MAD_aodhat = r(mad(dt$aod_hat)),
     stn_count = dt[, uniqueN(stn)],
-    train_N = dt[, .N]
+    train_N = dt[, .N],
+    median_aeronet = r(median(dt$AOD_470nm))
   )
 }
 
