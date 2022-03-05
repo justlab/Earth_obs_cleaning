@@ -27,6 +27,8 @@ else if(length(s('git diff-index HEAD --'))>0)
 
 Git commit: `r commit` `r uncommitted`
 
+Rendered: `r Sys.time()`
+
 ### 5 fold CV summary statistics
 ```{r table_cv_results, echo=FALSE}
 tar_load(cv_summary_tables)
