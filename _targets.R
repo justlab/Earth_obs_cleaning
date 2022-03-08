@@ -133,7 +133,7 @@ set1_targets = list(
                                        features = features)),
 
       # Prediction ####
-      tar_target(pred_dates, c(as.Date('2003-03-16'), as.Date('2003-03-17'))),
+      tar_target(pred_dates, seq.Date(from = as.Date('2003-01-01'), to = as.Date('2003-02-28'), by = "day")),
 
       tar_target(predinput, format = "fst_dt",
                 {future::plan("multicore", workers = n.workers)
