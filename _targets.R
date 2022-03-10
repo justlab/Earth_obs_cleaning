@@ -63,7 +63,7 @@ buffers_km = c(10, 30, 90, 270)
 agg_level = 10
 agg_thresh = 3
 features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
-             "Column_WV", "RelAZ", "qa_best",
+             "Column_WV", "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle", "qa_best",
              do.call(paste0, expand.grid(
                c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
                paste0(buffers_km, "km"))))

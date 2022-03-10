@@ -93,7 +93,8 @@ rasterize_vrts <- function(op_vrts, opDT, with_time = TRUE){
 #'   subdatasets are set to the those being used for MCD19A2.
 #' @return paths to VRTs in a nested list by overpass and subdataset for this date
 get_overpasses_vrts <- function(hdf_paths, binDT, load_sat = sats, vrt_path,
-  load_sds = c('Optical_Depth_047', 'AOD_Uncertainty', 'Column_WV', 'AOD_QA', 'RelAZ')){
+  load_sds = c('Optical_Depth_047', 'AOD_Uncertainty', 'Column_WV', 'AOD_QA',
+               'cosSZA', 'cosVZA', 'RelAZ', 'Scattering_Angle', 'Glint_Angle')){
   load_sat = match.arg(load_sat)
   binDT = binDT[sat == load_sat]
 
