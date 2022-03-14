@@ -659,11 +659,13 @@ pred_inputs <- function(features, buffers_km, hdf_root, vrt_path, load_sat,
                          pattern = '\\.hdf$', full.names = TRUE)
 
   if(length(hdf_paths) == 0){
-    stop('Unhandled case where all HDFs missing for date ', this_date)
+    return(data.table())
   }
 
   binDT = bin_overpasses(hdf_paths)
   binDT = binDT[sat == load_sat]
+  if (!nrow(binDT))
+      return(data.table())
   day_op = get_overpasses_vrts(hdf_paths, binDT, load_sat, vrt_path)
 
   # lapply by overpass, which are the groups in day_op
