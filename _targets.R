@@ -169,7 +169,7 @@ set1_targets = list(
 
 # Combine all initial CV results into a list ####
 set1u = unlist(set1_targets)
-combined_target = tar_combine(combined_cv, set1u[grep('initial_cv', names(set1u))],
+combined_target = tar_combine(combined_cv, set1u[grep('initial_cv_l2', names(set1u))],
                               command = list(!!!.x))
 
 # Render CV report ####

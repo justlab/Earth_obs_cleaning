@@ -271,7 +271,7 @@ derive_mcd19_vars = function(aer_data, n.workers, ...)
 #'   observations
 derive_mcd19_vars_1day = function(aer_data, load_sat, buffers_km, aer_stn, hdf_root,
                                   agg_level, agg_thresh, vrt_path,
-                                  rolldiff_limit = as.difftime(30, units = 'mins')){
+                                  rolldiff_limit = as.difftime(7.5, units = 'mins')){
   # 1. Prepare AERONET data
   aer_stn = st_sf(aer_stn) # testing whether passing in a DT version avoids error with vctrs package
   sv_aer = vect(aer_stn)
