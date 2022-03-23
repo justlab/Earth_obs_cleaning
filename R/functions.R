@@ -57,12 +57,13 @@ station_cell_ids = function(stations_sf, refgrid_path, refras_path){
 #' @return data.table of AERONET observations, joined with MODIS reference grid
 #'   unique ID
 get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
-  stn_names = unique(stations$Site_Name)
+  assert(!anyDuplicated(stations$Site_Name))
   # open files containing names of stations in the specified region
-  aer_files_dir <- sapply(paste0(unique(stn_names),".*\\.lev20"), FUN = list.files,
-                          path = aod_dir, full.names = TRUE)
-  found_files <- sapply(aer_files_dir, function(x) length(x) > 0)
-  aer_files_dir = aer_files_dir[found_files]
+  aer_files_dir = list.files(aod_dir, full.names = TRUE)
+  aer_files_dir = aer_files_dir[
+    str_match(basename(aer_files_dir),
+      "\\A\\d{8}_\\d{8}_(.+)\\.lev20\\z")[,2]
+    %in% stations$Site_Name]
   if(length(aer_files_dir) > 0){
     t0 <- fread(aer_files_dir[[1]], nrows = 10) # to get variable names:
     vars_aod <- intersect(grep("AOD_", names(t0), value = T), grep("nm", names(t0), value = T))
@@ -88,6 +89,8 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
     aer_data <- rbindlist(file_list)
 
     aer_data[, aer_date := as.Date(stn_time)]
+    assert(nrow(unique(aer_data[, .(AERONET_Site_Name, stn_time)])) ==
+      nrow(aer_data))
     aer_data
   } else {
     NULL
