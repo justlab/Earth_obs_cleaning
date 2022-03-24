@@ -97,20 +97,6 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
   }
 }
 
-#' Assign a month index from 1970-01-01 to all observation dates.
-#'
-#' These don't actually align with months of the calendar, but it
-#' doesn't matter because the separation into months is only for
-#' convenience of parallelization; the actual logic is per-day.
-#'
-#' @param aer_data AERONET observation data
-#' @return data.table of AERONET observation data with a monthid column added
-assign_monthid <- function(aer_data){
-  start = as.Date('1970-01-01') - 1
-  aer_data[, monthid := as.period(as.Date(aer_date) - start) %/% months(1)]
-  aer_data
-}
-
 #' Filter data.table of AERONET observations to only those in the given dates
 #'
 #' @param aer_data AERONET observation data.table with a date column `aer_date`
@@ -167,15 +153,6 @@ interpolate_aod <- function(aer_data, aer_stns){
   aer_data_wPred <- aer_sites[aer_data_wPred]
   setkey(aer_data_wPred, Site_Name, stn_time)
   aer_data_wPred
-}
-
-#' Return the SF points for stations reporting data in the previously-selected
-#' time period
-#'
-#' @param stations SF points of AERONET stations
-#' @param stn_data data.table of station observations for previously-selected time period
-filter_stations = function(stations, stn_data){
-  stations[stations$Site_Name %in% stn_data$Site_Name, ]
 }
 
 #' Return a reference raster with the extent of the FST reference grid instead of
@@ -817,10 +794,6 @@ dart_full <- function(
        shap_bias = shap_bias,
        model_out_path = model_out_path,
        first_date = first_date)
-}
-
-model_file_table = function(years, model_info_list){
-  data.table(year = years, lapply(model_info_list, `[[`, 'model_out_path'))
 }
 
 #' Predict the difference between MCD19 and AERONET

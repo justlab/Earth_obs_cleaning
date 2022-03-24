@@ -13,10 +13,6 @@ sats = c("terra", "aqua")
 
 # for reporting purpose
 y_var = "diff_AOD"
-y_var_pred = "diff_AOD_pred"
-
-# how many features to print in scatterplots
-n_vars = 10
 
 set.seed(1234)
 
