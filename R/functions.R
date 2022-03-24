@@ -224,12 +224,15 @@ get_focal_extent = function(x, c1, r1, radw){
 derive_mcd19_vars = function(aer_data, n.workers, ...)
   {aer_data[, chunk := match(aer_date, sort(unique(aer_date))) %% n.workers]
    future::plan("multicore", workers = n.workers)
-   rbindlist(future.apply::future_lapply(
+   d = rbindlist(future.apply::future_lapply(
        split(aer_data, by = "chunk"),
        future.seed = 789L,
        function(chunk)
            chunk[, by = aer_date, .SDcols = colnames(chunk),
-               derive_mcd19_vars_1day(.SD, ...)]))}
+               derive_mcd19_vars_1day(.SD, ...)]))
+   assert(nrow(unique(d[, .(Site_Name, stn_time)])) == nrow(d))
+   assert(nrow(unique(d[, .(cell, overpass_time)])) == nrow(d))
+   d}
 
 #' Roll join a single day of AERONET data to nearest MCD19A2 overpass and
 #' calculate derived values from MCD19A2 within specified distances from the
@@ -328,6 +331,12 @@ derive_mcd19_vars_1day = function(aer_data, load_sat, buffers_km, aer_stn, hdf_r
     # Only keep roll joins within specified time difference limit
     rj[, rj_difftime := overpass_time - stn_time]
     rj = rj[abs(rj_difftime) <= rolldiff_limit, ]
+
+    # Only keep one case per satellite observation. Duplicates occur
+    # when there are multiple stations in one cell of the satellite
+    # grid.
+    rj = rj[order(abs(rj_difftime), Site_Name),
+        by = .(overpass_time, cell), head(.SD, 1)]
 
     if(nrow(rj) > 0){
       # 3. Derived values from focal statistics on satellite AOD
