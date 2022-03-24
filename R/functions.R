@@ -12,6 +12,10 @@
 #' @param refras_path path to MODIS reference raster stack
 #' @return a subset of geometry points within the given polygon
 select_stations <- function(stations, reg_polygon, refgrid_path, refras_path){
+  stations = stations[Site_Name != "CART_SITE"]
+    # This station is in the same place as "Cart_Site" and has
+    # relatively few observations. It's not clear to what degree it's
+    # a duplicate.
   aerpts = st_as_sf(stations, coords = c("lon", "lat"), crs = 4326)
   if(st_crs(aerpts) != st_crs(reg_polygon)){ # polygons are in nad83
     aerpts <- st_transform(aerpts, crs = st_crs(reg_polygon))
