@@ -57,7 +57,7 @@ all_dates = seq(
     lubridate::make_date(min(process_years)),
     lubridate::make_date(max(process_years), 12, 31),
     by = 1)
-region_values = list(regions = aoiname)
+region_values = list(region = aoiname)
 sat_values = list(sat = sats)
 buffers_km = c(10, 30, 90, 270)
 agg_level = 10
@@ -88,11 +88,11 @@ set1_targets = list(
   tar_map( # region mapping
     values = region_values,
     tar_target(buff,
-               get_aoi_buffer(regions)),
+               get_aoi_buffer(region)),
     tar_target(aer,
                select_stations(aer_stations, buff, refgrid_path, refras_path)),
     tar_target(mcd_refras,
-               crop_refras_mcd(refgrid_path, mcd19path, aoiname = regions)),
+               crop_refras_mcd(refgrid_path, mcd19path, aoiname = region)),
 
     # Load AERONET data ####
     tar_target(aer_nospace,
