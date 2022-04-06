@@ -630,7 +630,7 @@ sf_to_ext <- function(sf, to_crs = NULL){
 #'
 #' @param features character vector of column names to train on
 #' @param buffers_km vector of buffer radii in kilometers
-#' @param hdf_root path to MCD19A2 HDF files
+#' @param satellite_hdf_files data table returned by `get_earthdata`
 #' @param vrt_path directory to store overpass VRTs that reference HDF files.
 #' @param this_date a date to make predictions for
 #' @param sat input "terra" or "aqua"
@@ -642,25 +642,26 @@ sf_to_ext <- function(sf, to_crs = NULL){
 #' @param aoi sf shape of the region the model was trained over.
 #' @param pred_bbox SpatExtent of the region to predict. If NULL, will crop
 #'   using the shape provided in `aoi`.
-pred_inputs <- function(features, buffers_km, hdf_root, vrt_path, load_sat,
+pred_inputs <- function(features, buffers_km, satellite_hdf_files, vrt_path, load_sat,
                         this_date, agg_level, agg_thresh, aoi,
                         pred_bbox = NULL){
 
   # Get overpasses for the date
   if(length(this_date)>1) stop('Unexpected this_dates vector longer than 1')
 
-  hdf_paths = list.files(file.path(hdf_root, format(this_date, '%Y.%m.%d')),
-                         pattern = '\\.hdf$', full.names = TRUE)
+  hdf_files = (satellite_hdf_files
+      [.("terra.and.aqua", this_date)]
+      [file.size(path) != 0])
 
-  if(length(hdf_paths) == 0){
+  if(nrow(hdf_files) == 0){
     return(data.table())
   }
 
-  binDT = bin_overpasses(hdf_paths)
+  binDT = bin_overpasses(hdf_files)
   binDT = binDT[sat == load_sat]
   if (!nrow(binDT))
       return(data.table())
-  day_op = get_overpasses_vrts(hdf_paths, binDT, load_sat, vrt_path)
+  day_op = get_overpasses_vrts(hdf_files$path, binDT, load_sat, vrt_path)
 
   # lapply by overpass, which are the groups in day_op
   tryCatch({

@@ -148,7 +148,7 @@ set1_targets = list(
                      function(this_date) pred_inputs(
                           features = features,
                           buffers_km = buffers_km,
-                          hdf_root = hdf_root,
+                          satellite_hdf_files = satellite_hdf_files,
                           vrt_path = vrt_path,
                           load_sat = sat,
                           this_date = this_date,
