@@ -3,20 +3,21 @@
 # Orbit Info ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ####
 
 #' Extract orbit times from HDFs
-orbit_info <- function(hdf_path){
-  md = fromJSON(describe(hdf_path, options = 'json'))
+orbit_info <- function(hdf_file){
+  md = fromJSON(describe(hdf_file$path, options = 'json'))
   ocount = as.numeric(md$metadata[[1]]$Orbit_amount)
   otimes = str_split(md$metadata[[1]]$Orbit_time_stamp, '  ')[[1]][1:ocount]
-  list(tile = rep(str_extract(hdf_path, 'h[:digit:][:digit:]v[:digit:][:digit:]'), ocount),
+  list(tile = rep(as.character(hdf_file$tile), ocount),
        layer_index = 1:ocount,
        sat = str_sub(otimes, -1),
        orbit_time = as.POSIXct(str_sub(otimes, 1, nchar(otimes)-1), tz = 'UTC', format = '%Y%j%H%M'),
-       hdf = hdf_path)
+       hdf = hdf_file$path)
 }
 
 #' Make a DT of orbits binned by time for every tile in a day
-bin_overpasses <- function(hdf_paths){
-  oDT = rbindlist(lapply(hdf_paths, FUN = orbit_info))
+bin_overpasses <- function(hdf_files){
+  oDT = rbindlist(lapply(1 : nrow(hdf_files),
+      function(i) orbit_info(hdf_files[i])))
   oDT[sat == 'A', sat := 'aqua']
   oDT[sat == 'T', sat := 'terra']
   setkey(oDT, sat, orbit_time)

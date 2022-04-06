@@ -247,7 +247,7 @@ derive_mcd19_vars = function(aer_data, n.workers, ...)
 #' @param buffers_km vector of buffer radii in kilometers
 #' @param aer_stn data table of AERONET station names and reference unique ID
 #'   for satellite AOD cells
-#' @param hdf_root path to MCD19A2 HDF files
+#' @param satellite_hdf_files data table returned by `get_earthdata`
 #' @param agg_level how much to aggregate the input MODIS AOD to use for large
 #'   focal radii
 #' @param agg_thresh use the aggregated AOD when `(radius * 1000 / agg_level / mcd_res) > agg_thresh`,
@@ -256,7 +256,7 @@ derive_mcd19_vars = function(aer_data, n.workers, ...)
 #' @param vrt_path directory to store overpass VRTs that reference HDF files.
 #' @param rolldiff_limit maximum time between the AERONET and satellite
 #'   observations
-derive_mcd19_vars_1day = function(aer_data, load_sat, buffers_km, aer_stn, hdf_root,
+derive_mcd19_vars_1day = function(aer_data, load_sat, buffers_km, aer_stn, satellite_hdf_files,
                                   agg_level, agg_thresh, vrt_path,
                                   rolldiff_limit = as.difftime(7.5, units = 'mins')){
   # 1. Prepare AERONET data
@@ -272,20 +272,21 @@ derive_mcd19_vars_1day = function(aer_data, load_sat, buffers_km, aer_stn, hdf_r
   if(aer_data[, uniqueN(aer_date)] > 1) stop('Use tar_group_by and pattern=map to send one date at a time to derive_mcd19_vars')
   this_date = aer_data[1, aer_date]
 
-  hdf_paths = list.files(file.path(hdf_root, format(this_date, '%Y.%m.%d')),
-                         pattern = '\\.hdf$', full.names = TRUE)
+  hdf_files = (satellite_hdf_files
+      [.("terra.and.aqua", this_date)]
+      [file.size(path) != 0])
 
-  if(length(hdf_paths) == 0){
+  if(nrow(hdf_files) == 0){
     return(data.table())
   }
   # 2. Join AERONET to satellite AOD
-  binDT = bin_overpasses(hdf_paths)
+  binDT = bin_overpasses(hdf_files)
   binDT = binDT[sat == load_sat]
   if(nrow(binDT) == 0){
     return(data.table())
   }
 
-  day_op = get_overpasses_vrts(hdf_paths, binDT, load_sat, vrt_path)
+  day_op = get_overpasses_vrts(hdf_files$path, binDT, load_sat, vrt_path)
 
   # lapply by overpass, which are the groups in day_op
   tryCatch({

@@ -39,7 +39,7 @@ intermediate.path = function(...)
 # For speed, the following aren't dynamic files.
 aer_files_path = '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/'
 mcd19path = '/data-coco/mcd19/fst/conus_full'
-hdf_root = '/mnt/qnap_geo/MCD19A2/HDF'
+satellite_hdf_root = '/data-coco/Earth_obs_cleaning/earthdata'
 
 n.workers = 22L
 
@@ -52,7 +52,7 @@ source('R/xgboost_cv.R')
 # Targets ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-process_years = 2000:2020
+process_years = 2000:2021
 all_dates = seq(
     lubridate::make_date(min(process_years)),
     lubridate::make_date(max(process_years), 12, 31),
@@ -91,6 +91,12 @@ set1_targets = list(
                get_aoi_buffer(region)),
     tar_target(aer,
                select_stations(aer_stations, buff, refgrid_path, refras_path)),
+    tar_target(satellite_hdf_files, get.earthdata(
+               satellite_hdf_root,
+               product = "MCD19A2.006",
+               satellites = "terra.and.aqua",
+               tiles = satellite_aod_tiles[[region]],
+               dates = all_dates)),
     tar_target(mcd_refras,
                crop_refras_mcd(refgrid_path, mcd19path, aoiname = region)),
 
@@ -111,7 +117,7 @@ set1_targets = list(
                                                load_sat = sat,
                                                buffers_km = buffers_km,
                                                aer_stn = as.data.table(aer),
-                                               hdf_root = hdf_root,
+                                               satellite_hdf_files = satellite_hdf_files,
                                                agg_level = agg_level,
                                                agg_thresh = agg_thresh,
                                                vrt_path = vrt_path),

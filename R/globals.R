@@ -1,9 +1,19 @@
+library(data.table)
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Globals ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Region
 aoiname = "conus"
+
+satellite_aod_tiles = list(
+    # Selected by hand in QGIS with this shapefile:
+    # http://web.archive.org/web/2022/http://book.ecosens.org/wp-content/uploads/2016/06/modis_grid.zip
+    conus = rbind(
+        data.table(h = 8:13, v = 4),
+        data.table(h = 8:12, v = 5),
+        data.table(h = 8:10, v = 6))[, sprintf("h%02dv%02d", h, v)])
 
 # which MODIS platforms to use
 sats = c("terra", "aqua")
