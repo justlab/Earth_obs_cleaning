@@ -35,11 +35,11 @@ tar_config_set(store = '/data-coco/Earth_obs_cleaning/targets')
 Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 intermediate.path = function(...)
    file.path('/data-coco/Earth_obs_cleaning/intermediate', ...)
-
-# For speed, the following aren't dynamic files.
-aer_files_path = '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/ALL_POINTS/'
-mcd19path = '/data-coco/mcd19/fst/conus_full'
+download = function(from, to, ...)
+    download.update.meta(from, "/data-coco/Earth_obs_cleaning/downloads", to, ...)
 satellite_hdf_root = '/data-coco/Earth_obs_cleaning/earthdata'
+mcd19path = '/data-coco/mcd19/fst/conus_full'
+  # For speed, this isn't a dynamic file.
 
 n.workers = 22L
 
@@ -70,14 +70,26 @@ features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
 
 set1_targets = list(
   tar_target(aer_stn_path,
-             '/data-coco/ECHO_PM/AeronetAODV3Level2/AOD/AOD20/aeronet_locations_v3.txt',
-             format = 'file'),
+             download(
+                "https://aeronet.gsfc.nasa.gov/aeronet_locations_v3.txt",
+                "aeronet_stations.txt")),
   tar_target(refgrid_path,
              '/data-belle/LST/MYD21A1/derived/conus_grid_2020.fst',
              format = 'file'),
   tar_target(refras_path,
              '/data-belle/LST/MYD21A1/derived/conus_myd21_stack.tif',
              format = 'file'),
+  tar_target(aer_files_path,
+            {p = download(
+                 "https://aeronet.gsfc.nasa.gov/data_push/V3/AOD/AOD_Level20_All_Points_V3.tar.gz",
+                 "aeronet_observations.tar.gz")
+             assert(0 == unlink(intermediate.path("aeronet"),
+                 recursive = T))
+             assert(dir.create(intermediate.path("aeronet")))
+             assert(0 == system2("tar", shQuote(c(
+                 "--extract", "--file", p,
+                 "--directory", intermediate.path("aeronet")))))
+             intermediate.path("aeronet/AOD/AOD20/ALL_POINTS/")}),
   tar_target(aer_stations,
              fread(aer_stn_path, col.names = c('Site_Name', 'lon', 'lat', 'elevm')),
              format = 'fst_dt'),
