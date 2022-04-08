@@ -818,8 +818,6 @@ run_preds = function(data, full_model, features){
   data = data[!is.na(MCD19_AOD_470nm)]
   data[, pred_date := as.Date(dayint, '1970-01-01')]
 
-  # if the input data contains more than one model, run one model at a time
-  outlist = list()
   model = xgboost::xgb.load(full_model$model_out_path)
   predvec = predict(model, as.matrix(data[, features, with = FALSE]))
   # join predictions
