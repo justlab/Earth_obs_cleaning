@@ -681,6 +681,8 @@ pred_inputs <- function(features, buffers_km, satellite_hdf_files, vrt_path, loa
   aoi = sf_to_ext(aoi, crs_sinu)
   if(is.null(pred_bbox)) pred_bbox = aoi
 
+  terraOptions(progress = 0)
+
   # Prepare predictors for each overpass
   op_to_table <- function(op_id){
     raslist = day_rasters[[op_id]]
