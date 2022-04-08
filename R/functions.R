@@ -951,13 +951,17 @@ get_aoi_buffer <- function(aoiname){
 }
 
 #' get_conus_buff
-#' @param conus_file location of the sf CONUS file no Great Lake -- rds file
 #' @return sf object of CONUS shapefile
-get_conus_buff <- function(conus_file =
-  "/data-belle/LST/MODIS.LST.C6/derived/conus_GLakes_buff_sf_poly_201906.rds"){
-  readRDS(conus_file)
+get_conus_buff <- function(){
+  buffer.size.m = 5000
+
+  x = read_sf(paste0("/vsizip/", download(
+      "https://www2.census.gov/geo/tiger/GENZ2020/shp/cb_2020_us_state_20m.zip",
+        # Linked to from https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html
+      "conus.zip")))
+  st_buffer(dist = buffer.size.m, st_transform(crs = crs.us.atlas,
+      st_union(x[!(x$STUSPS %in% c("AK", "HI", "PR")),])))
 }
-# "/data-belle/LST/MODIS.LST.C6/derived/conus_sf_noGLakes.rds"
 
 #' get_nemia_buff
 #' @param states_file US states shp file
