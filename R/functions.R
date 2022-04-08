@@ -830,7 +830,7 @@ dart_full <- function(
 }
 
 #' Predict the difference between MCD19 and AERONET
-run_preds = function(data, full_model, features){
+run_preds = function(full_model, features, data){
   data = data[!is.na(MCD19_AOD_470nm)]
   data[, pred_date := as.Date(dayint, '1970-01-01')]
 

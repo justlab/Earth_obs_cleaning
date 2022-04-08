@@ -153,24 +153,22 @@ set1_targets = list(
       # Prediction ####
       tar_target(pred_dates, seq.Date(from = as.Date('2003-01-01'), to = as.Date('2003-01-03'), by = "day")),
 
-      tar_target(predinput, format = "fst_dt",
+      tar_target(pred_out, format = "fst_dt",
                 {future::plan("multicore", workers = n.workers)
                  rbindlist(future.apply::future_lapply(pred_dates,
                      future.seed = c(terra = 1337, aqua = 1338)[sat],
-                     function(this_date) pred_inputs(
-                          features = features,
-                          buffers_km = buffers_km,
-                          satellite_hdf_files = satellite_hdf_files,
-                          vrt_path = vrt_path,
-                          load_sat = sat,
-                          this_date = this_date,
-                          agg_level = agg_level,
-                          agg_thresh = agg_thresh,
-                          aoi = buff,
-                          pred_bbox = NULL)))}),
-
-      tar_target(pred_out,
-                 run_preds(predinput, full_model, features)),
+                     function(this_date)
+                         run_preds(full_model, features, pred_inputs(
+                             features = features,
+                             buffers_km = buffers_km,
+                             satellite_hdf_files = satellite_hdf_files,
+                             vrt_path = vrt_path,
+                             load_sat = sat,
+                             this_date = this_date,
+                             agg_level = agg_level,
+                             agg_thresh = agg_thresh,
+                             aoi = buff,
+                             pred_bbox = NULL))))}),
 
       # Map Predictions ####
       tar_target(preds_ggplot,
