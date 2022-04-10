@@ -1,0 +1,223 @@
+---
+title: "Running `Earth_obs_cleaning` on MCD19A2: Results from CONUS"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r basics, echo=FALSE}
+library(targets)
+library(data.table)
+library(DT)
+library(patchwork)
+library(ggplot2)
+library(sf)
+```
+
+```{r git_check, echo=FALSE}
+{
+s = function(cmd) suppressWarnings(system(cmd,
+    intern = TRUE, ignore.stderr = TRUE))
+commit = substr(s('git rev-parse HEAD'), 1, 8)
+uncommitted = ''
+if (!length(commit))
+   commit = 'unknown'
+else if(length(s('git diff-index HEAD --'))>0)
+   uncommitted = 'with uncommitted changes'
+}
+```
+
+Git commit: `r commit` `r uncommitted`
+
+Rendered: `r Sys.time()`
+
+## Objective
+
+Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD19A2 for Terra and Aqua satellites across the Continental USA, 2000-2021
+
+## Main findings from cross-validation
+
+```{r table_cv_results, echo=FALSE}
+tar_load(cv_summary_tables)
+DT::datatable(cv_summary_tables$stat,
+              rownames = FALSE,
+              fillContainer = FALSE,
+              autoHideNavigation = TRUE,
+              options = list(pageLength = 50,
+                             autoWidth = TRUE))
+```
+
+## Descriptives for the collocated dataset (Terra)
+
+## Stratified results for Terra CV dataset
+```{r stratified, echo=FALSE}
+performance_aod <- function(dt, ...){
+  performance_metrics(dt,
+                      ground_truth = "AOD_470nm",
+                      eo_raw = "MCD19_AOD_470nm",
+                      eo_pred = "aodhat")
+}
+tar_load(initial_cv_l2_terra_conus)
+dt <- initial_cv_l2_terra_conus$mDT_wPred
+if(!"aodhat" %in% colnames(dt)){
+  dt[, aodhat := MCD19_AOD_470nm - diff_AOD_pred]
+}
+
+dtwrapper <- function(dt){
+  DT::datatable(dt,
+                rownames = FALSE,
+                fillContainer = FALSE,
+                autoHideNavigation = TRUE,
+                options = list(pageLength = 50,
+                               autoWidth = TRUE))
+}
+```
+
+### Performance by year
+```{r strata_year, echo=FALSE}
+dtwrapper(dt[, performance_aod(.SD), keyby = year(aer_date)])
+```
+
+
+### Performance by month of year
+
+```{r strata_month, echo=FALSE}
+dtwrapper(dt[, performance_aod(.SD), keyby = month(aer_date)])
+```
+
+### Performance by `qa_best`
+
+```{r strata_qa, echo=FALSE}
+dtwrapper(dt[, performance_aod(.SD), by = qa_best])
+```
+
+### Performance by being over water
+
+```{r strata_water, echo=FALSE}
+dtwrapper(dt[, performance_aod(.SD), by = qa_lwsi])
+```
+
+### Performance by number of overpasses in collocation that site-day
+
+```{r strata_overpasses, echo=FALSE}
+dt[, overpasses := .N, by = c("Site_Name", "aer_date")]
+dtwrapper(dt[, performance_aod(.SD), keyby = overpasses])
+```
+
+## Performance by NOAA climate regions
+
+```{r noaa_setup, echo=FALSE}
+noaa.regions = list(
+  # https://www.ncdc.noaa.gov/monitoring-references/maps/us-climate-regions.php
+    Central = c("IL", "IN", "KY", "MO", "OH", "TN", "WV"),
+    East.North.Central = c("IA", "MI", "MN", "WI"),
+    Northeast = c("DC", "CT", "DE", "ME", "MD", "MA", "NH", "NJ", "NY", "PA", "RI", "VT"),
+      # Washington, DC, has no assigned NOAA climate region, so treat
+      # it as part of Maryland.
+    Northwest = c("ID", "OR", "WA"),
+    South = c("AR", "KS", "LA", "MS", "OK", "TX"),
+    Southeast = c("AL", "FL", "GA", "NC", "SC", "VA"),
+    Southwest = c("AZ", "CO", "NM", "UT"),
+    West = c("CA", "NV"),
+    West.North.Central = c("MT", "NE", "ND", "SD", "WY"))
+
+state.abb.plusdc = c(state.abb, "DC")
+conus.states.plusdc = sort(setdiff(state.abb.plusdc, c("AK", "HI")))
+
+stopifnot(identical(
+    sort(unlist(noaa.regions, use.names = F)),
+    conus.states.plusdc))
+
+state.noaa.region = factor(
+   sapply(state.abb.plusdc, USE.NAMES = F,
+       function(sa) if (sa %in% c("AK", "HI")) NA else
+           names(noaa.regions)[which(sapply(noaa.regions, function(r)
+               sa %in% r))]),
+   levels = names(noaa.regions))
+
+# Contiguous US state boundaries
+# will replace with a region defined by Kodi later
+usa = st_as_sf(maps::map("state", fill = TRUE, plot = FALSE))
+```
+
+```{r get_noaa_regions, include=FALSE}
+# assign AERONET stations to states
+tar_load(aer_stations)
+aer_stations_sf <- st_as_sf(aer_stations, coords = c("lon", "lat"), crs = "epsg:4326")
+sf::sf_use_s2(FALSE) # we were getting errors about the USA geometry otherwise
+aer_stations_sf <- st_join(aer_stations_sf, usa)
+dt <- merge(dt, aer_stations_sf, by = "Site_Name")
+# some Site_Names don't fall within land polygons for whatever reason
+dt[is.na(ID), table(Site_Name)]
+# where are the sites that didn't fall within a state?
+site_nostate <- st_as_sf(dt[is.na(ID), ][unique(Site_Name), .(Site_Name, `Site_Elevation(m)`, geometry), mult = "first"], crs = "epsg:4326")
+ggplot() +
+  geom_sf(data = usa, fill = NA) +
+  geom_sf(data = site_nostate, color = "red")
+# what proportion of data are not in a state?
+dt[, proportions(table(is.na(ID)))]
+# assign these to the closest state
+matched <- st_join(site_nostate,
+                   usa,
+                   join=nngeo::st_nn, k=1)
+# plot these matchups
+ggplot() +
+  geom_sf(data = usa, fill = NA) +
+  geom_sf_text(data = matched, aes(label = toupper(substr(ID, 1, 1))), color = "red") + theme_minimal()
+
+# where do our data come from (by State)?
+dt[, .(uniqueN(Site_Name), .N), by = ID][order(N, decreasing = T)]
+
+# trying to get from state names to state abbreviations
+dt[ , state.abb := state.abb[match(stringr::str_to_title(ID), state.name)]]
+dt[is.na(state.abb), .(ID, Site_Name, geometry)][, table(Site_Name)]
+dt[, state.noaa.region := factor(
+   sapply(state.abb, USE.NAMES = F,
+       function(sa) if (sa %in% c("AK", "HI")) NA else
+           names(noaa.regions)[which(sapply(noaa.regions, function(r)
+               sa %in% r))]),
+   levels = names(noaa.regions))]
+# unmatched locations
+dt[is.na(state.noaa.region), .(ID, state.abb, Site_Name, geometry)][unique(Site_Name), , mult = "first"]
+```
+
+```{r strata_noaa_regions, echo=FALSE}
+# performance by NOAA climate regions
+dtwrapper(dt[, performance_aod(.SD), keyby = state.noaa.region])
+
+# map by NOAA regions
+
+```
+
+
+## Agreement Plots
+
+*We can customize however we want*
+
+```{r agreement_plot, echo=FALSE}
+p1 <- ggplot(dt) +
+  aes(AOD_470nm, MCD19_AOD_470nm) +
+  geom_abline(linetype = "dashed") +
+  geom_point(alpha = 0.01) +
+  geom_smooth() +
+  scale_x_continuous("AERONET AOD 470nm", limits = c(0, 1)) +
+  scale_y_continuous("MAIAC AOD 470nm", limits = c(0, 1)) +
+  theme_bw() +
+  theme(aspect.ratio = 1)
+
+p2  <- ggplot(dt) +
+  aes(AOD_470nm, aodhat) +
+  geom_abline(linetype = "dashed") +
+  geom_point(alpha = 0.01) +
+  geom_smooth() +
+  scale_x_continuous("AERONET AOD 470nm", limits = c(0, 1)) +
+  scale_y_continuous("Corrected AOD 470nm", limits = c(0, 1)) +
+  theme_bw() +
+  theme(aspect.ratio = 1)
+
+p1 + p2
+```
+
+*Will add plot of agreement across bins of AOD*

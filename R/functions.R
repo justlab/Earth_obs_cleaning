@@ -555,7 +555,12 @@ cv_summary <- function(cv_list){
   difftimes_list = vector(mode = "list", length = length(cv_list))
   for(i in 1:length(cv_list)){
     cv = cv_list[[i]]
-    stats = cv_reporting(cv)
+    dt = data.table::copy(cv$mDT_wPred)
+    dt[, aodhat := MCD19_AOD_470nm - diff_AOD_pred]
+    stats = performance_metrics(dt,
+                                ground_truth = "AOD_470nm",
+                                eo_raw = "MCD19_AOD_470nm",
+                                eo_pred = "aodhat")
     stats$sat <- str_extract(names(cv_list)[[i]], 'terra|aqua')
     stats$loss <- str_match(names(cv_list)[[i]], 'cv_(l[12])_')[,2]
     stats_list[[i]] <- stats
@@ -563,13 +568,9 @@ cv_summary <- function(cv_list){
   }
   # prediction summary stats
   statsDT = rbindlist(lapply(stats_list, as.data.table))
-  statsDT[, MAE_change :=
-          paste0(round((MAE_uncorr-MAE_corr)/MAE_uncorr, 2) * 100, '%')]
-  statsDT[, MAD_change :=
-          paste0(round((MAD_mcd19-MAD_aodhat)/MAD_mcd19, 2) * 100, '%')]
-  setcolorder(statsDT, c('sat', 'loss',
-                       'MAE_uncorr', 'MAE_corr', 'MAE_change',
-                       'rmse', 'MAD_mcd19', 'MAD_aodhat', 'MAD_change'))
+  # setcolorder(statsDT, c('sat', 'loss',
+  #                      'MAE_uncorr', 'MAE_corr', 'MAE_change',
+  #                      'rmse', 'MAD_mcd19', 'MAD_aodhat', 'MAD_change'))
   # difftime distribution
   difftimeDT = rbindlist(lapply(difftimes_list, function(x) as.list(x)))
   difftimeDT[, c('sat', 'loss') := statsDT[, .(sat, loss)]]
@@ -580,24 +581,39 @@ cv_summary <- function(cv_list){
   list(stats = statsDT, difftimes = difftimeDT)
 }
 
-#' Calculate CV statistics on a single \code{initial_cv_dart()} output list object
+#' Calculate performance metrics on a data.table
 #'
-cv_reporting <- function(cv){
-  dt = cv$mDT_wPred
+#' Comparative cross-validation performance metrics with raw and corrected values.
+#' Takes a \code{data.table} and can be run across strata with a \code{by} statement.
+performance_metrics <- function(dt, ground_truth, eo_raw, eo_pred){
+  truth = quote(get(ground_truth))
+  raw = quote(get(eo_raw))
+  pred = quote(get(eo_pred))
   mae = function(v1, v2) mean(abs(v1 - v2))
   mad = function(v1) mean(abs(v1 - median(v1)))
-  dt[, aod_hat := MCD19_AOD_470nm - diff_AOD_pred]
-
+  mse = function(v1, v2) mean((v1 - v2)^2)
+  # rmse = function(v1, v2) sqrt(mean((v1 - v2)^2))
+  mean_bias = function(v1, v2) mean(v1 - v2)
   r = function(x) round(x, 4)
   list(
-    MAE_uncorr = r(dt[, mae(MCD19_AOD_470nm, AOD_470nm)]),
-    MAE_corr   = r(dt[, mae(aod_hat, AOD_470nm)]),
-    rmse = r(cv$rmse_all_folds),
-    MAD_mcd19  = r(mad(dt$MCD19_AOD_470nm)),
-    MAD_aodhat = r(mad(dt$aod_hat)),
-    stn_count = dt[, uniqueN(stn)],
+    # MAE_raw = r(mae(dt[, eval(raw)], dt[, eval(truth)])),
+    # MAE_pred   = r(mae(dt[, eval(pred)], dt[, eval(truth)])),
+    # MAD_truth= r(mad(dt[, eval(truth)])),
+    # MAD_pred = r(mad(dt[, eval(pred)])),
+
+    RMSE_raw = r(sqrt(mse(v1 = dt[, eval(raw)], v2 = dt[, eval(truth)]))),
+    RMSE_pred= r(sqrt(mse(v1 = dt[, eval(pred)], v2 = dt[, eval(truth)]))),
+    SD_truth   = r(sd(dt[, eval(truth)])),
+    SD_pred  = r(sd(dt[, eval(pred)])),
+    SD_raw   = r(sd(dt[, eval(raw)])),
+    pct_of_raw_mse = round(100 * (mse(dt[, eval(pred)], dt[, eval(truth)]) / mse(dt[, eval(raw)], dt[, eval(truth)])), 1),
+    bias_raw = r(mean_bias(dt[, eval(raw)], dt[, eval(truth)])),
+    bias_pred = r(mean_bias(dt[, eval(pred)], dt[, eval(truth)])),
+    r_raw = r(cor(dt[, eval(raw)], dt[, eval(truth)])),
+    r_pred = r(cor(dt[, eval(pred)], dt[, eval(truth)])),
+    stn_count  = uniqueN(dt$stn),
     train_N = dt[, .N],
-    median_aeronet = r(median(dt$AOD_470nm))
+    median_truth = r(median(dt[, eval(truth)]))
   )
 }
 
