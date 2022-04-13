@@ -439,7 +439,6 @@ create_qc_vars <- function(dt){
   dt[qa_bits==8, qa_lwsi := "water"]
   dt[qa_bits==16, qa_lwsi := "snow"]
   dt[qa_bits==24, qa_lwsi := "ice"]
-  dt[, qa_bits:= NULL]
   return(dt)
 }
 
@@ -462,6 +461,8 @@ prepare_dt <- function(dt, date_range = NULL){
   dt <- create_qc_vars(dt)
   dt[, dayint := as.integer(as.Date(overpass_time))]
   dt = dt[!is.na(get(y_var))]
+  # drop overpass matchups for pixels classified as water
+  dt = dt[qa_lwsi != "water"]
   dt
 }
 
