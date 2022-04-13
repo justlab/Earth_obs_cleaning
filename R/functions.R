@@ -967,17 +967,27 @@ get_aoi_buffer <- function(aoiname){
   buff
 }
 
-#' get_conus_buff
-#' @return sf object of CONUS shapefile
-get_conus_buff <- function(){
-  buffer.size.m = 5000
+#' get_conus
+#' @return sf object of states in CONUS
+get_conus <- function(){
 
   x = read_sf(paste0("/vsizip/", download(
       "https://www2.census.gov/geo/tiger/GENZ2020/shp/cb_2020_us_state_20m.zip",
         # Linked to from https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html
       "conus.zip")))
-  st_buffer(dist = buffer.size.m, st_transform(crs = crs.us.atlas,
-      st_union(x[!(x$STUSPS %in% c("AK", "HI", "PR")),])))
+      x[!(x$STUSPS %in% c("AK", "HI", "PR")),]
+}
+
+
+#' get_conus_buff
+#' @return sf object of buffered CONUS area
+get_conus_buff <- function(){
+  buffer.size.m = 5000
+
+  x = get_conus()
+  st_buffer(dist = buffer.size.m,
+            st_transform(crs = crs.us.atlas,
+                         st_union(x)))
 }
 
 #' get_nemia_buff
