@@ -18,9 +18,6 @@ satellite_aod_tiles = list(
 # which MODIS platforms to use
 sats = c("terra", "aqua")
 
-# out_dir = paste0("/data-coco/mcd19/fst/conus/", this_year, "_AOD_newVar/")
-# if(!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-
 # for reporting purpose
 y_var = "diff_AOD"
 
