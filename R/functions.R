@@ -166,7 +166,7 @@ interpolate_aod <- function(aer_data, aer_stns){
 #'
 crop_refras_mcd <- function(refgrid_path, mcd19path,
                             ref_uid = 'idM21pair0', aoiname = 'conus'){
-  if(!aoiname %in% c('conus', 'nemia')) stop('Only CONUS region has been implemented')
+  if(aoiname != 'conus')) stop('Only CONUS region has been implemented')
   # get the mcd19 file for the first date in an arbitrary year
   mcdDT = read_fst(list.files(file.path(mcd19path, 2010), '*.fst',
                               full.names = TRUE)[1],
@@ -956,12 +956,11 @@ unified_breaks = function(ras, n_classes, color_func, use_jenks = FALSE){
 }
 
 #' get_aoi_buffer
-#' @param aoiname Either "conus" or "nemia" for the region to to use for selection buffer
+#' @param aoiname the region to to use for selection buffer
 #' @return sf object of region buffer
 get_aoi_buffer <- function(aoiname){
   switch(aoiname,
     "conus" = buff <- get_conus_buff(),
-    "nemia" = buff <- get_nemia_buff(),
     stop("Unsupported aoi name:", aoiname)
   )
   buff
@@ -988,16 +987,4 @@ get_conus_buff <- function(){
   st_buffer(dist = buffer.size.m,
             st_transform(crs = crs.us.atlas,
                          st_union(x)))
-}
-
-#' get_nemia_buff
-#' @param states_file US states shp file
-#' @return sf object of NEMIA shapfile
-get_nemia_buff <- function(states_file = "/data-belle/census/states/tl_2017_us_state.shp"){
-  # no longer using the old 2km buffer of NEMIA; this is same data source used for CONUS grid
-  states = st_read(states_file)
-  states = states[, c("STUSPS")]
-  nemia = states[states$STUSPS %in% c("ME", "NH", "VT", "MA", "CT", "RI", "NY", "PA", "NJ",
-                                      "DE", "MD", "DC", "VA", "WV"), ]
-  nemia = st_union(nemia)
 }
