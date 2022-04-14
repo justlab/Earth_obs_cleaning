@@ -38,8 +38,6 @@ intermediate.path = function(...)
 download = function(from, to, ...)
     download.update.meta(from, "/data-coco/Earth_obs_cleaning/downloads", to, ...)
 satellite_hdf_root = '/data-coco/Earth_obs_cleaning/earthdata'
-mcd19path = '/data-coco/mcd19/fst/conus_full'
-  # For speed, this isn't a dynamic file.
 
 n.workers = 22L
 
@@ -109,8 +107,6 @@ set1_targets = list(
                satellites = "terra.and.aqua",
                tiles = satellite_aod_tiles[[region]],
                dates = all_dates)),
-    tar_target(mcd_refras,
-               crop_refras_mcd(refgrid_path, mcd19path, aoiname = region)),
 
     # Load AERONET data ####
     tar_target(aer_nospace,

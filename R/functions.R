@@ -159,25 +159,6 @@ interpolate_aod <- function(aer_data, aer_stns){
   aer_data_wPred
 }
 
-#' Return a reference raster with the extent of the FST reference grid instead of
-#' the reference raster TIF.
-#' This will be compatiable with `aoiname = 'conus'`, but would require further
-#' cropping to use with other AOIs.
-#'
-crop_refras_mcd <- function(refgrid_path, mcd19path,
-                            ref_uid = 'idM21pair0', aoiname = 'conus'){
-  if(aoiname != 'conus')) stop('Only CONUS region has been implemented')
-  # get the mcd19 file for the first date in an arbitrary year
-  mcdDT = read_fst(list.files(file.path(mcd19path, 2010), '*.fst',
-                              full.names = TRUE)[1],
-                   as.data.table = TRUE, columns = ref_uid)
-  rg = read_fst(refgrid_path, as.data.table = TRUE,
-                columns = c(ref_uid, 'x_sinu', 'y_sinu', 'cell_index'))
-  setkeyv(mcdDT, ref_uid)
-  rasterFromXYZ(rg[mcdDT, c('x_sinu', 'y_sinu', 'cell_index'), with = FALSE],
-                crs = crs_sinu)
-}
-
 #' Return a matrix classifying cells as being within a distance from the center.
 #'
 #' Assumes square matrix with odd number of rows & columns. The width (and
