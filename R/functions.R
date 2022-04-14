@@ -1,54 +1,24 @@
 # Contains most functions required for the AOD cleaning targets workflow
 
 #' Return AERONET points that intersect the polygon describing the area of
-#' interest, and include the cell ID (\code{idM21pair0}) from the reference
-#' CONUS MODIS grid.
+#' interest.
 #'
 #' @param stations data.table including coordiantes (\code{lon, lat}) points of
 #'   AERONET stations
 #' @param reg_polygon SF polygon defining the area of interest
-#' @param refgrid_path FST with coordinates of all raster cells in the area of
-#'   interest
-#' @param refras_path path to MODIS reference raster stack
+#' @param new_crs the CRS to set the result to
 #' @return a subset of geometry points within the given polygon
-select_stations <- function(stations, reg_polygon, refgrid_path, refras_path){
+select_stations <- function(stations, reg_polygon, new_crs){
   stations = stations[Site_Name != "CART_SITE"]
     # This station is in the same place as "Cart_Site" and has
     # relatively few observations. It's not clear to what degree it's
     # a duplicate.
-  aerpts = st_as_sf(stations, coords = c("lon", "lat"), crs = 4326)
-  if(st_crs(aerpts) != st_crs(reg_polygon)){ # polygons are in nad83
-    aerpts <- st_transform(aerpts, crs = st_crs(reg_polygon))
-  }
-  aerpts <- aerpts[st_intersects(aerpts, reg_polygon, sparse = FALSE),]
-  aerpts <- station_cell_ids(aerpts, refgrid_path, refras_path) # now in sinusoidal CRS
-  aerpts
-}
-
-#' Get the unique ID of the grid cell an AERONET station is in.
-#'
-#' @param stations_sf SF points of AERONET stations
-#' @param refgrid_path FST with coordinates of all raster cells in the area of
-#'   interest
-#' @param refras_path path to MODIS reference raster stack
-#' @return SF points of AERONET stations with unique MODIS grid cell IDs added
-#'   (\code{idM21pair0})
-station_cell_ids = function(stations_sf, refgrid_path, refras_path){
-  gras = raster(refras_path, band = 4)
-  stations_sf = st_transform(stations_sf, crs = st_crs(gras))
-  stations_sf$cell_index = raster::extract(gras, as(stations_sf, 'Spatial'))
-
-  gDT = read_fst(refgrid_path, as.data.table = TRUE, columns = c('idM21pair0', 'cell_index'))
-  setkey(gDT, cell_index)
-  setDT(stations_sf)
-  setkey(stations_sf, cell_index)
-  stations_sf[gDT, idM21pair0 := idM21pair0]
-  stations_sf[, cell_index := NULL]
-  setkey(stations_sf, Site_Name)
-  stations_sf = st_sf(stations_sf)
-  # previous row names no longer meaningful after resorting
-  attributes(stations_sf)$row.names <- 1:nrow(stations_sf)
-  stations_sf
+  aerpts = st_transform(crs = st_crs(reg_polygon),
+      st_as_sf(stations, coords = c("lon", "lat"), crs = crs.lonlat))
+  aerpts <- st_transform(crs = new_crs,
+      aerpts[st_intersects(aerpts, reg_polygon, sparse = FALSE),])
+  `rownames<-`(aerpts[withr::with_collate("C", order(aerpts$Site_Name)),],
+      NULL)
 }
 
 #' Load Aeronet AOD measurement data from text files sourced from downloaded

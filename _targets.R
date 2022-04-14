@@ -55,6 +55,11 @@ all_dates = seq(
     lubridate::make_date(min(process_years)),
     lubridate::make_date(max(process_years), 12, 31),
     by = 1)
+example_date = as.Date("2010-07-01")
+  # This should be a date for which the satellite data of interest
+  # exists.
+stopifnot(example_date %in% all_dates)
+
 region_values = list(region = aoiname)
 sat_values = list(sat = sats)
 buffers_km = c(10, 30, 90, 270)
@@ -71,12 +76,6 @@ set1_targets = list(
              download(
                 "https://aeronet.gsfc.nasa.gov/aeronet_locations_v3.txt",
                 "aeronet_stations.txt")),
-  tar_target(refgrid_path,
-             '/data-belle/LST/MYD21A1/derived/conus_grid_2020.fst',
-             format = 'file'),
-  tar_target(refras_path,
-             '/data-belle/LST/MYD21A1/derived/conus_myd21_stack.tif',
-             format = 'file'),
   tar_target(aer_files_path,
             {p = download(
                  "https://aeronet.gsfc.nasa.gov/data_push/V3/AOD/AOD_Level20_All_Points_V3.tar.gz",
@@ -99,8 +98,6 @@ set1_targets = list(
     values = region_values,
     tar_target(buff,
                get_aoi_buffer(region)),
-    tar_target(aer,
-               select_stations(aer_stations, buff, refgrid_path, refras_path)),
     tar_target(satellite_hdf_files, get.earthdata(
                satellite_hdf_root,
                product = "MCD19A2.006",
@@ -109,6 +106,9 @@ set1_targets = list(
                dates = all_dates)),
 
     # Load AERONET data ####
+    tar_target(aer,
+               select_stations(aer_stations, buff, terra::crs(
+                   terra::rast(satellite_hdf_files[date == example_date, path[1]])))),
     tar_target(aer_nospace,
                sf::st_drop_geometry(aer)),
     tar_target(aer_data,
