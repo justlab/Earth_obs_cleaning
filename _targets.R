@@ -57,12 +57,14 @@ all_dates = seq(
     by = 1)
 example_date = as.Date("2010-07-01")
   # This should be a date for which the satellite data of interest
-  # exists.
+  # exists on all tiles.
 stopifnot(example_date %in% all_dates)
 
 region_values = list(region = aoiname)
 sat_values = list(sat = sats)
 buffers_km = c(10, 30, 90, 270)
+pred_round_digits = 5
+  # MCD19 AOD has 3 digits of precision, so this is a little more.
 agg_level = 10
 agg_thresh = 3
 features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
@@ -104,6 +106,8 @@ set1_targets = list(
                satellites = "terra.and.aqua",
                tiles = satellite_aod_tiles[[region]],
                dates = all_dates)),
+    tar_target(pred_grid, format = "fst_dt", make_pred_grid(
+               satellite_hdf_files[date == example_date, path])),
 
     # Load AERONET data ####
     tar_target(aer,
@@ -153,8 +157,11 @@ set1_targets = list(
                 {future::plan("multicore", workers = n.workers)
                  rbindlist(future.apply::future_lapply(pred_dates,
                      future.seed = c(terra = 1337, aqua = 1338)[sat],
-                     function(this_date)
-                         run_preds(full_model, features, pred_inputs(
+                     function(this_date) run_preds(
+                         full_model, features,
+                         grid = pred_grid,
+                         round_digits = pred_round_digits,
+                         data = pred_inputs(
                              features = features,
                              buffers_km = buffers_km,
                              satellite_hdf_files = satellite_hdf_files,

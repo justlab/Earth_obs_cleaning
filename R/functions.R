@@ -593,6 +593,17 @@ sf_to_ext <- function(sf, to_crs = NULL){
   ext(sv)
 }
 
+#' Compute the grid on which all predictions will be made. We assume
+#' that 1-m precision is sufficient and round the coordinates (both
+#' here and when matching other rasters to this grid).
+make_pred_grid = function(raster.paths)
+   {d = rbindlist(lapply(raster.paths, function(p)
+       {r = terra::rast(p)
+        lapply(as.data.table(round(xyFromCell(r, 1 : ncell(r)))),
+            as.integer)}))
+    setkey(d, x, y)
+    d}
+
 #' Prepare prediction table. Will predict values for every overpass in the
 #' specified region and dates.
 #'
@@ -782,16 +793,24 @@ dart_full <- function(
 }
 
 #' Predict the difference between MCD19 and AERONET
-run_preds = function(full_model, features, data){
+run_preds = function(full_model, features, grid, round_digits, data){
   data = data[!is.na(MCD19_AOD_470nm)]
   data[, pred_date := as.Date(dayint, '1970-01-01')]
 
-  model = xgboost::xgb.load(full_model$model_out_path)
-  predvec = predict(model, as.matrix(data[, features, with = FALSE]))
+  predvec = predict(
+      xgboost::xgb.load(full_model$model_out_path),
+      as.matrix(data[, features, with = FALSE]))
   # join predictions
-  outpred = data.table(data[, .(x, y, pred_date, op_id, MCD19_AOD_470nm)], preds = predvec)
-  outpred[, MCD19_adjust := MCD19_AOD_470nm - preds]
-  outpred
+  r = function(v) as.integer(round(10^round_digits * v))
+  data = data[, .(
+      pred_date,
+      overpass = op_id,
+      cell = grid[.(round(data$x), round(data$y)), which = T],
+      value_old = r(MCD19_AOD_470nm),
+      value_new = r(MCD19_AOD_470nm - predvec))]
+  assert(!anyNA(data))
+  setkey(data, pred_date, overpass, cell)
+  data
 }
 
 # Maps ####
