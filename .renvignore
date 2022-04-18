@@ -1,5 +1,0 @@
-# only track packages in the workflow
-*
-!_additional_packages.R
-!_targets_packages.R
-!_targets.R
