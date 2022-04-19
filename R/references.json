@@ -1,0 +1,62 @@
+[
+    {
+        "DOI": "10.1016/j.atmosenv.2020.117649",
+        "URL": "https://linkinghub.elsevier.com/retrieve/pii/S1352231020303812",
+        "accessed": {
+            "date-parts": [
+                [
+                    2022,
+                    4,
+                    4
+                ]
+            ]
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "Arfer",
+                "given": "Kodi B."
+            },
+            {
+                "family": "Rush",
+                "given": "Johnathan"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Shtein",
+                "given": "Alexandra"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Atmospheric Environment",
+        "container-title-short": "Atmospheric Environment",
+        "id": "just2020",
+        "issued": {
+            "date-parts": [
+                [
+                    2020
+                ]
+            ]
+        },
+        "language": "en",
+        "libraryid": "",
+        "page": "117649",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "title": "Advancing methodologies for applying machine learning and evaluating spatiotemporal models of fine particulate matter (PM2.5) using satellite data over large regions",
+        "type": "article-journal",
+        "volume": "239"
+    }
+]

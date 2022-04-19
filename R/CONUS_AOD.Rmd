@@ -1,6 +1,7 @@
 ---
 title: "Running `Earth_obs_cleaning` on MCD19A2: Results from CONUS"
 output: html_document
+bibliography: references.json
 ---
 
 ```{r setup, include=FALSE}
@@ -53,34 +54,20 @@ DT::datatable(cv_summary_tables$stat,
 ## Descriptives for the collocated dataset (Terra)
 
 ## Stratified results for Terra CV dataset
+
 ```{r stratified, echo=FALSE}
-performance_aod <- function(dt, ...){
-  performance_metrics(dt,
-                      ground_truth = "AOD_470nm",
-                      eo_raw = "MCD19_AOD_470nm",
-                      eo_pred = "aodhat")
-}
 tar_load(initial_cv_l2_terra_conus)
 dt <- initial_cv_l2_terra_conus$mDT_wPred
 if(!"aodhat" %in% colnames(dt)){
   dt[, aodhat := MCD19_AOD_470nm - diff_AOD_pred]
 }
-
-dtwrapper <- function(dt){
-  DT::datatable(dt,
-                rownames = FALSE,
-                fillContainer = FALSE,
-                autoHideNavigation = TRUE,
-                options = list(pageLength = 50,
-                               autoWidth = TRUE))
-}
 ```
 
 ### Performance by year
+
 ```{r strata_year, echo=FALSE, eval=TRUE}
 dtwrapper(dt[, performance_aod(.SD), keyby = year(aer_date)])
 ```
-
 
 ### Performance by month of year
 
@@ -192,13 +179,10 @@ dtwrapper(dt[, performance_aod(.SD), keyby = state.noaa.region])
 
 ```
 
-
 ## Agreement Plots
 
-*We can customize however we want*
-
 ```{r agreement_plot, warning=FALSE, echo=FALSE}
-p1 <- ggplot(dt) +
+p1 <- ggplot(dt[AOD_470nm < 1 & MCD19_AOD_470nm < 1]) +
   aes(AOD_470nm, MCD19_AOD_470nm) +
   geom_abline(linetype = "dashed") +
   geom_point(alpha = 0.01) +
@@ -206,9 +190,11 @@ p1 <- ggplot(dt) +
   scale_x_continuous("AERONET AOD 470nm", limits = c(0, 1)) +
   scale_y_continuous("MAIAC AOD 470nm", limits = c(0, 1)) +
   theme_bw() +
-  theme(aspect.ratio = 1)
+  theme(aspect.ratio = 1) + 
+  labs(caption = paste0("Not shown: ", dt[AOD_470nm > 1 | MCD19_AOD_470nm > 1, .N], " AOD values outside [0, 1]"))
 
-p2  <- ggplot(dt) +
+
+p2  <- ggplot(dt[AOD_470nm < 1 & aodhat > 0 & aodhat < 1]) +
   aes(AOD_470nm, aodhat) +
   geom_abline(linetype = "dashed") +
   geom_point(alpha = 0.01) +
@@ -216,15 +202,18 @@ p2  <- ggplot(dt) +
   scale_x_continuous("AERONET AOD 470nm", limits = c(0, 1)) +
   scale_y_continuous("Corrected AOD 470nm", limits = c(0, 1)) +
   theme_bw() +
-  theme(aspect.ratio = 1)
+  theme(aspect.ratio = 1) + 
+  labs(caption = paste0("Not shown: ", dt[AOD_470nm > 1 | aodhat > 1 | aodhat < 0, .N], " AOD values outside [0, 1]"))
 
 p1 + p2
 ```
 
 *Will add plot of agreement across bins of AOD*
 
-## SHAP interpretation ####
+## SHAP interpretation
+
 In decreasing order (from Terra collocated cross-validation predictions)
+
 ```{r shap_rank, echo=FALSE}
 # what do the SHAPs tell us?
 tar_load(initial_cv_l2_terra_conus)
@@ -232,7 +221,9 @@ shaps <- initial_cv_l2_terra_conus$"shap_score"
 # sort by importance
 kable(sort(sapply(abs(shaps), mean), decreasing = TRUE), 
       format = "html",
-      table.attr = "style='width:40%;'",
-      digits = 4, col.names = "Mean Abs SHAP")
-
+      table.attr = "style='width:30%;'",
+      digits = 3, col.names = "Mean Abs SHAP")
 ```
+
+*End of report*
+
