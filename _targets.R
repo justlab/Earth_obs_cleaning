@@ -1,10 +1,5 @@
 library(targets)
 library(tarchetypes)
-library(future)
-# library(future.callr)
-# plan(callr)
-# plan(multicore)
-plan(multisession)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Configuration ####
@@ -20,7 +15,6 @@ tar_option_set(
                'fst',
                'sf',
                'magrittr',
-               'future',
                'ggplot2',
                'SHAPforxgboost',
                'Just.universal',
@@ -158,27 +152,26 @@ set1_targets = list(
              list("test"), as.list(process_years))),
 
          tar_target(pred_out, format = "fst_dt",
-                   {future::plan("multicore", workers = n.workers)
-                    rbindlist(future.apply::future_lapply(
+                    rbindlist(parallel::mclapply(mc.cores = n.workers,
                         (if (pred_year == "test")
                             example_date else
                             all_dates[data.table::year(all_dates) == pred_year]),
-                        future.seed = c(terra = 1337, aqua = 1338)[sat],
-                        function(this_date) run_preds(
-                            full_model, features,
-                            grid = pred_grid,
-                            round_digits = pred_round_digits,
-                            data = pred_inputs(
-                                features = features,
-                                buffers_km = buffers_km,
-                                satellite_hdf_files = satellite_hdf_files,
-                                vrt_path = vrt_path,
-                                load_sat = sat,
-                                this_date = this_date,
-                                agg_level = agg_level,
-                                agg_thresh = agg_thresh,
-                                aoi = buff,
-                                pred_bbox = NULL))))}),
+                        function(this_date)
+                            with.temp.seed(list("predict", this_date, sat), run_preds(
+                                full_model, features,
+                                grid = pred_grid,
+                                round_digits = pred_round_digits,
+                                data = pred_inputs(
+                                    features = features,
+                                    buffers_km = buffers_km,
+                                    satellite_hdf_files = satellite_hdf_files,
+                                    vrt_path = vrt_path,
+                                    load_sat = sat,
+                                    this_date = this_date,
+                                    agg_level = agg_level,
+                                    agg_thresh = agg_thresh,
+                                    aoi = buff,
+                                    pred_bbox = NULL)))))),
 
         # Map Predictions ####
         tar_target(preds_ggplot,

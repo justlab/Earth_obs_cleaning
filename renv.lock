@@ -781,17 +781,6 @@
         "parallelly"
       ]
     },
-    "future.apply": {
-      "Package": "future.apply",
-      "Version": "1.8.1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "f568ce73d3d59582b0f7babd0eb33d07",
-      "Requirements": [
-        "future",
-        "globals"
-      ]
-    },
     "generics": {
       "Package": "generics",
       "Version": "0.1.2",

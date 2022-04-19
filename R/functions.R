@@ -178,10 +178,8 @@ get_focal_extent = function(x, c1, r1, radw){
 
 derive_mcd19_vars = function(aer_data, n.workers, ...)
   {aer_data[, chunk := match(aer_date, sort(unique(aer_date))) %% n.workers]
-   future::plan("multicore", workers = n.workers)
-   d = rbindlist(future.apply::future_lapply(
+   d = rbindlist(parallel::mclapply(mc.cores = n.workers,
        split(aer_data, by = "chunk"),
-       future.seed = 789L,
        function(chunk)
            chunk[, by = aer_date, .SDcols = colnames(chunk),
                derive_mcd19_vars_1day(.SD, ...)]))
@@ -210,6 +208,8 @@ derive_mcd19_vars = function(aer_data, n.workers, ...)
 derive_mcd19_vars_1day = function(aer_data, load_sat, buffers_km, aer_stn, satellite_hdf_files,
                                   agg_level, agg_thresh, vrt_path,
                                   rolldiff_limit = as.difftime(7.5, units = 'mins')){
+  set.seed.with.obj(list(
+      "derive_mcd19_vars_1day", aer_data$aer_date[1], load_sat))
   # 1. Prepare AERONET data
   aer_stn = st_sf(aer_stn) # testing whether passing in a DT version avoids error with vctrs package
   sv_aer = vect(aer_stn)
