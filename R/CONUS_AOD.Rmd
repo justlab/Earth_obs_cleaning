@@ -154,21 +154,20 @@ matched <- st_join(site_nostate,
 # ggplot() +
 #   geom_sf(data = usa, fill = NA) +
 #   geom_sf_text(data = matched, aes(label = toupper(substr(ID, 1, 1))), color = "red") + theme_minimal()
+dt[as.data.table(matched, key = "Site_Name"), ID := i.ID] 
 
 # where do our data come from (by State)?
 dt[, .(uniqueN(Site_Name), .N), by = ID][order(N, decreasing = T)]
 
 # trying to get from state names to state abbreviations
-dt[ , state.abb := state.abb[match(stringr::str_to_title(ID), state.name)]]
-dt[is.na(state.abb), .(ID, Site_Name, geometry)][, table(Site_Name)]
+# ugly capitalization
+dt[ , state.abb := state.abb.plusdc[match(stringr::str_to_title(ID), c(state.name, "District Of Columbia"))]]
 dt[, state.noaa.region := factor(
    sapply(state.abb, USE.NAMES = F,
        function(sa) if (sa %in% c("AK", "HI")) NA else
            names(noaa.regions)[which(sapply(noaa.regions, function(r)
                sa %in% r))]),
    levels = names(noaa.regions))]
-# unmatched locations
-dt[is.na(state.noaa.region), .(ID, state.abb, Site_Name, geometry)][unique(Site_Name), , mult = "first"]
 ```
 
 ```{r strata_noaa_regions, echo=FALSE}
@@ -226,4 +225,3 @@ kable(sort(sapply(abs(shaps), mean), decreasing = TRUE),
 ```
 
 *End of report*
-
