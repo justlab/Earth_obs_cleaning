@@ -151,37 +151,45 @@ set1_targets = list(
                                        features = features)),
 
       # Prediction ####
-      tar_target(pred_dates, seq.Date(from = as.Date('2003-01-01'), to = as.Date('2003-01-03'), by = "day")),
+      tar_map(
+         # Branch on the year, as well as a fake year "test" for which
+         # only one day is used.
+         values = list(pred_year = c(
+             list("test"), as.list(process_years))),
 
-      tar_target(pred_out, format = "fst_dt",
-                {future::plan("multicore", workers = n.workers)
-                 rbindlist(future.apply::future_lapply(pred_dates,
-                     future.seed = c(terra = 1337, aqua = 1338)[sat],
-                     function(this_date) run_preds(
-                         full_model, features,
-                         grid = pred_grid,
-                         round_digits = pred_round_digits,
-                         data = pred_inputs(
-                             features = features,
-                             buffers_km = buffers_km,
-                             satellite_hdf_files = satellite_hdf_files,
-                             vrt_path = vrt_path,
-                             load_sat = sat,
-                             this_date = this_date,
-                             agg_level = agg_level,
-                             agg_thresh = agg_thresh,
-                             aoi = buff,
-                             pred_bbox = NULL))))}),
+         tar_target(pred_out, format = "fst_dt",
+                   {future::plan("multicore", workers = n.workers)
+                    rbindlist(future.apply::future_lapply(
+                        (if (pred_year == "test")
+                            example_date else
+                            all_dates[data.table::year(all_dates) == pred_year]),
+                        future.seed = c(terra = 1337, aqua = 1338)[sat],
+                        function(this_date) run_preds(
+                            full_model, features,
+                            grid = pred_grid,
+                            round_digits = pred_round_digits,
+                            data = pred_inputs(
+                                features = features,
+                                buffers_km = buffers_km,
+                                satellite_hdf_files = satellite_hdf_files,
+                                vrt_path = vrt_path,
+                                load_sat = sat,
+                                this_date = this_date,
+                                agg_level = agg_level,
+                                agg_thresh = agg_thresh,
+                                aoi = buff,
+                                pred_bbox = NULL))))}),
 
-      # Map Predictions ####
-      tar_target(preds_ggplot,
-                 ggplot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3),
-                 packages = c('ggplot2', 'cowplot', 'data.table', 'fst')),
-      tar_target(preds_mapshot,
-                 mapshot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3,
-                                     use_jenks = TRUE, maxpixels = 2e6),
-                 packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda'),
-                 format = 'file')
+        # Map Predictions ####
+        tar_target(preds_ggplot,
+                   ggplot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3),
+                   packages = c('ggplot2', 'cowplot', 'data.table', 'fst')),
+        tar_target(preds_mapshot,
+                   mapshot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3,
+                                       use_jenks = TRUE, maxpixels = 2e6),
+                   packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda'),
+                   format = 'file')
+      )
     )
   )
 )
