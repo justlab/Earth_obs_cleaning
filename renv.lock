@@ -2534,10 +2534,10 @@
     },
     "xgboost": {
       "Package": "xgboost",
-      "Version": "1.5.0.2",
+      "Version": "1.6.0.1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "875a6fe13a0bba26e2c98aeec28604af",
+      "Hash": "d25eaad6dd96cab8930d13bc411425c5",
       "Requirements": [
         "Matrix",
         "data.table",

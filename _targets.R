@@ -152,6 +152,9 @@ set1_targets = list(
              list("test"), as.list(process_years))),
 
          tar_target(pred_out, format = "fst_dt",
+                   {if (Sys.getenv("OMP_NUM_THREADS") != "1")
+                      # https://github.com/dmlc/xgboost/issues/2094
+                        stop("The environment variable OMP_NUM_THREADS must be set to 1 before R starts to avoid a hang in `predict.xgb.Booster`.")
                     rbindlist(parallel::mclapply(mc.cores = n.workers,
                         (if (pred_year == "test")
                             example_date else
@@ -171,7 +174,7 @@ set1_targets = list(
                                     agg_level = agg_level,
                                     agg_thresh = agg_thresh,
                                     aoi = buff,
-                                    pred_bbox = NULL)))))),
+                                    pred_bbox = NULL)))))}),
 
         # Map Predictions ####
         tar_target(preds_ggplot,
