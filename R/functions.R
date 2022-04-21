@@ -537,7 +537,7 @@ cv_summary <- function(cv_list){
 #'
 #' Comparative cross-validation performance metrics with raw and corrected values.
 #' Takes a \code{data.table} and can be run across strata with a \code{by} statement.
-performance_metrics <- function(dt, ground_truth, eo_raw, eo_pred){
+performance_metrics <- function(dt, ground_truth, eo_raw, eo_pred, digits = 3){
   truth = quote(get(ground_truth))
   raw = quote(get(eo_raw))
   pred = quote(get(eo_pred))
@@ -546,7 +546,7 @@ performance_metrics <- function(dt, ground_truth, eo_raw, eo_pred){
   mse = function(v1, v2) mean((v1 - v2)^2)
   # rmse = function(v1, v2) sqrt(mean((v1 - v2)^2))
   mean_bias = function(v1, v2) mean(v1 - v2)
-  r = function(x) round(x, 4)
+  r = function(x) round(x, digits)
   list(
     # MAE_raw = r(mae(dt[, eval(raw)], dt[, eval(truth)])),
     # MAE_pred   = r(mae(dt[, eval(pred)], dt[, eval(truth)])),
@@ -558,7 +558,7 @@ performance_metrics <- function(dt, ground_truth, eo_raw, eo_pred){
     SD_truth   = r(sd(dt[, eval(truth)])),
     SD_pred  = r(sd(dt[, eval(pred)])),
     SD_raw   = r(sd(dt[, eval(raw)])),
-    pct_of_raw_mse = round(100 * (mse(dt[, eval(pred)], dt[, eval(truth)]) / mse(dt[, eval(raw)], dt[, eval(truth)])), 1),
+    # pct_of_raw_mse = round(100 * (mse(dt[, eval(pred)], dt[, eval(truth)]) / mse(dt[, eval(raw)], dt[, eval(truth)])), 1),
     bias_raw = r(mean_bias(dt[, eval(raw)], dt[, eval(truth)])),
     bias_pred = r(mean_bias(dt[, eval(pred)], dt[, eval(truth)])),
     r_raw = r(cor(dt[, eval(raw)], dt[, eval(truth)])),

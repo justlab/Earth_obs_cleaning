@@ -1,6 +1,10 @@
 ---
 title: "Running `Earth_obs_cleaning` on MCD19A2: Results from CONUS"
-output: html_document
+header-includes:
+  - \usepackage{float}
+  - \floatplacement{figure}{H}  #make every figure with caption = h, this was the fix
+output: pdf_document
+always_allow_html: true
 bibliography: references.json
 ---
 
@@ -16,6 +20,9 @@ library(patchwork)
 library(ggplot2)
 library(sf)
 library(knitr)
+library(kableExtra)
+# library(flextable)
+# set_flextable_defaults(fonts_ignore=TRUE)
 ```
 
 ```{r git_check, echo=FALSE}
@@ -43,15 +50,15 @@ Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD1
 
 ```{r table_cv_results, echo=FALSE}
 tar_load(cv_summary_tables)
-DT::datatable(cv_summary_tables$stat,
-              rownames = FALSE,
-              fillContainer = FALSE,
-              autoHideNavigation = TRUE,
-              options = list(pageLength = 50,
-                             autoWidth = TRUE))
+result <- (cv_summary_tables$stat)
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
+  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 ```
 
 ## Descriptives for the collocated dataset (Terra)
+
+*still to be added*
 
 ## Stratified results for Terra CV dataset
 
@@ -66,32 +73,48 @@ if(!"aodhat" %in% colnames(dt)){
 ### Performance by year
 
 ```{r strata_year, echo=FALSE, eval=TRUE}
-dtwrapper(dt[, performance_aod(.SD), keyby = year(aer_date)])
+result <- dt[, performance_aod(.SD), keyby = year(aer_date)]
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
+  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 ```
 
 ### Performance by month of year
 
 ```{r strata_month, echo=FALSE}
-dtwrapper(dt[, performance_aod(.SD), keyby = month(aer_date)])
+result <- dt[, performance_aod(.SD), keyby = month(aer_date)]
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
+  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 ```
 
 ### Performance by `qa_best`
 
 ```{r strata_qa, echo=FALSE}
-dtwrapper(dt[, performance_aod(.SD), by = qa_best])
+result <- dt[, performance_aod(.SD), by = qa_best]
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
+  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 ```
 
 ### Performance by being over water
 
-```{r strata_water, echo=FALSE}
-dtwrapper(dt[, performance_aod(.SD), by = qa_lwsi])
+```{r strata_water, echo=FALSE, fig.pos="H"}
+result <- dt[, performance_aod(.SD), by = qa_lwsi]
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
+  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 ```
 
 ### Performance by number of overpasses in collocation that site-day
 
-```{r strata_overpasses, echo=FALSE}
+```{r strata_overpasses, echo=FALSE, fig.pos="H"}
 dt[, overpasses := .N, by = c("Site_Name", "aer_date")]
-dtwrapper(dt[, performance_aod(.SD), keyby = overpasses])
+result <- dt[, performance_aod(.SD), keyby = overpasses]
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
+  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
+
 ```
 
 ### Performance by NOAA climate regions
@@ -170,9 +193,12 @@ dt[, state.noaa.region := factor(
    levels = names(noaa.regions))]
 ```
 
-```{r strata_noaa_regions, echo=FALSE}
+```{r strata_noaa_regions, echo=FALSE, fig.pos="H"}
 # performance by NOAA climate regions
-dtwrapper(dt[, performance_aod(.SD), keyby = state.noaa.region])
+result <- dt[, performance_aod(.SD), keyby = state.noaa.region]
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
+  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 
 # map by NOAA regions
 
@@ -180,7 +206,7 @@ dtwrapper(dt[, performance_aod(.SD), keyby = state.noaa.region])
 
 ## Agreement Plots
 
-```{r agreement_plot, warning=FALSE, echo=FALSE}
+```{r agreement_plot, echo=FALSE, dev='png', dpi=300}
 p1 <- ggplot(dt[AOD_470nm < 1 & MCD19_AOD_470nm < 1]) +
   aes(AOD_470nm, MCD19_AOD_470nm) +
   geom_abline(linetype = "dashed") +
@@ -209,6 +235,8 @@ p1 + p2
 
 *Will add plot of agreement across bins of AOD*
 
+------------------------------------------------------------------------
+
 ## SHAP interpretation
 
 In decreasing order (from Terra collocated cross-validation predictions)
@@ -218,10 +246,12 @@ In decreasing order (from Terra collocated cross-validation predictions)
 tar_load(initial_cv_l2_terra_conus)
 shaps <- initial_cv_l2_terra_conus$"shap_score"
 # sort by importance
-kable(sort(sapply(abs(shaps), mean), decreasing = TRUE), 
-      format = "html",
-      table.attr = "style='width:30%;'",
-      digits = 3, col.names = "Mean Abs SHAP")
+df_shap <- data.frame(meanabsshap = round(sort(sapply(abs(shaps), mean), decreasing = TRUE), 4))
+kbl(df_shap, col.names = "Mean |SHAP|")
+# df_shap$variable <- row.names(df_shap)
+# ft_shap <- flextable(df_shap[, c(2, 1)])
+# ft_shap <- set_header_labels(ft_shap, list(variable = "Variable", meanabsshap = "Mean Absolute SHAP"))
+# ft_shap
 ```
 
 *End of report*
