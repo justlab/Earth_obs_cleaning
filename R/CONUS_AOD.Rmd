@@ -50,17 +50,15 @@ Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD1
 
 ```{r table_cv_results, echo=FALSE}
 tar_load(cv_summary_tables)
-result <- (cv_summary_tables$stat)
+result <- (cv_summary_tables$stat)[, !"loss"]
 kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
   kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
+  row_spec(0,bold=TRUE) %>% column_spec(2:12, width = "1cm")
 ```
 
+Here **raw** is MCD19A2.V006 MAIAC AOD; **truth** is AERONET AOD interpolated to 470nm; and **pred** is MAIAC after applying an XGBoost modeled correction factor.
+
 ## Descriptives for the collocated dataset (Terra)
-
-*still to be added*
-
-## Stratified results for Terra CV dataset
 
 ```{r stratified, echo=FALSE}
 tar_load(initial_cv_l2_terra_conus)
@@ -69,6 +67,25 @@ if(!"aodhat" %in% colnames(dt)){
   dt[, aodhat := MCD19_AOD_470nm - diff_AOD_pred]
 }
 ```
+While our ultimate goal is to improve AOD, our dependent variable for predictive modeling is the difference of the AOD retrieval and the AERONET AOD which is a nicely symmetric and reasonably well-behaved distribution (an estimate of the retrieval error).
+
+```{r describe_dv, echo=FALSE, eval=TRUE}
+kable(summary(dt[, list(diff_AOD)]))
+
+ggplot(dt, aes(x = diff_AOD)) + 
+  geom_histogram(binwidth = 0.005) + 
+  scale_x_continuous("MAIAC AOD minus AERONET AOD") + 
+  coord_cartesian(xlim = c(-1, 1)) + 
+  labs(title = paste0("Histogram of difference in colocated AOD (n=", 
+                      dt[, .N], ")"),
+      caption = paste0("Not shown: ", dt[diff_AOD < -1 | diff_AOD > 1, .N], " AOD differences outside [-1, 1]")) + 
+  theme_bw()
+```
+
+*More still to be added*
+
+## Stratified results for Terra CV dataset
+Here we show our performance metrics in different subsets of the cross-validation results. These are all from the same model training, just slicing up how the performance looks in different contexts.
 
 ### Performance by year
 
@@ -78,6 +95,8 @@ kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>%
   kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
   row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 ```
+
+We expect more 2021 data to show up over time since Level 2.0 data are often quite late to be added to the AERONET datasets. The 2020 results (higher SD in AERONET, fewer sites, RMSE for MAIAC is higher) are a bit of an anomaly, but also, COVID could have impacted field campaigns and regular recalibration, etc. If we want to look at 2020 specifically, we may want to consider restricting to long-running sites.
 
 ### Performance by month of year
 
@@ -97,14 +116,7 @@ kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>%
   row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 ```
 
-### Performance by being over water
-
-```{r strata_water, echo=FALSE, fig.pos="H"}
-result <- dt[, performance_aod(.SD), by = qa_lwsi]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
-  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
-```
+The takeaway here is that even though the RMSE of MAIAC is substantially better for `qa_best` versus non-best pixels, the improvements in the predicted AOD make even the non-best pixels have lower RMSE than the raw MAIAC `qa_best` and in that sense, we are expanding the set of high quality data by correcting for biases related to QA flagging criteria.
 
 ### Performance by number of overpasses in collocation that site-day
 
@@ -239,7 +251,7 @@ p1 + p2
 
 ## SHAP interpretation
 
-In decreasing order (from Terra collocated cross-validation predictions)
+In decreasing order of variable importance (from Terra collocated cross-validation predictions)
 
 ```{r shap_rank, echo=FALSE}
 # what do the SHAPs tell us?
