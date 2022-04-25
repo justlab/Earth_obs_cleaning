@@ -760,10 +760,21 @@
     },
     "fst": {
       "Package": "fst",
-      "Version": "0.9.6",
+      "Version": "0.9.8",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "028dd1a72730b8960602812c29190d10",
+      "Hash": "34637e000c63c3de8d8aafceb82fd082",
+      "Requirements": [
+        "Rcpp",
+        "fstcore"
+      ]
+    },
+    "fstcore": {
+      "Package": "fstcore",
+      "Version": "0.9.8",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "e3f33e578f19436cc08196f79aaebcd7",
       "Requirements": [
         "Rcpp"
       ]
