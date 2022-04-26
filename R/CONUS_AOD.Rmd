@@ -10,18 +10,23 @@ bibliography: references.json
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
 ```
 
 ```{r basics, echo=FALSE}
-library(targets)
-library(data.table)
-library(DT)
-library(patchwork)
-library(ggplot2)
-library(sf)
-library(knitr)
-library(kableExtra)
-# library(flextable)
+suppressPackageStartupMessages(
+  {library(targets)
+    library(Just.universal)
+    library(data.table)
+    library(DT)
+    library(patchwork)
+    library(ggplot2)
+    library(sf)
+    library(Just.universal)
+    library(knitr)
+    library(kableExtra)
+    # library(flextable)
+  })
 # set_flextable_defaults(fonts_ignore=TRUE)
 ```
 
@@ -162,43 +167,40 @@ state.noaa.region = factor(
 
 # Contiguous US state boundaries
 # will replace with a region defined by Kodi later
-usa = st_as_sf(maps::map("state", fill = TRUE, plot = FALSE))
+conus = get_conus()
 ```
 
 ```{r get_noaa_regions, include=FALSE}
 # assign AERONET stations to states
 tar_load(aer_stations)
-aer_stations_sf <- st_as_sf(aer_stations, coords = c("lon", "lat"), crs = "epsg:4326")
-sf::sf_use_s2(FALSE) # we were getting errors about the USA geometry otherwise
-aer_stations_sf <- st_join(aer_stations_sf, usa)
-dt <- merge(dt, aer_stations_sf, by = "Site_Name")
+aer_stations_sf <- st_transform(crs = st_crs(conus), st_as_sf(aer_stations, coords = c("lon", "lat"), crs = "epsg:4326"))
+aer_stations_sf <- st_join(aer_stations_sf, conus)
+dt <- merge(dt, aer_stations_sf[, c("Site_Name", "STUSPS")], by = "Site_Name")
 # some Site_Names don't fall within land polygons for whatever reason
-dt[is.na(ID), table(Site_Name)]
+dt[is.na(STUSPS), table(Site_Name)]
 # where are the sites that didn't fall within a state?
-site_nostate <- st_as_sf(dt[is.na(ID), ][unique(Site_Name), .(Site_Name, `Site_Elevation(m)`, geometry), mult = "first"], crs = "epsg:4326")
+site_nostate <- st_as_sf(dt[is.na(STUSPS), ][unique(Site_Name), .(Site_Name, `Site_Elevation(m)`, geometry), mult = "first"])
 # ggplot() +
-#   geom_sf(data = usa, fill = NA) +
+#   geom_sf(data = conus, fill = NA) +
 #   geom_sf(data = site_nostate, color = "red")
 # what proportion of data are not in a state?
-dt[, proportions(table(is.na(ID)))]
+dt[, proportions(table(is.na(STUSPS)))]
 # assign these to the closest state
 matched <- st_join(site_nostate,
-                   usa,
+                   conus,
                    join=nngeo::st_nn, k=1)
 # plot these matchups
 # ggplot() +
-#   geom_sf(data = usa, fill = NA) +
-#   geom_sf_text(data = matched, aes(label = toupper(substr(ID, 1, 1))), color = "red") + theme_minimal()
-dt[as.data.table(matched, key = "Site_Name"), ID := i.ID] 
+#   geom_sf(data = conus, fill = NA) +
+#   geom_sf_text(data = matched, aes(label = STUSPS), color = "red") + theme_minimal()
+dt[as.data.table(matched, key = "Site_Name"), STUSPS := i.STUSPS] 
 
 # where do our data come from (by State)?
-dt[, .(uniqueN(Site_Name), .N), by = ID][order(N, decreasing = T)]
+dt[, .(uniqueN(Site_Name), .N), by = STUSPS][order(N, decreasing = T)]
 
-# trying to get from state names to state abbreviations
-# ugly capitalization
-dt[ , state.abb := state.abb.plusdc[match(stringr::str_to_title(ID), c(state.name, "District Of Columbia"))]]
+# assign NOAA region from state USPS codes
 dt[, state.noaa.region := factor(
-   sapply(state.abb, USE.NAMES = F,
+   sapply(STUSPS, USE.NAMES = F,
        function(sa) if (sa %in% c("AK", "HI")) NA else
            names(noaa.regions)[which(sapply(noaa.regions, function(r)
                sa %in% r))]),
@@ -212,8 +214,9 @@ kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>%
   kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
   row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
 
-# map by NOAA regions
-
+## map by NOAA regions
+# map_regions <- ggplot(conus) + geom_sf()
+# print(map_regions)
 ```
 
 ## Agreement Plots
