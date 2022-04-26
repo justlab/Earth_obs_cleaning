@@ -3,7 +3,7 @@
 #' Return AERONET points that intersect the polygon describing the area of
 #' interest.
 #'
-#' @param stations data.table including coordiantes (\code{lon, lat}) points of
+#' @param stations data.table including coordinates (\code{lon, lat}) points of
 #'   AERONET stations
 #' @param reg_polygon SF polygon defining the area of interest
 #' @param new_crs the CRS to set the result to
