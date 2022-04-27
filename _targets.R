@@ -205,9 +205,12 @@ report_targets = list(
 
 # Render CONUS AOD results ###
 paper_conus_targets = list(
-  tar_render(paper_conus,
+  tar_render(paper_conus_html,
+             'R/CONUS_AOD.Rmd', output_format = "html_document",
+             packages = c('sf', 'patchwork')),
+    tar_render(paper_conus_pdf, output_format = "pdf_document",
              'R/CONUS_AOD.Rmd',
-             packages = c('sf', 'DT', 'patchwork'))
+             packages = c('sf', 'patchwork'))
 )
 # Final targets list ####
 list(set1_targets, combined_target, report_targets, paper_conus_targets)

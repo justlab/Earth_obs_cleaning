@@ -3,9 +3,15 @@ title: "Running `Earth_obs_cleaning` on MCD19A2: Results from CONUS"
 header-includes:
   - \usepackage{float}
   - \floatplacement{figure}{H}  #make every figure with caption = h, this was the fix
-output: pdf_document
+  - \usepackage{helvet} \renewcommand\familydefault{\sfdefault}
+output_format: 
+  pdf_document: default
+  html_document: default
 always_allow_html: true
 bibliography: references.json
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding,
+  output_dir = "output", output_format = "all") })
 ---
 
 ```{r setup, include=FALSE}
@@ -28,6 +34,8 @@ suppressPackageStartupMessages(
     # library(flextable)
   })
 # set_flextable_defaults(fonts_ignore=TRUE)
+source(here::here("R/functions.R"))
+source(here::here("R/paper_functions.R"))
 ```
 
 ```{r git_check, echo=FALSE}
@@ -56,9 +64,11 @@ Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD1
 ```{r table_cv_results, echo=FALSE}
 tar_load(cv_summary_tables)
 result <- (cv_summary_tables$stat)[, !"loss"]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
-  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:12, width = "1cm")
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+    align = "l") %>% 
+  kable_styling(position = "left", 
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(1:12, width = "1.1cm")
 ```
 
 Here **raw** is MCD19A2.V006 MAIAC AOD; **truth** is AERONET AOD interpolated to 470nm; and **pred** is MAIAC after applying an XGBoost modeled correction factor.
@@ -96,9 +106,11 @@ Here we show our performance metrics in different subsets of the cross-validatio
 
 ```{r strata_year, echo=FALSE, eval=TRUE}
 result <- dt[, performance_aod(.SD), keyby = year(aer_date)]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
-  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+    align = "l") %>% 
+  kable_styling(position = "left", 
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
 ```
 
 We expect more 2021 data to show up over time since Level 2.0 data are often quite late to be added to the AERONET datasets. The 2020 results (higher SD in AERONET, fewer sites, RMSE for MAIAC is higher) are a bit of an anomaly, but also, COVID could have impacted field campaigns and regular recalibration, etc. If we want to look at 2020 specifically, we may want to consider restricting to long-running sites.
@@ -107,18 +119,22 @@ We expect more 2021 data to show up over time since Level 2.0 data are often qui
 
 ```{r strata_month, echo=FALSE}
 result <- dt[, performance_aod(.SD), keyby = month(aer_date)]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
-  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+    align = "l") %>% 
+  kable_styling(position = "left", 
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
 ```
 
 ### Performance by `qa_best`
 
 ```{r strata_qa, echo=FALSE}
 result <- dt[, performance_aod(.SD), by = qa_best]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
-  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+    align = "l") %>% 
+  kable_styling(position = "left", 
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
 ```
 
 The takeaway here is that even though the RMSE of MAIAC is substantially better for `qa_best` versus non-best pixels, the improvements in the predicted AOD make even the non-best pixels have lower RMSE than the raw MAIAC `qa_best` and in that sense, we are expanding the set of high quality data by correcting for biases related to QA flagging criteria.
@@ -128,10 +144,11 @@ The takeaway here is that even though the RMSE of MAIAC is substantially better 
 ```{r strata_overpasses, echo=FALSE, fig.pos="H"}
 dt[, overpasses := .N, by = c("Site_Name", "aer_date")]
 result <- dt[, performance_aod(.SD), keyby = overpasses]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
-  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
-
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+    align = "l") %>% 
+  kable_styling(position = "left", 
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
 ```
 
 ### Performance by NOAA climate regions
@@ -167,7 +184,7 @@ state.noaa.region = factor(
 
 # Contiguous US state boundaries
 # will replace with a region defined by Kodi later
-conus = get_conus()
+conus = st_transform(crs = crs.us.atlas, get_conus())
 ```
 
 ```{r get_noaa_regions, include=FALSE}
@@ -210,9 +227,11 @@ dt[, state.noaa.region := factor(
 ```{r strata_noaa_regions, echo=FALSE, fig.pos="H"}
 # performance by NOAA climate regions
 result <- dt[, performance_aod(.SD), keyby = state.noaa.region]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result))) %>% 
-  kable_styling(latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1cm")
+kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+    align = "l") %>% 
+  kable_styling(position = "left", 
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
 ```
 
 ```{r noaa_region_plot, echo=FALSE, dev='png', dpi=300}
@@ -226,14 +245,17 @@ conus$state.noaa.region <- factor(
 conus <- merge(conus, dt[, performance_aod(.SD), keyby = state.noaa.region], by = "state.noaa.region")
 conus_melt <- melt(as.data.table(conus[, c("geometry", "state.noaa.region", "RMSE_raw", "RMSE_pred")]),
                    id.vars = c("geometry", "state.noaa.region"))
-levels(conus_melt$variable) <- c("MCD19A2", "corrected AOD")
+levels(conus_melt$variable) <- c("MAIAC AOD", "corrected AOD")
 map_region_rmse <- ggplot(conus_melt, aes(geometry = geometry)) + 
   geom_sf(aes(fill = value)) + 
   geom_sf(data = dt[, .(.N, geometry = geometry[1]), by = Site_Name], aes(geometry = geometry, size = N), alpha = 0.1) + 
   facet_wrap(~variable, ncol = 1) + 
+  coord_sf(default_crs = st_crs(conus)) + 
   scale_size("colocated\nobservations", range = c(1, 3)) + 
   scale_fill_continuous("Regional\nRMSE") + 
-  theme_minimal()
+  theme_minimal() + 
+  theme(axis.text = element_blank(),
+        panel.grid.major = element_blank())
 map_region_rmse
 ```
 
@@ -273,14 +295,13 @@ p1 + p2
 ## SHAP interpretation
 
 In decreasing order of variable importance (from Terra collocated cross-validation predictions)
-
 ```{r shap_rank, echo=FALSE}
 # what do the SHAPs tell us?
 tar_load(initial_cv_l2_terra_conus)
 shaps <- initial_cv_l2_terra_conus$"shap_score"
 # sort by importance
 df_shap <- data.frame(meanabsshap = round(sort(sapply(abs(shaps), mean), decreasing = TRUE), 4))
-kbl(df_shap, col.names = "Mean |SHAP|")
+kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
 # df_shap$variable <- row.names(df_shap)
 # ft_shap <- flextable(df_shap[, c(2, 1)])
 # ft_shap <- set_header_labels(ft_shap, list(variable = "Variable", meanabsshap = "Mean Absolute SHAP"))
