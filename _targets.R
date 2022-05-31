@@ -184,6 +184,9 @@ set1_targets = list(
                                     aoi = buff,
                                     pred_bbox = NULL)))))}),
 
+        # Compare predictions to ground observations
+        tar_target(ground_comparison, satellite_vs_ground(pred_out, ground_obs)),
+
         # Map Predictions ####
         tar_target(preds_ggplot,
                    ggplot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3),

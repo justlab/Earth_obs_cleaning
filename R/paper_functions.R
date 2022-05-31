@@ -52,3 +52,21 @@ get_ground_obs = function(years, grid)
     setkey(d, date, cell, lon, lat)
     setcolorder(d)
     d}
+
+satellite_vs_ground = function(satellite, ground)
+   {d = merge(
+       satellite[, .(
+          date = pred_date,
+          overpass, cell,
+          satellite_value_old = value_old,
+          satellite_value_new = value_new)],
+       ground[, .(
+          date, cell, ground_value = value)],
+       by = c("date", "cell"))
+    # Find the weighted correlation of old and new satellite values
+    # with ground values.
+    d[, by = .(date, cell), weight := 1 / .N]
+    sapply(c("old", "new"), function(sv_type)
+        cov.wt(
+            d[, .(get(paste0("satellite_value_", sv_type)), ground_value)],
+            wt = d$weight, cor = T, method = "ML")$cor[1, 2])}
