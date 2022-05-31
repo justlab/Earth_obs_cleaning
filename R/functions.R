@@ -593,16 +593,12 @@ sf_to_ext <- function(sf, to_crs = NULL){
   ext(sv)
 }
 
-#' Compute the grid on which all predictions will be made. We assume
-#' that 1-m precision is sufficient and round the coordinates (both
-#' here and when matching other rasters to this grid).
+#' Compute the grid on which all predictions will be made.
 make_pred_grid = function(raster.paths)
-   {d = rbindlist(lapply(raster.paths, function(p)
-       {r = terra::rast(p)
-        lapply(as.data.table(round(xyFromCell(r, 1 : ncell(r)))),
-            as.integer)}))
-    setkey(d, x, y)
-    d}
+   {r = do.call(terra::merge,
+        lapply(raster.paths, function(p) terra::rast(p)[[1]]))
+    r$IGNORE = 0L
+    r[[2]]}
 
 #' Prepare prediction table. Will predict values for every overpass in the
 #' specified region and dates.
@@ -808,7 +804,7 @@ run_preds = function(full_model, features, grid, round_digits, data){
   data = data[, .(
       pred_date,
       overpass = op_id,
-      cell = grid[.(round(data$x), round(data$y)), which = T],
+      cell = as.integer(terra::cellFromXY(grid, cbind(x, y))),
       value_old = r(MCD19_AOD_470nm),
       value_new = r(MCD19_AOD_470nm - predvec))]
   assert(!anyNA(data))
