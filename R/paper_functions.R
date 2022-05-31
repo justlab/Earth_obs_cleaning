@@ -19,3 +19,36 @@ performance_aod <- function(dt, ...){
                       eo_raw = "MCD19_AOD_470nm",
                       eo_pred = "aodhat")
 }
+
+#' Get observations of PM_{2.5} from the Environmental Protection
+#' Agency's (EPA) Air Quality System. The unit is μg/m^3.
+#' File source: https://aqs.epa.gov/aqsweb/airdata/download_files.html#Daily
+#' Documentation: https://aqs.epa.gov/aqsweb/documents/about_aqs_data.html
+get_ground_obs = function(years, grid)
+   {aqs.url.root = "https://aqs.epa.gov/aqsweb/airdata"
+    parameter.code = 88101L
+      # PM_{2.5} from a federally approved reference or equivalent
+      # method (FRM/FEM).
+
+    d = rbindlist(lapply(years, function(the.year)
+       {fname = sprintf("daily_%d_%d.zip", parameter.code, the.year)
+        d = fread(
+            cmd = paste("unzip -p ", shQuote(download(
+                paste0(aqs.url.root, "/", fname),
+                file.path("aqs", fname)))),
+            select = c(
+               "Date Local", "Longitude", "Latitude",
+               "Event Type", "Sample Duration", "Arithmetic Mean"))
+        setnames(d, str_replace_all(names(d), " ", "."))
+        d[
+            Sample.Duration %in% c("24 HOUR", "24-HR BLK AVG") &
+                Event.Type != "Excluded",
+            .(date = Date.Local, lon = Longitude, lat = Latitude,
+               value = Arithmetic.Mean)]}))
+
+    d[, cell := as.integer(terra::cellFromXY(grid,
+        convert.crs(cbind(lon, lat), crs.lonlat, terra::crs(grid))))]
+    d = d[!is.na(cell)]
+    setkey(d, date, cell, lon, lat)
+    setcolorder(d)
+    d}

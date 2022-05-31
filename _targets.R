@@ -108,6 +108,8 @@ set1_targets = list(
                dates = all_dates)),
     tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
                satellite_hdf_files[date == example_date, path])),
+    tar_target(ground_obs, format = "fst_dt",
+               get_ground_obs(process_years, pred_grid)),
 
     # Load AERONET data ####
     tar_target(aer,
