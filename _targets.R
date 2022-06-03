@@ -67,6 +67,12 @@ features = c("MCD19_AOD_470nm", "dayint", "AOD_Uncertainty",
                c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
                paste0(buffers_km, "km"))))
 
+terra.rast.fmt = tar_format(
+    read = function(path)
+        terra::rast(path),
+    write = function(object, path)
+        terra::writeRaster(object, path, filetype = "GTiff"))
+
 set1_targets = list(
   tar_target(aer_stn_path,
              download(
@@ -100,8 +106,10 @@ set1_targets = list(
                satellites = "terra.and.aqua",
                tiles = satellite_aod_tiles[[region]],
                dates = all_dates)),
-    tar_target(pred_grid, format = "fst_dt", make_pred_grid(
+    tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
                satellite_hdf_files[date == example_date, path])),
+    tar_target(ground_obs, format = "fst_dt",
+               get_ground_obs(process_years, pred_grid)),
 
     # Load AERONET data ####
     tar_target(aer,
@@ -175,6 +183,9 @@ set1_targets = list(
                                     agg_thresh = agg_thresh,
                                     aoi = buff,
                                     pred_bbox = NULL)))))}),
+
+        # Compare predictions to ground observations
+        tar_target(ground_comparison, satellite_vs_ground(pred_out, ground_obs)),
 
         # Map Predictions ####
         tar_target(preds_ggplot,
