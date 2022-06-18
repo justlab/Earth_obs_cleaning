@@ -555,10 +555,10 @@ performance_metrics <- function(dt, ground_truth, eo_raw, eo_pred, digits = 3){
 
     RMSE_raw = r(sqrt(mse(v1 = dt[, eval(raw)], v2 = dt[, eval(truth)]))),
     RMSE_pred= r(sqrt(mse(v1 = dt[, eval(pred)], v2 = dt[, eval(truth)]))),
+    pct_of_raw_mse = round(100 * (mse(dt[, eval(pred)], dt[, eval(truth)]) / mse(dt[, eval(raw)], dt[, eval(truth)])), 1),
     SD_truth   = r(sd(dt[, eval(truth)])),
-    SD_pred  = r(sd(dt[, eval(pred)])),
     SD_raw   = r(sd(dt[, eval(raw)])),
-    # pct_of_raw_mse = round(100 * (mse(dt[, eval(pred)], dt[, eval(truth)]) / mse(dt[, eval(raw)], dt[, eval(truth)])), 1),
+    SD_pred  = r(sd(dt[, eval(pred)])),
     bias_raw = r(mean_bias(dt[, eval(raw)], dt[, eval(truth)])),
     bias_pred = r(mean_bias(dt[, eval(pred)], dt[, eval(truth)])),
     r_raw = r(cor(dt[, eval(raw)], dt[, eval(truth)])),
@@ -817,12 +817,12 @@ run_preds = function(full_model, features, grid, round_digits, data){
 #' Compare adjusted AOD to original
 #' @param data the data.table output of prediction
 #' @param viz_date the single date to visualize from the output predictions
-#' @param op_id the single overpass to visualize from the selected date
+#' @param viz_op the single overpass to visualize from the selected date
 #' @return vertically stacked ggplots comparing original and adjusted MCD19A2 AOD
-ggplot_orig_vs_adj = function(data, viz_date, viz_op){
-
-  data = data[pred_date == viz_date & op_id == viz_op,
-              .(x, y, MCD19_AOD_470nm, MCD19_adjust)]
+ggplot_orig_vs_adj = function(data, viz_date, viz_op, grid){
+  data = data[pred_date == viz_date & overpass == viz_op,
+              .(cell, MCD19_AOD_470nm = value_old * 0.00001, MCD19_adjust = value_new * 0.00001)]
+  data[, c("x", "y") := data.table(terra::xyFromCell(grid, cell))]
   orig = simple.pred.map(data, fillvar = 'MCD19_AOD_470nm')
   adj = simple.pred.map(data, fillvar = 'MCD19_adjust')
   title = ggdraw() + draw_label(paste(as.character(viz_date), 'Overpass', viz_op))
@@ -845,15 +845,18 @@ simple.pred.map = function(preds, fillvar, xvar = 'x', yvar = 'y',
 #'
 #' @param data the data.table output of prediction
 #' @param viz_date the single date to visualize from the output predictions
-#' @param op_id the single overpass to visualize from the selected date
+#' @param viz_op the single overpass to visualize from the selected date
+#' @param grid the base grid used for looking up cell coordinates
 #' @param maxpixels resample raster version of predictions to approxmimately
 #'   this many pixels and force the display in mapshot of this resolution
 #' @return mapview object with a layer for the original and adjusted MCD19A2 AOD
-mapshot_orig_vs_adj = function(data, viz_date, viz_op,
+mapshot_orig_vs_adj = function(data, viz_date, viz_op, grid,
                                use_jenks = FALSE, maxpixels = NULL){
-
-  data = data[pred_date == viz_date & op_id == viz_op,
-              .(x, y, MCD19_AOD_470nm, MCD19_adjust)]
+  data = data[pred_date == viz_date & overpass == viz_op,
+              .(cell, MCD19_AOD_470nm = value_old * 0.00001, MCD19_adjust = value_new * 0.00001)]
+  data[, c("x", "y") := data.table(terra::xyFromCell(grid, cell))]
+  data[, cell := NULL]
+  setcolorder(data, c("x", "y"))
   ras = rasterFromXYZ(data, crs = crs_sinu)
 
   # resample raster

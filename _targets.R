@@ -33,7 +33,7 @@ download = function(from, to, ...)
     download.update.meta(from, "/data-coco/Earth_obs_cleaning/downloads", to, ...)
 satellite_hdf_root = '/data-coco/Earth_obs_cleaning/earthdata'
 
-n.workers = 22L
+n.workers = 15L
 
 source('R/globals.R')
 source('R/data.R')
@@ -189,13 +189,14 @@ set1_targets = list(
 
         # Map Predictions ####
         tar_target(preds_ggplot,
-                   ggplot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3),
-                   packages = c('ggplot2', 'cowplot', 'data.table', 'fst')),
+                   ggplot_orig_vs_adj(pred_out, all_dates[data.table::year(all_dates) == pred_year][1], viz_op = 3, pred_grid),
+                   packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra')),
         tar_target(preds_mapshot,
-                   mapshot_orig_vs_adj(pred_out, pred_dates[1], viz_op = 3,
+                   mapshot_orig_vs_adj(pred_out, all_dates[data.table::year(all_dates) == pred_year][1], viz_op = 3, pred_grid,
                                        use_jenks = TRUE, maxpixels = 2e6),
-                   packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda'),
-                   format = 'file')
+                   packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
+                   format = 'file'
+                   )
       )
     )
   )
