@@ -66,7 +66,12 @@ satellite_vs_ground = function(satellite, ground)
     # Find the weighted correlation of old and new satellite values
     # with ground values.
     d[, by = .(date, cell), weight := 1 / .N]
-    sapply(c("old", "new"), function(sv_type)
+    out = lapply(c("old", "new"), function(sv_type)
         cov.wt(
             d[, .(get(paste0("satellite_value_", sv_type)), ground_value)],
-            wt = d$weight, cor = T, method = "ML")$cor[1, 2])}
+            wt = d$weight, cor = T, method = "ML")$cor[1, 2])
+    names(out) <- c("old", "new")
+    out[["nobs"]] = d[, .N]
+    out[["celldays"]] = d[, sum(weight)]
+    out
+    }

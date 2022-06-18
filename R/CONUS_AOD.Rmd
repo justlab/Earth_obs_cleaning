@@ -34,6 +34,7 @@ suppressPackageStartupMessages(
     library(knitr)
     library(kableExtra)
     library(RColorBrewer)
+    library(SHAPforxgboost)
     # library(flextable)
   })
 # set_flextable_defaults(fonts_ignore=TRUE)
@@ -74,7 +75,7 @@ kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
   row_spec(0,bold=TRUE) %>% column_spec(1:12, width = "1.1cm")
 ```
 
-Here **raw** is MCD19A2.V006 MAIAC AOD; **truth** is AERONET AOD interpolated to 470nm; and **pred** is MAIAC after applying an XGBoost modeled correction factor.
+Here **raw** is MCD19A2.V006 MAIAC AOD 470nm; **truth** is AERONET AOD interpolated to 470nm; and **pred** is MAIAC after applying an XGBoost modeled correction factor.
 
 ## Descriptives for the collocated dataset (Terra)
 
@@ -353,6 +354,21 @@ kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
 # ft_shap <- set_header_labels(ft_shap, list(variable = "Variable", meanabsshap = "Mean Absolute SHAP"))
 # ft_shap
 ```
-*Will add some scatterplots of these SHAPs*
+Summary visualization of SHAP contributions
+
+```{r shap_summary, echo=FALSE, dev='png', dpi=300}
+shap_long <- shap.prep(shap_contrib = initial_cv_l2_terra_conus$shap_score, 
+                       X_train = initial_cv_l2_terra_conus$mDT_wPred[, names(initial_cv_l2_terra_conus$shap_score), with = F])
+# **SHAP summary plot**
+shap.plot.summary(shap_long)
+```
+```{r shap_features, echo=FALSE, dev='png', dpi=300}
+g1 <- shap.plot.dependence(data_long = shap_long, x = 'dayint', y = 'Column_WV', color_feature = 'Column_WV') + ggtitle("(A) SHAP values of Column WV vs. Time trend")
+# g2 <- shap.plot.dependence(data_long = shap_long, x = 'dayint', y = 'MCD19_AOD_470nm', color_feature = 'MCD19_AOD_470nm') +  ggtitle("(B) SHAP values of MAIAC AOD vs. Time trend")
+# 
+# gridExtra::grid.arrange(g1, g2, ncol = 2)
+g1
+```
+
 
 *End of report*
