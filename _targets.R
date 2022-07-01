@@ -32,7 +32,11 @@ download = function(from, to, ...)
     download.update.meta(from, "/data-coco/Earth_obs_cleaning/downloads", to, ...)
 satellite_hdf_root = '/data-coco/Earth_obs_cleaning/earthdata'
 
-n.workers = 15L
+if(Sys.getenv("Earth_obs_cleaning_nthreads") == ""){
+  n.workers = pmax(1, parallel::detectCores() - 2)
+} else {
+  n.workers = as.integer(Sys.getenv("Earth_obs_cleaning_nthreads"))
+}
 
 source('R/globals.R')
 source('R/data.R')
