@@ -26,7 +26,6 @@ tar_option_set(
   error = 'abridge')
 
 tar_config_set(store = '/data-coco/Earth_obs_cleaning/targets')
-Sys.setenv(RSTUDIO_PANDOC = '/usr/lib/rstudio-server/bin/pandoc')
 intermediate.path = function(...)
    file.path('/data-coco/Earth_obs_cleaning/intermediate', ...)
 download = function(from, to, ...)
