@@ -23,7 +23,9 @@ tar_option_set(
                'data.table'),
   format = 'qs',
   workspace_on_error = TRUE,
-  error = 'abridge')
+  error = 'abridge',
+  memory = "transient",
+  garbage_collection = TRUE)
 
 tar_config_set(store = '/data-coco/Earth_obs_cleaning/targets')
 intermediate.path = function(...)
