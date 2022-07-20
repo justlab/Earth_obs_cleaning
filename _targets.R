@@ -163,17 +163,18 @@ set1_targets = list(
          # only one day is used.
          values = list(pred_year = c(
              list("test"), as.list(process_years))),
-
-         tar_target(pred_out, format = "fst_dt",
+         tar_map(
+           values = list(pred_month = 1:12),
+           tar_target(pred_out, format = "qs",
                    {if (Sys.getenv("OMP_NUM_THREADS") != "1")
                       # https://github.com/dmlc/xgboost/issues/2094
                         stop("The environment variable OMP_NUM_THREADS must be set to 1 before R starts to avoid a hang in `predict.xgb.Booster`.")
-                    rbindlist(parallel::mclapply(mc.cores = n.workers,
+                    parallel::mclapply(mc.cores = n.workers,
                         (if (pred_year == "test")
                             example_date else
-                            all_dates[data.table::year(all_dates) == pred_year]),
+                            all_dates[data.table::year(all_dates) == pred_year & data.table::month(all_dates) == pred_month]),
                         function(this_date)
-                            with.temp.seed(list("predict", this_date, sat), run_preds(
+                          with.temp.seed(list("predict", this_date, sat), run_preds(
                                 full_model, features,
                                 grid = pred_grid,
                                 round_digits = pred_round_digits,
@@ -187,22 +188,21 @@ set1_targets = list(
                                     agg_level = agg_level,
                                     agg_thresh = agg_thresh,
                                     aoi = buff,
-                                    pred_bbox = NULL)))))}),
-
+                                    pred_bbox = NULL))))})))
         # Compare predictions to ground observations
-        tar_target(ground_comparison, satellite_vs_ground(pred_out, ground_obs)),
+        # tar_target(ground_comparison, satellite_vs_ground(rbindlist(pred_out), ground_obs)),
 
-        # Map Predictions ####
-        tar_target(preds_ggplot,
-                   ggplot_orig_vs_adj(pred_out, all_dates[data.table::year(all_dates) == pred_year][1], viz_op = 3, pred_grid),
-                   packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra')),
-        tar_target(preds_mapshot,
-                   mapshot_orig_vs_adj(pred_out, all_dates[data.table::year(all_dates) == pred_year][1], viz_op = 3, pred_grid,
-                                       use_jenks = TRUE, maxpixels = 2e6),
-                   packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
-                   format = 'file'
-                   )
-      )
+        # # Map Predictions ####
+        # tar_target(preds_ggplot,
+        #            ggplot_orig_vs_adj(pred_out, all_dates[data.table::year(all_dates) == pred_year][1], viz_op = 3, pred_grid),
+        #            packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra')),
+        # tar_target(preds_mapshot,
+        #            mapshot_orig_vs_adj(pred_out, all_dates[data.table::year(all_dates) == pred_year][1], viz_op = 3, pred_grid,
+        #                                use_jenks = TRUE, maxpixels = 2e6),
+        #            packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
+        #            format = 'file'
+        #            )
+
     )
   )
 )
