@@ -53,15 +53,26 @@ get_ground_obs = function(years, grid)
     setcolorder(d)
     d}
 
+#' Get all satellite observations at cells that ever contain AQS
+#' monitors.
+satellite_at_aqs_sites = function(region, years, sat, ground)
+    rbindlist(lapply(
+        as.character(outer(1:12, years, sprintf,
+            fmt = "pred_out_%d_%d_%s_%s", sat, region)),
+        function(tname)
+            rbindlist(lapply(tar_read_raw(tname), function(satellite)
+                if (is.null(satellite)) NULL else satellite[
+                    cell %in% ground$cell,
+                    .(
+                        date = pred_date,
+                        overpass, cell,
+                        satellite_value_old = value_old,
+                        satellite_value_new = value_new)]))))
+
 satellite_vs_ground = function(satellite, ground)
    {d = merge(
-       satellite[, .(
-          date = pred_date,
-          overpass, cell,
-          satellite_value_old = value_old,
-          satellite_value_new = value_new)],
-       ground[, .(
-          date, cell, ground_value = value)],
+       satellite,
+       ground[, .(date, cell, ground_value = value)],
        by = c("date", "cell"))
     # Find the weighted correlation of old and new satellite values
     # with ground values.

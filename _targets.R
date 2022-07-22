@@ -188,9 +188,13 @@ set1_targets = list(
                                     agg_level = agg_level,
                                     agg_thresh = agg_thresh,
                                     aoi = buff,
-                                    pred_bbox = NULL))))})))
-        # Compare predictions to ground observations
-        # tar_target(ground_comparison, satellite_vs_ground(rbindlist(pred_out), ground_obs)),
+                                    pred_bbox = NULL))))}))),
+
+      tar_target(pred_at_aqs, format = "fst_dt",
+          satellite_at_aqs_sites(region, process_years, sat, ground_obs)),
+
+      tar_target(ground_comparison,
+          satellite_vs_ground(pred_at_aqs, ground_obs))
 
         # # Map Predictions ####
         # tar_target(preds_ggplot,
