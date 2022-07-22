@@ -197,11 +197,16 @@ set1_targets = list(
           satellite_vs_ground(pred_at_aqs, ground_obs)),
 
       # Map Predictions ####
+
+      tar_target(median_mse_date, initial_cv_l2$mDT_wPred
+          [, by = aer_date, mean((diff_AOD_pred - diff_AOD)^2)]
+          [which.min(abs(V1 - median(V1))), aer_date]),
+
       tar_target(preds_ggplot,
-                  ggplot_orig_vs_adj(pred_out_1_2016[[8]], viz_op = 3, pred_grid),
+                  ggplot_orig_vs_adj(pred_out_3_2005[[27]], viz_op = 3, pred_grid),
                   packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra')),
       tar_target(preds_mapshot,
-                  mapshot_orig_vs_adj(pred_out_1_2016[[8]], viz_op = 3, pred_grid,
+                  mapshot_orig_vs_adj(pred_out_3_2005[[27]], viz_op = 3, pred_grid,
                                       use_jenks = TRUE, maxpixels = 2e6),
                   packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
                   format = 'file'
