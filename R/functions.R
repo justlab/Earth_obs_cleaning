@@ -816,16 +816,15 @@ run_preds = function(full_model, features, grid, round_digits, data){
 
 #' Compare adjusted AOD to original
 #' @param data the data.table output of prediction
-#' @param viz_date the single date to visualize from the output predictions
 #' @param viz_op the single overpass to visualize from the selected date
 #' @return vertically stacked ggplots comparing original and adjusted MCD19A2 AOD
-ggplot_orig_vs_adj = function(data, viz_date, viz_op, grid){
-  data = data[pred_date == viz_date & overpass == viz_op,
+ggplot_orig_vs_adj = function(data, viz_op, grid){
+  data = data[overpass == viz_op,
               .(cell, MCD19_AOD_470nm = value_old * 0.00001, MCD19_adjust = value_new * 0.00001)]
   data[, c("x", "y") := data.table(terra::xyFromCell(grid, cell))]
   orig = simple.pred.map(data, fillvar = 'MCD19_AOD_470nm')
   adj = simple.pred.map(data, fillvar = 'MCD19_adjust')
-  title = ggdraw() + draw_label(paste(as.character(viz_date), 'Overpass', viz_op))
+  title = ggdraw() + draw_label(paste('Overpass', viz_op))
   cowplot::plot_grid(title, orig, adj, ncol = 1, align = 'v', axis = 'r')
 }
 
@@ -844,15 +843,14 @@ simple.pred.map = function(preds, fillvar, xvar = 'x', yvar = 'y',
 #' Interactively compare adjusted AOD to original
 #'
 #' @param data the data.table output of prediction
-#' @param viz_date the single date to visualize from the output predictions
 #' @param viz_op the single overpass to visualize from the selected date
 #' @param grid the base grid used for looking up cell coordinates
 #' @param maxpixels resample raster version of predictions to approxmimately
 #'   this many pixels and force the display in mapshot of this resolution
 #' @return mapview object with a layer for the original and adjusted MCD19A2 AOD
-mapshot_orig_vs_adj = function(data, viz_date, viz_op, grid,
+mapshot_orig_vs_adj = function(data, viz_op, grid,
                                use_jenks = FALSE, maxpixels = NULL){
-  data = data[pred_date == viz_date & overpass == viz_op,
+  data = data[overpass == viz_op,
               .(cell, MCD19_AOD_470nm = value_old * 0.00001, MCD19_adjust = value_new * 0.00001)]
   data[, c("x", "y") := data.table(terra::xyFromCell(grid, cell))]
   data[, cell := NULL]

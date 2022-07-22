@@ -194,18 +194,18 @@ set1_targets = list(
           satellite_at_aqs_sites(region, process_years, sat, ground_obs)),
 
       tar_target(ground_comparison,
-          satellite_vs_ground(pred_at_aqs, ground_obs))
+          satellite_vs_ground(pred_at_aqs, ground_obs)),
 
-        # # Map Predictions ####
-        # tar_target(preds_ggplot,
-        #            ggplot_orig_vs_adj(pred_out, all_dates[data.table::year(all_dates) == pred_year][1], viz_op = 3, pred_grid),
-        #            packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra')),
-        # tar_target(preds_mapshot,
-        #            mapshot_orig_vs_adj(pred_out, all_dates[data.table::year(all_dates) == pred_year][1], viz_op = 3, pred_grid,
-        #                                use_jenks = TRUE, maxpixels = 2e6),
-        #            packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
-        #            format = 'file'
-        #            )
+      # Map Predictions ####
+      tar_target(preds_ggplot,
+                  ggplot_orig_vs_adj(pred_out_1_2016[[8]], viz_op = 3, pred_grid),
+                  packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra')),
+      tar_target(preds_mapshot,
+                  mapshot_orig_vs_adj(pred_out_1_2016[[8]], viz_op = 3, pred_grid,
+                                      use_jenks = TRUE, maxpixels = 2e6),
+                  packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
+                  format = 'file'
+                  )
 
     )
   )
