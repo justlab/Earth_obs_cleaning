@@ -236,7 +236,7 @@ paper_conus_targets = list(
              packages = c('sf', 'patchwork')),
     tar_render(paper_conus_pdf, output_format = "pdf_document",
              'R/CONUS_AOD.Rmd',
-             packages = c('sf', 'patchwork'))
+             packages = c('sf', 'patchwork', 'magick'))
 )
 # Final targets list ####
 list(set1_targets, combined_target, report_targets, paper_conus_targets)
