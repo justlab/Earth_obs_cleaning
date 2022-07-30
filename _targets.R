@@ -20,7 +20,8 @@ tar_option_set(
                'Just.universal',
                'xgboost',
                'parallel',
-               'data.table'),
+               'data.table',
+               'arrow'),
   format = 'qs',
   workspace_on_error = TRUE,
   error = 'abridge',
@@ -165,11 +166,11 @@ set1_targets = list(
              list("test"), as.list(process_years))),
          tar_map(
            values = list(pred_month = 1:12),
-           tar_target(pred_out, format = "qs",
+           tar_target(pred_out, format = "parquet",
                    {if (Sys.getenv("OMP_NUM_THREADS") != "1")
                       # https://github.com/dmlc/xgboost/issues/2094
                         stop("The environment variable OMP_NUM_THREADS must be set to 1 before R starts to avoid a hang in `predict.xgb.Booster`.")
-                    parallel::mclapply(mc.cores = n.workers,
+                    rbindlist(parallel::mclapply(mc.cores = n.workers,
                         (if (pred_year == "test")
                             example_date else
                             all_dates[data.table::year(all_dates) == pred_year & data.table::month(all_dates) == pred_month]),
@@ -188,7 +189,7 @@ set1_targets = list(
                                     agg_level = agg_level,
                                     agg_thresh = agg_thresh,
                                     aoi = buff,
-                                    pred_bbox = NULL))))}))),
+                                    pred_bbox = NULL)))))}))),
 
       tar_target(pred_at_aqs, format = "fst_dt",
           satellite_at_aqs_sites(region, process_years, sat, ground_obs)),
