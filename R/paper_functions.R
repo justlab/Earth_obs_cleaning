@@ -59,15 +59,17 @@ satellite_at_aqs_sites = function(region, years, sat, ground)
     rbindlist(lapply(
         as.character(outer(1:12, years, sprintf,
             fmt = "pred_out_%d_%d_%s_%s", sat, region)),
-        function(tname)
-            rbindlist(lapply(tar_read_raw(tname), function(satellite)
-                if (is.null(satellite)) NULL else satellite[
-                    cell %in% ground$cell,
-                    .(
-                        date = pred_date,
-                        overpass, cell,
-                        satellite_value_old = value_old,
-                        satellite_value_new = value_new)]))))
+        function(tname){
+          satellite = tar_read_raw(tname)
+          if (nrow(satellite) == 0) NULL else satellite[
+            cell %in% unique(ground$cell),
+            .(
+              date = pred_date,
+              overpass, cell,
+              satellite_value_old = value_old,
+              satellite_value_new = value_new)]
+        }
+    ))
 
 satellite_vs_ground = function(satellite, ground)
    {d = merge(
