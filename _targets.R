@@ -204,10 +204,10 @@ set1_targets = list(
           [which.min(abs(V1 - median(V1))), aer_date]),
 
       tar_target(preds_ggplot,
-                  ggplot_orig_vs_adj(pred_out_3_2005[[27]], viz_op = 3, pred_grid),
+                  ggplot_orig_vs_adj(pred_out_4_2011[pred_date == as.Date("2011-04-18")], viz_op = 3, pred_grid),
                   packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra')),
       tar_target(preds_mapshot,
-                  mapshot_orig_vs_adj(pred_out_3_2005[[27]], viz_op = 3, pred_grid,
+                  mapshot_orig_vs_adj(pred_out_4_2011[pred_date == as.Date("2011-04-18")], viz_op = 3, pred_grid,
                                       use_jenks = TRUE, maxpixels = 2e6),
                   packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
                   format = 'file'
