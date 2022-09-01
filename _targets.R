@@ -28,12 +28,15 @@ tar_option_set(
   memory = "transient",
   garbage_collection = TRUE)
 
-tar_config_set(store = '/data-coco/Earth_obs_cleaning/targets')
+data.dir = Sys.getenv("EARTH_OBS_CLEANING_DATA_DIR")
+stopifnot(dir.exists(data.dir))
+
+tar_config_set(store = file.path(data.dir, 'targets'))
 intermediate.path = function(...)
-   file.path('/data-coco/Earth_obs_cleaning/intermediate', ...)
+   file.path(data.dir, 'intermediate', ...)
 download = function(from, to, ...)
-    download.update.meta(from, "/data-coco/Earth_obs_cleaning/downloads", to, ...)
-satellite_hdf_root = '/data-coco/Earth_obs_cleaning/earthdata'
+    download.update.meta(from, file.path(data.dir, "downloads"), to, ...)
+satellite_hdf_root = file.path(data.dir, 'earthdata')
 
 if(Sys.getenv("Earth_obs_cleaning_nthreads") == ""){
   n.workers = pmax(1, parallel::detectCores() - 2)
