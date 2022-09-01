@@ -38,11 +38,10 @@ download = function(from, to, ...)
     download.update.meta(from, file.path(data.dir, "downloads"), to, ...)
 satellite_hdf_root = file.path(data.dir, 'earthdata')
 
-if(Sys.getenv("Earth_obs_cleaning_nthreads") == ""){
-  n.workers = pmax(1, parallel::detectCores() - 2)
-} else {
-  n.workers = as.integer(Sys.getenv("Earth_obs_cleaning_nthreads"))
-}
+n.workers = Sys.getenv("EARTH_OBS_CLEANING_NTHREADS")
+n.workers = (if (n.workers == "")
+    max(1, parallel::detectCores() - 2) else
+    as.integer(n.workers))
 
 source('R/globals.R')
 source('R/data.R')
