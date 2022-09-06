@@ -68,9 +68,9 @@
       "RemoteHost": "api.github.com",
       "RemoteRepo": "Just_universal",
       "RemoteUsername": "justlab",
-      "RemoteRef": "c0340ac2332f0748d4850d82b728a6df5eea9f41",
-      "RemoteSha": "c0340ac2332f0748d4850d82b728a6df5eea9f41",
-      "Hash": "bee78ca49c1ee7d8618ac27499a49a46",
+      "RemoteRef": "29892e3fad8203a9f3b1f6de900c9e31952350c6",
+      "RemoteSha": "29892e3fad8203a9f3b1f6de900c9e31952350c6",
+      "Hash": "59f9f85795c9d92601c9353662ffbe80",
       "Requirements": [
         "DBI",
         "RSQLite",
@@ -90,6 +90,7 @@
         "readr",
         "rmarkdown",
         "sf",
+        "terra",
         "xgboost"
       ]
     },
