@@ -54,14 +54,17 @@ source('R/paper_functions.R')
 # Targets ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+example_date = as.Date("2010-07-03")
+  # This should be a date for which the satellite data of interest
+  # exists on all tiles.
 process_years = 2000:2021
 all_dates = seq(
     lubridate::make_date(min(process_years)),
     lubridate::make_date(max(process_years), 12, 31),
     by = 1)
-example_date = as.Date("2010-07-01")
-  # This should be a date for which the satellite data of interest
-  # exists on all tiles.
+if (Sys.getenv("EARTH_OBS_CLEANING_TEST_SMALL_DATERANGE") != "")
+   {process_years = year(example_date)
+    all_dates = example_date + (-1:1)}
 stopifnot(example_date %in% all_dates)
 
 region_values = list(region = aoiname)
