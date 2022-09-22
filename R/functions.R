@@ -178,11 +178,11 @@ get_focal_extent = function(x, c1, r1, radw){
 
 derive_mcd19_vars = function(aer_data, n.workers, ...)
   {aer_data[, chunk := match(aer_date, sort(unique(aer_date))) %% n.workers]
-   d = rbindlist(parallel::mclapply(mc.cores = n.workers,
+   d = rbindlist(Filter(nrow, parallel::mclapply(mc.cores = n.workers,
        split(aer_data, by = "chunk"),
        function(chunk)
            chunk[, by = aer_date, .SDcols = colnames(chunk),
-               derive_mcd19_vars_1day(.SD, ...)]))
+               derive_mcd19_vars_1day(.SD, ...)])))
    assert(nrow(unique(d[, .(Site_Name, stn_time)])) == nrow(d))
    assert(nrow(unique(d[, .(cell, overpass_time)])) == nrow(d))
    d}
