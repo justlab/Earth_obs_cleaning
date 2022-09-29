@@ -23,11 +23,15 @@ def get_tile_day(tile_day):
     out_dir.mkdir(parents = True, exist_ok = True)
     dir_url = f'{base_url}/{tile}/{date.year}/{date.strftime("%j")}/'
     for file_url in re.findall('<td><a href="([^"]+)', GET(dir_url)):
+        basename = Path(file_url).name
         file_url = requests.compat.urljoin(dir_url, file_url)
+        if basename.startswith('GO16_ABI12B_'):
+          # Skip this. We only need the files with "ABI12A".
+            continue
         subprocess.run(('curl',
             '--fail', '--remote-time', '--silent',
             str(file_url),
-            '-o', str(out_dir / Path(file_url).name)))
+            '-o', str(out_dir / basename)))
     return tile_day
 
 def main():
