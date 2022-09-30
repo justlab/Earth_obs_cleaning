@@ -63,6 +63,12 @@ Rendered: `r Sys.time()`
 
 Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD19A2 for Terra and Aqua satellites across the Continental USA, 2000-2021
 
+# Introduction
+
+# Methods
+
+# Results
+
 ## Main findings from cross-validation
 
 ```{r table_cv_results, echo=FALSE}
@@ -196,8 +202,8 @@ kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
 ```{r noaa_setup, echo=FALSE}
 noaa.regions = list(
   # https://www.ncdc.noaa.gov/monitoring-references/maps/us-climate-regions.php
-    Central = c("IL", "IN", "KY", "MO", "OH", "TN", "WV"),
-    East.North.Central = c("IA", "MI", "MN", "WI"),
+    Ohio.Valley = c("IL", "IN", "KY", "MO", "OH", "TN", "WV"), #previously 'Central'
+    Upper.Midwest = c("IA", "MI", "MN", "WI"), #previously 'East.North.Central'
     Northeast = c("DC", "CT", "DE", "ME", "MD", "MA", "NH", "NJ", "NY", "PA", "RI", "VT"),
       # Washington, DC, has no assigned NOAA climate region, so treat
       # it as part of Maryland.
@@ -206,7 +212,7 @@ noaa.regions = list(
     Southeast = c("AL", "FL", "GA", "NC", "SC", "VA"),
     Southwest = c("AZ", "CO", "NM", "UT"),
     West = c("CA", "NV"),
-    West.North.Central = c("MT", "NE", "ND", "SD", "WY"))
+    Northern.Rockies.and.Plains = c("MT", "NE", "ND", "SD", "WY")) #previously 'West.North.Central'
 
 state.abb.plusdc = c(state.abb, "DC")
 conus.states.plusdc = sort(setdiff(state.abb.plusdc, c("AK", "HI")))
