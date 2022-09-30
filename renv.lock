@@ -684,6 +684,16 @@
         "vctrs"
       ]
     },
+    "duckdb": {
+      "Package": "duckdb",
+      "Version": "0.5.1",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "ed86d0ef128329ddd146663edf61d039",
+      "Requirements": [
+        "DBI"
+      ]
+    },
     "e1071": {
       "Package": "e1071",
       "Version": "1.7-11",
