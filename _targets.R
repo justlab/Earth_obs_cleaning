@@ -31,10 +31,13 @@ source('R/paper_functions.R')
 # * Targets
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-example_date = as.Date("2010-07-03")
+example_date = switch(Wf$satellite.product,
   # This should be a date for which the satellite data of interest
   # exists on all tiles.
-process_years = 2000:2021
+    mcd19a2 = as.Date("2010-07-03"))
+process_years = switch(Wf$satellite.product,
+    mcd19a2 = 2000:2021)
+
 all_dates = seq(
     lubridate::make_date(min(process_years)),
     lubridate::make_date(max(process_years), 12, 31),
@@ -44,7 +47,6 @@ if (Sys.getenv("EARTH_OBS_CLEANING_TEST_SMALL_DATERANGE") != "")
     all_dates = example_date + (-1:1)}
 stopifnot(example_date %in% all_dates)
 
-sat_values = list(sat = sats)
 buffers_km = c(10, 30, 90, 270)
 pred_round_digits = 5
   # MCD19 AOD has 3 digits of precision, so this is a little more.
@@ -87,135 +89,127 @@ set1_targets = list(
     tar_target(vrt_path, prepare_vrt_directory(
         intermediate.path())),
 
-    tar_map(values = list(region = aoiname),
+    tar_target(buff, get_aoi_buffer(
+        Wf$region)),
+    tar_target(satellite_hdf_files, get.earthdata(
+        satellite_hdf_root,
+        product = "MCD19A2.006",
+        satellites = (if (Wf$satellite %in% c("terra", "aqua"))
+            "terra.and.aqua" else
+            stop()),
+        tiles = satellite_aod_tiles[[Wf$region]],
+        dates = all_dates)),
+    tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
+        satellite_hdf_files[date == example_date, path])),
+    tar_target(ground_obs, format = "fst_dt", get_ground_obs(
+        process_years, pred_grid)),
 
-        tar_target(buff, get_aoi_buffer(
-            region)),
-        tar_target(satellite_hdf_files, get.earthdata(
-            satellite_hdf_root,
-            product = "MCD19A2.006",
-            satellites = "terra.and.aqua",
-            tiles = satellite_aod_tiles[[region]],
-            dates = all_dates)),
-        tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
-            satellite_hdf_files[date == example_date, path])),
-        tar_target(ground_obs, format = "fst_dt", get_ground_obs(
-            process_years, pred_grid)),
+    # AERONET processing for this region
+    tar_target(aer, select_stations(
+        aer_stations,
+        buff,
+        terra::crs(terra::rast(
+            satellite_hdf_files[date == example_date, path[1]])))),
+    tar_target(aer_nospace, sf::st_drop_geometry(
+        aer)),
+    tar_target(aer_data, get_stn_data(
+        aod_dir = aer_files_path,
+        stations = aer_nospace)),
+    tar_target(aer_filtered, format = 'fst_dt', filter_aer_bydate(
+        aer_data, all_dates)),
 
-        # AERONET processing for this region
-        tar_target(aer, select_stations(
-            aer_stations,
-            buff,
-            terra::crs(terra::rast(
-                satellite_hdf_files[date == example_date, path[1]])))),
-        tar_target(aer_nospace, sf::st_drop_geometry(
-            aer)),
-        tar_target(aer_data, get_stn_data(
-            aod_dir = aer_files_path,
-            stations = aer_nospace)),
-        tar_target(aer_filtered, format = 'fst_dt', filter_aer_bydate(
-            aer_data, all_dates)),
+    # This step is where most of the satellite data is read.
+    tar_target(mcd19_vars, format = 'fst_dt', derive_mcd19_vars(
+        aer_filtered,
+        n.workers = n.workers,
+        load_sat = sat,
+        buffers_km = buffers_km,
+        aer_stn = as.data.table(aer),
+        satellite_hdf_files = satellite_hdf_files,
+        agg_level = agg_level,
+        agg_thresh = agg_thresh,
+        vrt_path = vrt_path)),
 
-        tar_map(values = list(sat = sats),
+    tar_target(traindata, prepare_dt(
+        mcd19_vars, date_range = all_dates)),
 
-            # This step is where most of the satellite data is read.
-            tar_target(mcd19_vars, format = 'fst_dt', derive_mcd19_vars(
-                aer_filtered,
-                n.workers = n.workers,
-                load_sat = sat,
-                buffers_km = buffers_km,
-                aer_stn = as.data.table(aer),
-                satellite_hdf_files = satellite_hdf_files,
-                agg_level = agg_level,
-                agg_thresh = agg_thresh,
-                vrt_path = vrt_path)),
+    # Modeling
+    tar_map(values = list(loss = c("l1", "l2")),
+        tar_target(initial_cv, initial_cv_dart(
+            traindata,
+            absolute = loss == "l1",
+            y_var = "diff_AOD",
+            features = features,
+            stn_var = "Site_Name"))),
+    tar_target(full_model, dart_full(
+        traindata,
+        y_var = "diff_AOD",
+        features = features)),
 
-            tar_target(traindata, prepare_dt(
-                mcd19_vars, date_range = all_dates)),
+    # Making new predictions
+    tar_map(
+        # Branch on the year, as well as a fake year "test" for which
+        # only one day is used.
+        values = list(pred_year = c(
+            list("test"), as.list(process_years))),
 
-            # Modeling
-            tar_map(values = list(loss = c("l1", "l2")),
-                tar_target(initial_cv, initial_cv_dart(
-                    traindata,
-                    absolute = loss == "l1",
-                    y_var = "diff_AOD",
-                    features = features,
-                    stn_var = "Site_Name"))),
-            tar_target(full_model, dart_full(
-                traindata,
-                y_var = "diff_AOD",
-                features = features)),
+        tar_map(values = list(pred_month = 1:12),
+            tar_target(pred_out, format = "parquet",
+               {if (Sys.getenv("OMP_NUM_THREADS") != "1")
+                  # https://github.com/dmlc/xgboost/issues/2094
+                    stop("The environment variable OMP_NUM_THREADS must be set to 1 before R starts to avoid a hang in `predict.xgb.Booster`.")
+                rbindlist(parallel::mclapply(mc.cores = n.workers,
+                    (if (pred_year == "test")
+                        example_date else
+                        all_dates[data.table::year(all_dates) == pred_year & data.table::month(all_dates) == pred_month]),
+                    function(this_date) with.temp.seed(
+                        list("predict", this_date, sat),
+                        run_preds(
+                            full_model,
+                            features,
+                            grid = pred_grid,
+                            round_digits = pred_round_digits,
+                            data = pred_inputs(
+                                features = features,
+                                buffers_km = buffers_km,
+                                satellite_hdf_files = satellite_hdf_files,
+                                vrt_path = vrt_path,
+                                load_sat = sat,
+                                this_date = this_date,
+                                agg_level = agg_level,
+                                agg_thresh = agg_thresh,
+                                aoi = buff,
+                                pred_bbox = NULL)))))}))),
 
-            # Making new predictions
-            tar_map(
-                # Branch on the year, as well as a fake year "test" for which
-                # only one day is used.
-                values = list(pred_year = c(
-                    list("test"), as.list(process_years))),
+    # Comparing AQS to our predictions
+    tar_target(pred_at_aqs, format = "fst_dt", satellite_at_aqs_sites(
+        Wf$region, process_years, sat, ground_obs)),
+    tar_target(ground_comparison, satellite_vs_ground(
+        pred_at_aqs, ground_obs)),
 
-                tar_map(values = list(pred_month = 1:12),
-                    tar_target(pred_out, format = "parquet",
-                       {if (Sys.getenv("OMP_NUM_THREADS") != "1")
-                          # https://github.com/dmlc/xgboost/issues/2094
-                            stop("The environment variable OMP_NUM_THREADS must be set to 1 before R starts to avoid a hang in `predict.xgb.Booster`.")
-                        rbindlist(parallel::mclapply(mc.cores = n.workers,
-                            (if (pred_year == "test")
-                                example_date else
-                                all_dates[data.table::year(all_dates) == pred_year & data.table::month(all_dates) == pred_month]),
-                            function(this_date) with.temp.seed(
-                                list("predict", this_date, sat),
-                                run_preds(
-                                    full_model,
-                                    features,
-                                    grid = pred_grid,
-                                    round_digits = pred_round_digits,
-                                    data = pred_inputs(
-                                        features = features,
-                                        buffers_km = buffers_km,
-                                        satellite_hdf_files = satellite_hdf_files,
-                                        vrt_path = vrt_path,
-                                        load_sat = sat,
-                                        this_date = this_date,
-                                        agg_level = agg_level,
-                                        agg_thresh = agg_thresh,
-                                        aoi = buff,
-                                        pred_bbox = NULL)))))}))),
-
-            # Comparing AQS to our predictions
-            tar_target(pred_at_aqs, format = "fst_dt", satellite_at_aqs_sites(
-                region, process_years, sat, ground_obs)),
-            tar_target(ground_comparison, satellite_vs_ground(
-                pred_at_aqs, ground_obs)),
-
-            # Maps
-            tar_target(median_mse_date, initial_cv_l2$mDT_wPred
-                [, by = aer_date, mean((diff_AOD_pred - diff_AOD)^2)]
-                [which.min(abs(V1 - median(V1))), aer_date]),
-            tar_target(preds_ggplot,
-                packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra'),
-                ggplot_orig_vs_adj(
-                    pred_out_4_2011[pred_date == as.Date("2011-04-18")],
-                    viz_op = 3,
-                    pred_grid)),
-            tar_target(preds_mapshot, format = 'file',
-                packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
-                mapshot_orig_vs_adj(
-                    pred_out_4_2011[pred_date == as.Date("2011-04-18")],
-                    viz_op = 3,
-                    pred_grid,
-                    use_jenks = TRUE,
-                    maxpixels = 2e6)))))
-
-# Combine all initial CV results into a list.
-set1u = unlist(set1_targets)
-combined_target = tar_combine(combined_cv,
-    command = list(!!!.x),
-    set1u[grep('initial_cv_l2', names(set1u))])
+    # Maps
+    tar_target(median_mse_date, initial_cv_l2$mDT_wPred
+        [, by = aer_date, mean((diff_AOD_pred - diff_AOD)^2)]
+        [which.min(abs(V1 - median(V1))), aer_date]),
+    tar_target(preds_ggplot,
+        packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra'),
+        ggplot_orig_vs_adj(
+            pred_out_4_2011[pred_date == as.Date("2011-04-18")],
+            viz_op = 3,
+            pred_grid)),
+    tar_target(preds_mapshot, format = 'file',
+        packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
+        mapshot_orig_vs_adj(
+            pred_out_4_2011[pred_date == as.Date("2011-04-18")],
+            viz_op = 3,
+            pred_grid,
+            use_jenks = TRUE,
+            maxpixels = 2e6)))
 
 # Render the CV report.
 report_targets = list(
   tar_target(cv_summary_tables, cv_summary(
-      combined_cv)),
+      initial_cv_l2)),
   tar_render(initial_cv_report,
       'R/initial_cv_report.Rmd'))
 
@@ -229,4 +223,4 @@ paper_conus_targets = list(
         'R/CONUS_AOD.Rmd'))
 
 # The final targets list
-list(set1_targets, combined_target, report_targets, paper_conus_targets)
+list(set1_targets, report_targets, paper_conus_targets)

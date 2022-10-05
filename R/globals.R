@@ -19,8 +19,16 @@ n.workers = (if (n.workers == "")
     max(1, parallel::detectCores() - 2) else
     as.integer(n.workers))
 
-# Region
-aoiname = "conus"
+# The most general workflow-defining variables.
+Wf = stringr::str_match_all(
+   Sys.getenv("EARTH_OBS_CLEANING_WORKFLOW"),
+   "([^ =]+)=([^ =]+)")[[1]]
+Wf = as.environment(`names<-`(as.list(Wf[,3]), Wf[,2]))
+stopifnot(Wf$outcome %in% c("aod"))
+stopifnot(Wf$satellite.product %in% c("mcd19a2"))
+stopifnot(Wf$satellite %in% c("terra", "aqua"))
+stopifnot(Wf$ground.product %in% c("aeronet"))
+stopifnot(Wf$region %in% c("conus"))
 
 satellite_aod_tiles = list(
     # Selected by hand in QGIS with this shapefile:
@@ -29,9 +37,6 @@ satellite_aod_tiles = list(
         data.table(h = 8:13, v = 4),
         data.table(h = 8:12, v = 5),
         data.table(h = 8:10, v = 6))[, sprintf("h%02dv%02d", h, v)])
-
-# which MODIS platforms to use
-sats = c("terra", "aqua")
 
 # for reporting purpose
 y_var = "diff_AOD"
