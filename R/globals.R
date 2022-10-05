@@ -4,6 +4,21 @@ library(data.table)
 # Globals ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+data.dir = Sys.getenv("EARTH_OBS_CLEANING_DATA_DIR")
+stopifnot(dir.exists(data.dir))
+intermediate.path = function(...)
+   file.path(data.dir, 'intermediate', ...)
+dir.create(intermediate.path(), showWarnings = F)
+download = function(from, to, ...)
+    download.update.meta(from, file.path(data.dir, "downloads"), to, ...)
+satellite_hdf_root = file.path(data.dir, 'earthdata')
+dir.create(satellite_hdf_root, showWarnings = F)
+
+n.workers = Sys.getenv("EARTH_OBS_CLEANING_NTHREADS")
+n.workers = (if (n.workers == "")
+    max(1, parallel::detectCores() - 2) else
+    as.integer(n.workers))
+
 # Region
 aoiname = "conus"
 
