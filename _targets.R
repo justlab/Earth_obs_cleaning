@@ -49,7 +49,7 @@ stopifnot(example_date %in% all_dates)
 
 buffers_km = c(10, 30, 90, 270)
 pred_round_digits = 5
-  # MCD19 AOD has 3 digits of precision, so this is a little more.
+  # MCD19A2 AOD has 3 digits of precision, so this is a little more.
 agg_level = 10
 agg_thresh = 3
 features = c(
