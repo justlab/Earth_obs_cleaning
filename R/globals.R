@@ -1,9 +1,5 @@
 library(data.table)
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Globals ####
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 data.dir = Sys.getenv("EARTH_OBS_CLEANING_DATA_DIR")
 stopifnot(dir.exists(data.dir))
 intermediate.path = function(...)

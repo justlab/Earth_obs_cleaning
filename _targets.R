@@ -1,9 +1,15 @@
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# * Setup
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+source('R/globals.R')
+source('R/data.R')
+source('R/functions.R')
+source('R/xgboost_cv.R')
+source('R/paper_functions.R')
+
 library(targets)
 library(tarchetypes)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# * Configuration
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 tar_config_set(
     config = file.path(data.dir, "targets.yaml"),
@@ -16,20 +22,6 @@ tar_option_set(
     error = 'abridge',
     memory = "transient",
     garbage_collection = TRUE)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# * Imports
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-source('R/globals.R')
-source('R/data.R')
-source('R/functions.R')
-source('R/xgboost_cv.R')
-source('R/paper_functions.R')
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# * Targets
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 example_date = switch(Wf$satellite.product,
   # This should be a date for which the satellite data of interest
@@ -65,6 +57,10 @@ terra.rast.fmt = tar_format(
         terra::rast(path),
     write = function(object, path)
         terra::writeRaster(object, path, filetype = "GTiff"))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# * Targets
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 set1_targets = list(
 
