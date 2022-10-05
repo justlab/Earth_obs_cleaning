@@ -5,6 +5,9 @@ library(tarchetypes)
 # * Configuration
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+tar_config_set(
+    config = file.path(data.dir, "targets.yaml"),
+    store = file.path(data.dir, "targets_store"))
 tar_option_set(
     packages = sapply(parse("R/libraries.R")[[1]][-1][[1]][-1],
         function(x) as.character(x[[2]])),
@@ -13,8 +16,6 @@ tar_option_set(
     error = 'abridge',
     memory = "transient",
     garbage_collection = TRUE)
-
-tar_config_set(store = file.path(data.dir, 'targets'))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # * Imports
