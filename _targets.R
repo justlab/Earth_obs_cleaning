@@ -6,10 +6,8 @@ library(tarchetypes)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 tar_option_set(
-    packages = strsplit(split = "\\s+", "
-        lubridate stringr raster terra jsonlite tibble fst sf magrittr
-        ggplot2 SHAPforxgboost Just.universal xgboost parallel
-        data.table arrow DBI")[[1]][-1],
+    packages = sapply(parse("R/libraries.R")[[1]][-1][[1]][-1],
+        function(x) as.character(x[[2]])),
     format = 'qs',
     workspace_on_error = TRUE,
     error = 'abridge',
