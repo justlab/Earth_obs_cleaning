@@ -126,28 +126,25 @@ set1_targets = list(
         aer_stations,
         buff,
         terra::crs(pred_grid))),
-    tar_target(aer_nospace, sf::st_drop_geometry(
-        aer)),
-    tar_target(aer_data, get_stn_data(
-        aod_dir = aer_files_path,
-        stations = aer_nospace)),
     tar_target(aer_filtered, format = 'fst_dt', filter_aer_bydate(
-        aer_data, all_dates)),
+        dates = all_dates,
+        get_stn_data(
+            aod_dir = aer_files_path,
+            stations = sf::st_drop_geometry(aer)))),
 
     # This step is where most of the satellite data is read.
-    tar_target(mcd19_vars, format = 'fst_dt', derive_mcd19_vars(
-        aer_filtered,
-        n.workers = n.workers,
-        load_sat = sat,
-        buffers_km = buffers_km,
-        aer_stn = as.data.table(aer),
-        satellite_hdf_files = satellite_hdf_files,
-        agg_level = agg_level,
-        agg_thresh = agg_thresh,
-        vrt_path = vrt_path)),
-
-    tar_target(traindata, prepare_dt(
-        mcd19_vars, date_range = all_dates)),
+    tar_target(traindata, format = 'fst_dt', prepare_dt(
+        date_range = all_date,
+        derive_mcd19_vars(
+            aer_filtered,
+            n.workers = n.workers,
+            load_sat = sat,
+            buffers_km = buffers_km,
+            aer_stn = as.data.table(aer),
+            satellite_hdf_files = satellite_hdf_files,
+            agg_level = agg_level,
+            agg_thresh = agg_thresh,
+            vrt_path = vrt_path))),
 
     # Modeling
     tar_map(values = list(loss = c("l1", "l2")),
