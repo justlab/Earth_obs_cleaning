@@ -1,5 +1,7 @@
 Earth_obs_cleaning is an R-based tool to predict the difference between AERONET and MCD19A2 satellite AOD, and apply that prediction to improve remotely sensed AOD.
 
+(The below hasn't been updated since 2b7c939087fb483372f3c339e605515d41ec3388.)
+
 # Installation
 
 A Unix-like operating system is assumed. We've developed the project on Ubuntu. A high-end machine may be required for running large workflows, but shouldn't be necessary for the test workflow described in the following section.
