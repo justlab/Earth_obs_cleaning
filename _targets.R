@@ -66,7 +66,7 @@ terra.rast.fmt = tar_format(
 # * Targets
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-set1_targets = list(
+list(
 
     # AERONET region-indepedent loading logic
     tar_target(aer_stn_path, download(
@@ -157,83 +157,4 @@ set1_targets = list(
     tar_target(full_model, dart_full(
         traindata,
         y_var = "diff_AOD",
-        features = features)),
-
-    # Making new predictions
-    tar_map(
-        # Branch on the year, as well as a fake year "test" for which
-        # only one day is used.
-        values = list(pred_year = c(
-            list("test"), as.list(process_years))),
-
-        tar_map(values = list(pred_month = 1:12),
-            tar_target(pred_out, format = "parquet",
-               {if (Sys.getenv("OMP_NUM_THREADS") != "1")
-                  # https://github.com/dmlc/xgboost/issues/2094
-                    stop("The environment variable OMP_NUM_THREADS must be set to 1 before R starts to avoid a hang in `predict.xgb.Booster`.")
-                rbindlist(parallel::mclapply(mc.cores = n.workers,
-                    (if (pred_year == "test")
-                        example_date else
-                        all_dates[data.table::year(all_dates) == pred_year & data.table::month(all_dates) == pred_month]),
-                    function(this_date) with.temp.seed(
-                        list("predict", this_date, sat),
-                        run_preds(
-                            full_model,
-                            features,
-                            grid = pred_grid,
-                            round_digits = pred_round_digits,
-                            data = pred_inputs(
-                                features = features,
-                                buffers_km = buffers_km,
-                                satellite_hdf_files = satellite_hdf_files,
-                                vrt_path = vrt_path,
-                                load_sat = sat,
-                                this_date = this_date,
-                                agg_level = agg_level,
-                                agg_thresh = agg_thresh,
-                                aoi = buff,
-                                pred_bbox = NULL)))))}))),
-
-    # Comparing AQS to our predictions
-    tar_target(pred_at_aqs, format = "fst_dt", satellite_at_aqs_sites(
-        Wf$region, process_years, sat, ground_obs)),
-    tar_target(ground_comparison, satellite_vs_ground(
-        pred_at_aqs, ground_obs)),
-
-    # Maps
-    tar_target(median_mse_date, initial_cv_l2$mDT_wPred
-        [, by = aer_date, mean((diff_AOD_pred - diff_AOD)^2)]
-        [which.min(abs(V1 - median(V1))), aer_date]),
-    tar_target(preds_ggplot,
-        packages = c('ggplot2', 'cowplot', 'data.table', 'fst', 'terra'),
-        ggplot_orig_vs_adj(
-            pred_out_4_2011[pred_date == as.Date("2011-04-18")],
-            viz_op = 3,
-            pred_grid)),
-    tar_target(preds_mapshot, format = 'file',
-        packages = c('mapview', 'raster', 'data.table', 'fst', 'rgeoda', 'terra'),
-        mapshot_orig_vs_adj(
-            pred_out_4_2011[pred_date == as.Date("2011-04-18")],
-            viz_op = 3,
-            pred_grid,
-            use_jenks = TRUE,
-            maxpixels = 2e6)))
-
-# Render the CV report.
-report_targets = list(
-  tar_target(cv_summary_tables, cv_summary(
-      initial_cv_l2)),
-  tar_render(initial_cv_report,
-      'R/initial_cv_report.Rmd'))
-
-# Render CONUS AOD results.
-paper_conus_targets = list(
-    tar_render(paper_conus_html, output_format = "html_document",
-        packages = c('sf', 'patchwork'),
-        'R/CONUS_AOD.Rmd'),
-    tar_render(paper_conus_pdf, output_format = "pdf_document",
-        packages = c('sf', 'patchwork', 'magick'),
-        'R/CONUS_AOD.Rmd'))
-
-# The final targets list
-list(set1_targets, report_targets, paper_conus_targets)
+        features = features)))
