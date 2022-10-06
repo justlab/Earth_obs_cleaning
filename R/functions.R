@@ -593,10 +593,30 @@ sf_to_ext <- function(sf, to_crs = NULL){
   ext(sv)
 }
 
+read_satellite_raster = function(satellite.product, tile, path)
+   {r = terra::rast(path)
+    if (satellite.product == "geonexl2")
+      # The coordinates are all wrong. Fix them.
+      # See "Example for 0.01x0.01 (1km) grid" at
+      # https://web.archive.org/web/20220119040921/https://www.nasa.gov/geonex/dataproducts
+       {terra::crs(r) = paste0("epsg:", crs.lonlat)
+        h0 = -180
+        v0 = 60
+        size = 6
+        m = stringr::str_match(tile, "h(\\d+)v(\\d+)")
+        assert(!anyNA(m))
+        h = as.integer(m[,2])
+        v = as.integer(m[,3])
+        terra::ext(r) = c(
+            h0 + (h + c(0, 1))*size,
+            v0 - (v + c(1, 0))*size)}
+    r}
+
 #' Compute the grid on which all predictions will be made.
-make_pred_grid = function(raster.paths)
-   {r = do.call(terra::merge,
-        lapply(raster.paths, function(p) terra::rast(p)[[1]]))
+make_pred_grid = function(satellite.product, earthdata.rows)
+   {r = do.call(terra::merge, lapply(1 : nrow(earthdata.rows),
+        function(i) with(earthdata.rows[i],
+            read_satellite_raster(satellite.product, tile, path))[[1]]))
     r$IGNORE = 0L
     r[[2]]}
 

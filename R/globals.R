@@ -2,6 +2,7 @@ library(data.table)
 
 data.dir = Sys.getenv("EARTH_OBS_CLEANING_DATA_DIR")
 stopifnot(dir.exists(data.dir))
+geonexl2.dir = file.path(data.dir, "geonexl2")
 intermediate.path = function(...)
    file.path(data.dir, 'intermediate', ...)
 dir.create(intermediate.path(), showWarnings = F)
@@ -21,8 +22,11 @@ Wf = stringr::str_match_all(
    "([^ =]+)=([^ =]+)")[[1]]
 Wf = as.environment(`names<-`(as.list(Wf[,3]), Wf[,2]))
 stopifnot(Wf$outcome %in% c("aod"))
-stopifnot(Wf$satellite.product %in% c("mcd19a2"))
-stopifnot(Wf$satellite %in% c("terra", "aqua"))
+stopifnot(
+    Wf$satellite.product == "mcd19a2" &&
+       Wf$satellite %in% c("terra", "aqua") ||
+    Wf$satellite.product == "geonexl2" &&
+       Wf$satellite == "goes16")
 stopifnot(Wf$ground.product %in% c("aeronet"))
 stopifnot(Wf$region %in% c("conus"))
 

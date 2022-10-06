@@ -23,12 +23,16 @@ tar_option_set(
     memory = "transient",
     garbage_collection = TRUE)
 
+daily.sat = Wf$satellite.product != "geonexl2"
+
 example_date = switch(Wf$satellite.product,
   # This should be a date for which the satellite data of interest
   # exists on all tiles.
-    mcd19a2 = as.Date("2010-07-03"))
+    mcd19a2 = as.Date("2010-07-03"),
+    geonexl2 = as.Date("2018-07-03"))
 process_years = switch(Wf$satellite.product,
-    mcd19a2 = 2000:2021)
+    mcd19a2 = 2000 : 2021,
+    geonexl2 = 2018 : 2019)
 
 all_dates = seq(
     lubridate::make_date(min(process_years)),
@@ -87,16 +91,33 @@ set1_targets = list(
 
     tar_target(buff, get_aoi_buffer(
         Wf$region)),
-    tar_target(satellite_hdf_files, get.earthdata(
-        satellite_hdf_root,
-        product = "MCD19A2.006",
-        satellites = (if (Wf$satellite %in% c("terra", "aqua"))
-            "terra.and.aqua" else
-            stop()),
-        tiles = satellite_aod_tiles[[Wf$region]],
-        dates = all_dates)),
+    tar_target(satellite_hdf_files, switch(Wf$satellite.product,
+        mcd19a2 = get.earthdata(
+            satellite_hdf_root,
+            product = "MCD19A2.006",
+            satellites = (if (Wf$satellite %in% c("terra", "aqua"))
+                "terra.and.aqua" else
+                stop()),
+            tiles = satellite_aod_tiles[[Wf$region]],
+            dates = all_dates),
+        geonexl2 =
+           {paths = dir(file.path(geonexl2.dir, Wf$satellite),
+                recursive = T, full.names = T)
+            data.table(
+                satellite = factor(Wf$satellite),
+                datetime = as.POSIXct(strptime(tz = "UTC",
+                    basename(paths),
+                    "GO16_ABI12A_%Y%j%H%M_")),
+                tile = factor(basename(dirname(paths))),
+                path = paths)})),
     tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
-        satellite_hdf_files[date == example_date, path])),
+        Wf$satellite.product,
+        satellite_hdf_files[
+            (if (daily.sat)
+                date == example_date else
+                lubridate::as_date(datetime) == example_date),
+            by = tile,
+            head(.SD, 1)])),
     tar_target(ground_obs, format = "fst_dt", get_ground_obs(
         process_years, pred_grid)),
 
