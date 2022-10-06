@@ -125,8 +125,7 @@ set1_targets = list(
     tar_target(aer, select_stations(
         aer_stations,
         buff,
-        terra::crs(terra::rast(
-            satellite_hdf_files[date == example_date, path[1]])))),
+        terra::crs(pred_grid))),
     tar_target(aer_nospace, sf::st_drop_geometry(
         aer)),
     tar_target(aer_data, get_stn_data(
