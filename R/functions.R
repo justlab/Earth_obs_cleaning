@@ -596,20 +596,35 @@ sf_to_ext <- function(sf, to_crs = NULL){
 read_satellite_raster = function(satellite.product, tile, path)
    {r = terra::rast(path)
     if (satellite.product == "geonexl2")
-      # The coordinates are all wrong. Fix them.
-      # See "Example for 0.01x0.01 (1km) grid" at
-      # https://web.archive.org/web/20220119040921/https://www.nasa.gov/geonex/dataproducts
-       {terra::crs(r) = paste0("epsg:", crs.lonlat)
-        h0 = -180
-        v0 = 60
-        size = 6
-        m = stringr::str_match(tile, "h(\\d+)v(\\d+)")
-        assert(!anyNA(m))
-        h = as.integer(m[,2])
-        v = as.integer(m[,3])
-        terra::ext(r) = c(
-            h0 + (h + c(0, 1))*size,
-            v0 - (v + c(1, 0))*size)}
+       {# Get the other (lower-resolution) layers.
+        vnames = c("cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle")
+        r2 = terra::rast(paste0(
+            str_replace(r@ptr$filenames[1], ":grid1km:[A-Za-z0-9_]+\\Z",
+                ":grid5km:"),
+            vnames))
+        names(r2) = vnames
+        # The coordinates are all wrong. Fix them.
+        # See "Example for 0.01x0.01 (1km) grid" at
+        # https://web.archive.org/web/20220119040921/https://www.nasa.gov/geonex/dataproducts
+        fix.coordinates = function(r)
+           {terra::crs(r) = paste0("epsg:", crs.lonlat)
+            h0 = -180
+            v0 = 60
+            size = 6
+            m = stringr::str_match(tile, "h(\\d+)v(\\d+)")
+            assert(!anyNA(m))
+            h = as.integer(m[,2])
+            v = as.integer(m[,3])
+            terra::ext(r) = c(
+                h0 + (h + c(0, 1))*size,
+                v0 - (v + c(1, 0))*size)
+            r}
+        # Combine all the layers.
+        r = c(
+           fix.coordinates(r),
+           terra::disagg(fix.coordinates(r2), nrow(r) / nrow(r2)))
+        # Rename a layer for consistency with MCD19A2.
+        names(r) = str_replace(names(r), "AOT_Uncertainty", "AOD_Uncertainty")}
     r}
 
 #' Compute the grid on which all predictions will be made.
