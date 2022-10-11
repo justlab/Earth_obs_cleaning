@@ -121,8 +121,8 @@ interpolate_aod <- function(aer_data, aer_stns){
   setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
   setkey(aer_data_wPred, Site_Name)
   aer_sites = as.data.table(aer_stns)
-  aer_sites[, c('x_sinu', 'y_sinu') := as.data.table(st_coordinates(geometry))]
-  aer_sites = aer_sites[, .(Site_Name, x_sinu, y_sinu)]
+  aer_sites[, c('x_satcrs', 'y_satcrs') := as.data.table(st_coordinates(geometry))]
+  aer_sites = aer_sites[, .(Site_Name, x_satcrs, y_satcrs)]
   setkey(aer_sites, Site_Name)
   aer_data_wPred <- aer_sites[aer_data_wPred]
   setkey(aer_data_wPred, Site_Name, stn_time)
@@ -369,7 +369,7 @@ derive_mcd19_vars_1day = function(aer_data, load_sat, buffers_km, aer_stn, satel
       for(distx in buffers_km){
         rj[, c(paste0('diff_AOD', distx, 'km')) := MCD19_AOD_470nm - get(paste0('Mean_AOD', distx, 'km'))]
       }
-      rj[, c('ID', 'x_sinu', 'y_sinu') := NULL] # remove AERONET station row index and coordinates
+      rj[, c('ID', 'x_satcrs', 'y_satcrs') := NULL] # remove AERONET station row index and coordinates
       rj
     } else {
       # This will create an extra "V1" column in rowbound final target with all NAs,
