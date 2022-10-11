@@ -103,13 +103,15 @@ list(
         geonexl2 =
            {paths = dir(file.path(geonexl2.dir, Wf$satellite),
                 recursive = T, full.names = T)
-            data.table(
-                satellite = factor(Wf$satellite),
-                datetime = as.POSIXct(strptime(tz = "UTC",
-                    basename(paths),
-                    "GO16_ABI12A_%Y%j%H%M_")),
-                tile = factor(basename(dirname(paths))),
-                path = paths)})),
+            `[`(
+                data.table(
+                    satellite = factor(Wf$satellite),
+                    datetime = as.POSIXct(strptime(tz = "UTC",
+                        basename(paths),
+                        "GO16_ABI12A_%Y%j%H%M_")),
+                    tile = factor(basename(dirname(paths))),
+                    path = paths),
+                lubridate::as_date(datetime) %in% all_dates)})),
     tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
         Wf$satellite.product,
         satellite_hdf_files[
