@@ -105,6 +105,9 @@ list(
             tiles = satellite_aod_tiles[[Wf$region]],
             dates = all_dates),
         geonexl2 =
+          # As of 13 Oct 2022, the GeoNEX-L2 files are only available
+          # at a location that's likely temporary, so proper automatic
+          # download is not yet implemented.
            {paths = dir(file.path(geonexl2.dir, Wf$satellite),
                 recursive = T, full.names = T)
             `[`(
