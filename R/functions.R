@@ -163,6 +163,71 @@ get_focal_extent = function(x, c1, r1, radw){
   ext(c(sort(c(xn, xx))), sort(c(yn, yx)))
 }
 
+make_traindata = function(
+        satellite.product, features,
+        aer_filtered, aer_stn, satellite_hdf_files, example_date)
+   {y.sat = "Optical_Depth_047"
+    temporal.matchup.seconds = 30
+
+    aer_filtered = aer_filtered[, c(
+        list(
+            site = AERONET_Site_Name,
+            time.ground = stn_time),
+        mget(str_subset(colnames(aer_filtered), "AOD")))]
+    setkey(aer_filtered, site, time.ground)
+    ground = aer_filtered[, .(site, time.ground)]
+    ground[, c("x_satcrs", "y_satcrs") := aer_stn[
+        .(ground$site), on = "Site_Name",
+        as.data.table(st_coordinates(geometry))]]
+    setkey(ground, time.ground)
+
+    d = rbindlist(lapply(unique(satellite_hdf_files$tile), function(the.tile)
+       {message(the.tile)
+        # Set satellite cell indices for the ground data, dropping
+        # ground data outside of this tile.
+        r.example = read_satellite_raster(satellite.product, the.tile,
+           satellite_hdf_files[j = path[1],
+               tile == the.tile &
+               lubridate::as_date(datetime) == example_date])
+        d = cbind(ground, cell = terra::cellFromXY(
+            r.example,
+            ground[, .(x_satcrs, y_satcrs)]))[!is.na(cell)]
+        if (!nrow(d))
+            return()
+        # Join the satellite files with the ground data by time.
+        sat = satellite_hdf_files[tile == the.tile,
+            .(time.sat = datetime, path)]
+        setkey(sat, time.sat)
+        sat[, sat.ix := .I]
+        d = cbind(d[, -"time.ground"], sat[d,
+            roll = "nearest", mult = "first",
+            .(time.ground = i.time.ground, time.sat = x.time.sat, sat.ix)])
+        d = d[abs(difftime(time.sat, time.ground, units = "secs"))
+            <= temporal.matchup.seconds]
+        if (!nrow(d))
+            return()
+        # Read in the values of the appropriate satellite files.
+        vnames = intersect(names(r.example), features)
+        d[, by = sat.ix, c("y.sat", vnames) :=
+            read_satellite_raster(
+                satellite.product,
+                the.tile,
+                sat[.BY$sat.ix, path])[[c(y.sat, vnames)]][cell]]
+        # Keep only cases where we have the satellite outcome of
+        # interest.
+        d[!is.na(y.sat)]}))
+
+    message("Interpolating AOD")
+    d[, y.ground := `[`(
+        interpolate_aod(aer_filtered[.(d$site, d$time.ground)]),
+        .(d$site, d$time.ground),
+        aod)]
+    d = d[!is.na(y.ground)]
+
+    # Calculate the difference.
+    d[, y.diff := y.sat - y.ground]
+    d}
+
 derive_mcd19_vars = function(aer_data, n.workers, ...)
   {aer_data[, chunk := match(aer_date, sort(unique(aer_date))) %% n.workers]
    d = rbindlist(Filter(nrow, parallel::mclapply(mc.cores = n.workers,
@@ -429,6 +494,9 @@ initial_cv_dart <- function(
   xgb_threads <- get.threads()
 
   mDT <- data.table::copy(setDT(data)) # needed for drake, uncertain about targets
+  if("time.sat" %in% features) {
+    mDT[, time.sat := as.double(time.sat)]
+  }
   if(!is.null(day_var)) {
     mDT[, dayint := as.integer(get(day_var))]
     by_var = "day"

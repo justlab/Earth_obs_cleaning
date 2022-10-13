@@ -49,12 +49,16 @@ pred_round_digits = 5
 agg_level = 10
 agg_thresh = 3
 features = c(
-    "MCD19_AOD_470nm", "dayint", "AOD_Uncertainty", "Column_WV",
+    "y.sat", "AOD_Uncertainty",
     "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
-    "qa_best",
-    do.call(paste0, expand.grid(
-        c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
-        paste0(buffers_km, "km"))))
+    switch(Wf$satellite.product,
+        mcd19a2 = c(
+            "dayint", "Column_WV", "qa_best",
+            do.call(paste0, expand.grid(
+                c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
+                paste0(buffers_km, "km")))),
+        geonexl2 =
+            "time.sat"))
 
 terra.rast.fmt = tar_format(
     read = function(path)
@@ -135,9 +139,8 @@ list(
             stations = sf::st_drop_geometry(aer)))),
 
     # This step is where most of the satellite data is read.
-    tar_target(traindata, format = 'fst_dt', prepare_dt(
-        date_range = all_date,
-        derive_mcd19_vars(
+    tar_target(traindata, format = 'fst_dt', switch(Wf$satellite.product,
+        mcd19a2 = prepare_dt(date_range = all_date, derive_mcd19_vars(
             aer_filtered,
             n.workers = n.workers,
             load_sat = sat,
@@ -146,16 +149,22 @@ list(
             satellite_hdf_files = satellite_hdf_files,
             agg_level = agg_level,
             agg_thresh = agg_thresh,
-            vrt_path = vrt_path))),
+            vrt_path = vrt_path)),
+        geonexl2 = make_traindata(
+            Wf$satellite.product,
+            features,
+            aer_filtered, as.data.table(aer),
+            satellite_hdf_files,
+            example_date))),
 
     # Modeling
     tar_map(values = list(loss = c("l1", "l2")),
         tar_target(initial_cv, initial_cv_dart(
             traindata,
             absolute = loss == "l1",
-            y_var = "diff_AOD",
+            y_var = "y.diff",
             features = features,
-            stn_var = "Site_Name"))),
+            stn_var = "site"))),
     tar_target(full_model, dart_full(
         traindata,
         y_var = "diff_AOD",
