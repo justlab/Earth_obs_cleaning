@@ -81,53 +81,40 @@ filter_aer_bydate <- function(aer_data, dates){
   aer_data[aer_date %in% dates, ]
 }
 
-#' prepare AERONET observation data for interpolation of AOD470nm
-#'
-#' interpolating to wavelength 470 nm, input as 0.47
-#'
-#' @param aer_data the dataset contains all the AOD measurements and exact wavelengths
-#' @param aer_stns simple feature collection of station locations
-#' @return dataset of aer_data with pred, also with `nearest_refgrid` next to Site_Name
-interpolate_aod <- function(aer_data, aer_stns){
-  keepcols = grep('1020|1640', names(aer_data), invert = TRUE)
-  aer_data <- aer_data[, ..keepcols]
-  aer_data[, obs:= .I]
-  setkey(aer_data, obs)
-  vars_wv <- grep("Exact_Wavelengths_of_AOD", names(aer_data), value = TRUE)
-  vars_aod_sub <- grep("AOD_", names(aer_data), value = TRUE)
-  aer_data$N_NAAOD <- rowSums(!is.na(aer_data[, ..vars_aod_sub]))
-  # create long-format data
-  d <- melt(aer_data[, c(vars_aod_sub, vars_wv, "obs"), with = FALSE],
-            measure = list(vars_aod_sub, vars_wv), value.name = c("aod", "exact_wv"))
-  # choose non-NA and >0 AOD
-  d <- d[!is.na(aod) & aod > 0]
-  # ids for wavelengths observed on one side of 470nm
-  obs_os <- d[, by = obs, .(oneside = (max(exact_wv)-0.47)*(min(exact_wv)-0.47)>0)][oneside == TRUE, obs]
-  # the predict part:
-  d2 <- d[, by = obs,
-     {m = lm(log(aod) ~ log(exact_wv) + I((log(exact_wv))^2))
-      if (m$rank == length(coef(m)))
-        # Only use the model if it's full-rank.
-          list(AOD_470nm = exp(predict(m,
-              data.frame(exact_wv = 0.47))))}] # notice to put 0.47 not 470
-  setkey(d2, obs)
-  aer_data_wPred <- d2[aer_data]
-  # set NA: At least 4 observations wanted for exterpolation
-  aer_data_wPred[N_NAAOD < 4 & obs %in% obs_os, AOD_470nm := NA]
-  # remove unnecessary variables:
-  aer_data_wPred <- aer_data_wPred[, -c(vars_aod_sub, vars_wv), with = FALSE]
+# Interpolate AERONET AOD to the desired wavelength.
+interpolate_aod <- function(aer_data)
+   {# N.B. All computations with wavelengths here are in micrometers,
+    # even though the column names of the observations data use
+    # nanometers, as in "AOD_531nm". We do this because the input
+    # exact wavelengths are in micrometers.
+    target.wl = 0.47
+    max.input.wl = 1.0
+      # This value was chosen because AOD at wavelengths above 1 μm
+      # seemed to lie off the trendline for interpolation of 0.47 μm.
+    min.obs = 4
 
-  # join station locations to observations
-  setnames(aer_data_wPred, "AERONET_Site_Name", "Site_Name")
-  setkey(aer_data_wPred, Site_Name)
-  aer_sites = as.data.table(aer_stns)
-  aer_sites[, c('x_satcrs', 'y_satcrs') := as.data.table(st_coordinates(geometry))]
-  aer_sites = aer_sites[, .(Site_Name, x_satcrs, y_satcrs)]
-  setkey(aer_sites, Site_Name)
-  aer_data_wPred <- aer_sites[aer_data_wPred]
-  setkey(aer_data_wPred, Site_Name, stn_time)
-  aer_data_wPred
-}
+    # Reshape the observations to one row per (site, time, wavelength,
+    # AOD).
+    d = `[`(
+        melt(aer_data, measure.vars = patterns(
+            exact.wl = "Exact_Wavelength",
+            aod = "AOD_")),
+        exact.wl <= max.input.wl & !is.na(aod) & aod > 0,
+        -"variable")
+    assert(!anyNA(d))
+
+    # Run the interpolation models.
+    d[, keyby = .(site, time.ground),
+        if (.N >= min.obs &
+                # Ensure we have at least one observation at
+                # wavelengths less than and greater than the target.
+                any(exact.wl <= target.wl) &
+                any(exact.wl >= target.wl))
+           {m = lm(log(aod) ~ log(exact.wl) + I((log(exact.wl))^2))
+            if (m$rank == length(coef(m)))
+              # Only use the model if it's full-rank.
+                list(aod = exp(predict(m,
+                    data.frame(exact.wl = target.wl))))}]}
 
 #' Return a matrix classifying cells as being within a distance from the center.
 #'
