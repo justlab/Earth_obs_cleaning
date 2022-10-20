@@ -23,8 +23,6 @@ tar_option_set(
     memory = "transient",
     garbage_collection = TRUE)
 
-daily.sat = Wf$satellite.product != "geonexl2"
-
 example_date = switch(Wf$satellite.product,
   # This should be a date for which the satellite data of interest
   # exists on all tiles.
@@ -49,22 +47,19 @@ pred_round_digits = 5
 agg_level = 10
 agg_thresh = 3
 features = c(
-    "y.sat", "AOD_Uncertainty",
+    "y.sat", "time.sat",
+    "AOD_Uncertainty",
     "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
-    switch(Wf$satellite.product,
-        mcd19a2 = c(
-            "dayint", "Column_WV", "qa_best",
-            do.call(paste0, expand.grid(
-                c("pNonNAAOD", "Mean_AOD", "diff_AOD"),
-                paste0(buffers_km, "km")))),
-        geonexl2 =
-            "time.sat"))
+    (if (Wf$satellite.product == "mcd19a2")
+        c("Column_WV", "qa_best")))
 
 terra.rast.fmt = tar_format(
     read = function(path)
         terra::rast(path),
     write = function(object, path)
         terra::writeRaster(object, path, filetype = "GTiff"))
+
+pbapply::pboptions(type = "timer")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # * Targets
@@ -96,14 +91,17 @@ list(
     tar_target(buff, get_aoi_buffer(
         Wf$region)),
     tar_target(satellite_hdf_files, switch(Wf$satellite.product,
-        mcd19a2 = get.earthdata(
-            satellite_hdf_root,
-            product = "MCD19A2.006",
-            satellites = (if (Wf$satellite %in% c("terra", "aqua"))
-                "terra.and.aqua" else
-                stop()),
-            tiles = satellite_aod_tiles[[Wf$region]],
-            dates = all_dates),
+        mcd19a2 =
+           {d = get.earthdata(
+                satellite_hdf_root,
+                product = "MCD19A2.006",
+                satellites = (if (Wf$satellite %in% c("terra", "aqua"))
+                    "terra.and.aqua" else
+                    stop()),
+                tiles = satellite_aod_tiles[[Wf$region]],
+                dates = all_dates)
+            setnames(d, "date", "time")
+            d},
         geonexl2 =
           # As of 13 Oct 2022, the GeoNEX-L2 files are only available
           # at a location that's likely temporary, so proper automatic
@@ -113,18 +111,16 @@ list(
             `[`(
                 data.table(
                     satellite = factor(Wf$satellite),
-                    datetime = as.POSIXct(strptime(tz = "UTC",
+                    time = as.POSIXct(tz = "UTC",
                         basename(paths),
-                        "GO16_ABI12A_%Y%j%H%M_")),
+                        "GO16_ABI12A_%Y%j%H%M_"),
                     tile = factor(basename(dirname(paths))),
                     path = paths),
-                lubridate::as_date(datetime) %in% all_dates)})),
+                lubridate::as_date(time) %in% all_dates)})),
     tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
         Wf$satellite.product,
         satellite_hdf_files[
-            (if (daily.sat)
-                date == example_date else
-                lubridate::as_date(datetime) == example_date),
+            lubridate::as_date(time) == example_date,
             by = tile,
             head(.SD, 1)])),
     tar_target(ground_obs, format = "fst_dt", get_ground_obs(
@@ -142,23 +138,16 @@ list(
             stations = sf::st_drop_geometry(aer)))),
 
     # This step is where most of the satellite data is read.
-    tar_target(traindata, format = 'fst_dt', switch(Wf$satellite.product,
-        mcd19a2 = prepare_dt(date_range = all_date, derive_mcd19_vars(
-            aer_filtered,
-            n.workers = n.workers,
-            load_sat = sat,
-            buffers_km = buffers_km,
-            aer_stn = as.data.table(aer),
-            satellite_hdf_files = satellite_hdf_files,
-            agg_level = agg_level,
-            agg_thresh = agg_thresh,
-            vrt_path = vrt_path)),
-        geonexl2 = make_traindata(
-            Wf$satellite.product,
-            features,
-            aer_filtered, as.data.table(aer),
-            satellite_hdf_files,
-            example_date))),
+    tar_target(traindata, format = 'fst_dt', make_traindata(
+        Wf$satellite.product,
+        Wf$satellite,
+        features,
+        aer_filtered,
+        as.data.table(aer),
+        satellite_hdf_files,
+        example_date,
+        n.workers = pmin(8L, n.workers))),
+          # Using a lot more workers on Coco seems to be slower.
 
     # Modeling
     tar_map(values = list(loss = c("l1", "l2")),

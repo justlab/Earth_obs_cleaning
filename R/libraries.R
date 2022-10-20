@@ -13,4 +13,5 @@ suppressPackageStartupMessages(
     library(parallel)
     library(data.table)
     library(arrow)
-    library(DBI)})
+    library(DBI)
+    library(pbapply)})

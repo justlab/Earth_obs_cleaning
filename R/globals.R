@@ -30,6 +30,16 @@ stopifnot(
 stopifnot(Wf$ground.product %in% c("aeronet"))
 stopifnot(Wf$region %in% c("conus"))
 
+daily.sat = function(satellite.product = Wf$satellite.product)
+  # Whether the satellite product is daily, as opposed to being
+  # resolved at a finer unit, such as the second.
+    satellite.product != "geonexl2"
+
+multipass.sat = function(satellite.product = Wf$satellite.product)
+  # Whether the satellite product has more than one overpass in
+  # each file.
+    satellite.product == "mcd19a2"
+
 satellite_aod_tiles = list(
     # Selected by hand in QGIS with this shapefile:
     # http://web.archive.org/web/2022/http://book.ecosens.org/wp-content/uploads/2016/06/modis_grid.zip

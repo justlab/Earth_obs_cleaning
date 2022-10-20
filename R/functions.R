@@ -164,11 +164,15 @@ get_focal_extent = function(x, c1, r1, radw){
 }
 
 make_traindata = function(
-        satellite.product, features,
-        aer_filtered, aer_stn, satellite_hdf_files, example_date)
+        satellite.product, the.satellite, features,
+        aer_filtered, aer_stn, satellite_hdf_files, example_date,
+        n.workers)
    {y.sat = "Optical_Depth_047"
-    temporal.matchup.seconds = 30
+    temporal.matchup.seconds = (if (daily.sat(satellite.product))
+        8 * 60 else
+        30)
 
+    message("Assembling ground data")
     aer_filtered = aer_filtered[, c(
         list(
             site = AERONET_Site_Name,
@@ -181,41 +185,103 @@ make_traindata = function(
         as.data.table(st_coordinates(geometry))]]
     setkey(ground, time.ground)
 
-    d = rbindlist(lapply(unique(satellite_hdf_files$tile), function(the.tile)
-       {message(the.tile)
+    satellite_hdf_files = copy(satellite_hdf_files)
+    satellite_hdf_files[, sat.files.ix := .I]
+
+    all.tiles = unique(satellite_hdf_files$tile)
+    d = rbindlist(lapply(all.tiles, function(the.tile)
+       {message(sprintf("Getting training data for tile %s (%d / %d)",
+            the.tile, match(the.tile, all.tiles), length(all.tiles)))
+
         # Set satellite cell indices for the ground data, dropping
         # ground data outside of this tile.
         r.example = read_satellite_raster(satellite.product, the.tile,
-           satellite_hdf_files[j = path[1],
-               tile == the.tile &
-               lubridate::as_date(datetime) == example_date])
-        d = cbind(ground, cell = terra::cellFromXY(
+            satellite_hdf_files[j = path[1],
+                tile == the.tile &
+                lubridate::as_date(time) == example_date])
+        d = cbind(ground, cell.local = terra::cellFromXY(
             r.example,
-            ground[, .(x_satcrs, y_satcrs)]))[!is.na(cell)]
+            ground[, .(x_satcrs, y_satcrs)]))[!is.na(cell.local)]
         if (!nrow(d))
             return()
-        # Join the satellite files with the ground data by time.
+
+        # Identify the satellite data for this tile.
         sat = satellite_hdf_files[tile == the.tile,
-            .(time.sat = datetime, path)]
+            .(time.sat = time, sat.files.ix)]
+        if (multipass.sat(satellite.product))
+          # Each file contains multiple overpasses and multiple
+          # satellites, stored in different layers. Expand `sat` into
+          # one row per layer, keeping only the satellite of interest.
+           {message("Collecting overpasses")
+            sat = rbindlist(pblapply(cl = n.workers, 1 : nrow(sat), function(i)
+               {path = satellite_hdf_files[sat[i, sat.files.ix], path]
+                if (file.size(path) == 0)
+                    return()
+                orbit.times = str_extract_all(
+                    fromJSON(terra::describe(options = "json", path))
+                        $metadata[[1]]$Orbit_time_stamp,
+                    "\\S+")[[1]]
+                `[`(
+                    sat[i, .(
+                        sat.files.ix,
+                        overpass = seq_along(orbit.times),
+                        satellite = c(T = "terra", A = "aqua")[
+                            str_sub(orbit.times, -1)],
+                        time.sat = as.POSIXct(tz = "UTC",
+                            orbit.times,
+                            "%Y%j%H%M"))],
+                    satellite == the.satellite,
+                    -"satellite")}))
+            if (!nrow(sat))
+                return()}
+        else
+            sat[, overpass := NA_integer_]
+        assert(!anyNA(sat[, -"overpass"]))
         setkey(sat, time.sat)
-        sat[, sat.ix := .I]
+
+        # Join the satellite files with the ground data by time.
+        message("Roll-joining")
         d = cbind(d[, -"time.ground"], sat[d,
             roll = "nearest", mult = "first",
-            .(time.ground = i.time.ground, time.sat = x.time.sat, sat.ix)])
-        d = d[abs(difftime(time.sat, time.ground, units = "secs"))
-            <= temporal.matchup.seconds]
+            .(time.ground = i.time.ground, time.sat = x.time.sat,
+                sat.files.ix, overpass)])
+        d = d[!is.na(time.sat)]
+        d[, time.diff := as.numeric(difftime(time.ground, time.sat,
+            units = "secs"))]
+        d = d[abs(time.diff) <= temporal.matchup.seconds]
         if (!nrow(d))
             return()
+
+        # Use each satellite cell-time only once, taking the closest
+        # time matchup.
+        message("Reducing")
+        d = d[order(abs(time.diff)), by = .(time.sat, cell.local),
+            head(.SD, 1)]
+
         # Read in the values of the appropriate satellite files.
-        vnames = intersect(names(r.example), features)
-        d[, by = sat.ix, c("y.sat", vnames) :=
-            read_satellite_raster(
-                satellite.product,
-                the.tile,
-                sat[.BY$sat.ix, path])[[c(y.sat, vnames)]][cell]]
+        vnames = intersect(
+            str_replace(features, "qa_best", "AOD_QA"),
+            names(r.example))
+        message("Reading satellite data")
+        d = rbindlist(pblapply(
+            cl = n.workers,
+            split(d, by = c("sat.files.ix", "overpass")),
+            function(chunk) chunk[, c("y.sat", vnames) :=
+               {r = read_satellite_raster(
+                    satellite.product,
+                    the.tile,
+                    satellite_hdf_files[chunk$sat.files.ix[1], path],
+                    overpass[1])
+                r[[c(y.sat, vnames)]][cell.local]}]))
+
+        if ("AOD_QA" %in% colnames(d))
+           {d[, qa_best := bitwAnd(AOD_QA,
+                bitwShiftL(strtoi("1111", base = 2), 8)) == 0]
+                  # Page 13 of https://web.archive.org/web/20200927141823/https://lpdaac.usgs.gov/documents/110/MCD19_User_Guide_V6.pdf
+            d[, AOD_QA := NULL]}
         # Keep only cases where we have the satellite outcome of
         # interest.
-        d[!is.na(y.sat)]}))
+        d[!is.na(y.sat), -"time.diff"]}))
 
     message("Interpolating AOD")
     d[, y.ground := `[`(
@@ -648,39 +714,63 @@ sf_to_ext <- function(sf, to_crs = NULL){
   ext(sv)
 }
 
-read_satellite_raster = function(satellite.product, tile, path)
-   {r = terra::rast(path)
+read_satellite_raster = function(
+        satellite.product, tile, path, overpass = NA_integer_)
+   {r1 = terra::rast(path)
+
+    if (multipass.sat(satellite.product))
+       {if (is.na(overpass))
+          # Use a default overpass.
+            overpass = 1L
+        if (overpass == 1 && !any(str_detect(names(r1), "_1\\Z")))
+          # This file has only one overpass, so `overpass` needs to be
+          # NA for the following logic.
+            overpass = NA_integer_}
+
+    if (!is.na(overpass))
+      # Reduce to the layers for this overpass.
+       {regex = paste0("_", overpass, "\\Z")
+        r1 = r1[[str_subset(names(r1), regex)]]
+        names(r1) = str_remove(names(r1), regex)}
+
     if (satellite.product == "geonexl2")
-       {# Get the other (lower-resolution) layers.
-        vnames = c("cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle")
-        r2 = terra::rast(paste0(
-            str_replace(r@ptr$filenames[1], ":grid1km:[A-Za-z0-9_]+\\Z",
-                ":grid5km:"),
-            vnames))
-        names(r2) = vnames
+      # Rename a layer for consistency with MCD19A2.
+        names(r1) = str_replace(names(r1), "AOT_Uncertainty", "AOD_Uncertainty")
+
+    # Get the other (lower-resolution) layers.
+    r2 = terra::rast(lapply(
+        c("cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle"),
+        function(vname)
+           {r = terra::rast(paste0(
+                str_replace(r1@ptr$filenames[1], ":grid1km:[A-Za-z0-9_]+\\Z",
+                    ":grid5km:"),
+                vname))
+            if (!is.na(overpass))
+                r = r[[overpass]]
+            `names<-`(r, vname)}))
+
+    # Combine all the layers.
+    fix.coordinates = function(r)
+       {if (satellite.product != "geonexl2")
+            return(r)
         # The coordinates are all wrong. Fix them.
         # See "Example for 0.01x0.01 (1km) grid" at
         # https://web.archive.org/web/20220119040921/https://www.nasa.gov/geonex/dataproducts
-        fix.coordinates = function(r)
-           {terra::crs(r) = paste0("epsg:", crs.lonlat)
-            h0 = -180
-            v0 = 60
-            size = 6
-            m = stringr::str_match(tile, "h(\\d+)v(\\d+)")
-            assert(!anyNA(m))
-            h = as.integer(m[,2])
-            v = as.integer(m[,3])
-            terra::ext(r) = c(
-                h0 + (h + c(0, 1))*size,
-                v0 - (v + c(1, 0))*size)
-            r}
-        # Combine all the layers.
-        r = c(
-           fix.coordinates(r),
-           terra::disagg(fix.coordinates(r2), nrow(r) / nrow(r2)))
-        # Rename a layer for consistency with MCD19A2.
-        names(r) = str_replace(names(r), "AOT_Uncertainty", "AOD_Uncertainty")}
-    r}
+        terra::crs(r) = paste0("epsg:", crs.lonlat)
+        h0 = -180
+        v0 = 60
+        size = 6
+        m = stringr::str_match(tile, "h(\\d+)v(\\d+)")
+        assert(!anyNA(m))
+        h = as.integer(m[,2])
+        v = as.integer(m[,3])
+        terra::ext(r) = c(
+            h0 + (h + c(0, 1))*size,
+            v0 - (v + c(1, 0))*size)
+        r}
+    c(
+       fix.coordinates(r1),
+       terra::disagg(fix.coordinates(r2), nrow(r1) / nrow(r2)))}
 
 #' Compute the grid on which all predictions will be made.
 make_pred_grid = function(satellite.product, earthdata.rows)
