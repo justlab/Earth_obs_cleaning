@@ -28,7 +28,7 @@ def get_tile_day(tile_day):
         if basename.startswith('GO16_ABI12B_'):
           # Skip this. We only need the files with "ABI12A".
             continue
-        subprocess.run(('curl',
+        subprocess.run(check = True, args = ('curl',
             '--fail', '--remote-time', '--silent',
             str(file_url),
             '-o', str(out_dir / basename)))
