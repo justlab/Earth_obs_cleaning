@@ -266,22 +266,25 @@ make_traindata = function(
         d = rbindlist(pblapply(
             cl = n.workers,
             split(d, by = c("sat.files.ix", "overpass")),
-            function(chunk) chunk[, c("y.sat", vnames) :=
-               {r = read_satellite_raster(
-                    satellite.product,
-                    the.tile,
-                    satellite_hdf_files[chunk$sat.files.ix[1], path],
-                    overpass[1])
-                r[[c(y.sat, vnames)]][cell.local]}]))
+            function(chunk) chunk
+                [, c("y.sat", vnames) :=
+                   {r = read_satellite_raster(
+                        satellite.product,
+                        the.tile,
+                        satellite_hdf_files[chunk$sat.files.ix[1], path],
+                        overpass[1])
+                    r[[c(y.sat, vnames)]][cell.local]}]
+                [!is.na(y.sat), -"time.diff"]))
+                  # Keep only cases where we have the satellite
+                  # outcome of interest.
 
         if ("AOD_QA" %in% colnames(d))
            {d[, qa_best := bitwAnd(AOD_QA,
                 bitwShiftL(strtoi("1111", base = 2), 8)) == 0]
                   # Page 13 of https://web.archive.org/web/20200927141823/https://lpdaac.usgs.gov/documents/110/MCD19_User_Guide_V6.pdf
             d[, AOD_QA := NULL]}
-        # Keep only cases where we have the satellite outcome of
-        # interest.
-        d[!is.na(y.sat), -"time.diff"]}))
+
+        d}))
 
     message("Interpolating AOD")
     d[, y.ground := `[`(
