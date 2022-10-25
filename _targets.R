@@ -48,6 +48,7 @@ agg_level = 10
 agg_thresh = 3
 features = c(
     "y.sat", "time.sat",
+    "y.sat.mean", "y.sat.present",
     "AOD_Uncertainty",
     "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
     (if (Wf$satellite.product == "mcd19a2")

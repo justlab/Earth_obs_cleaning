@@ -171,6 +171,8 @@ make_traindata = function(
     temporal.matchup.seconds = (if (daily.sat(satellite.product))
         8 * 60 else
         30)
+    window.radius = 5L
+      # The window will be `1 + 2*window.radius` cells on each side.
 
     message("Assembling ground data")
     aer_filtered = aer_filtered[, c(
@@ -267,13 +269,25 @@ make_traindata = function(
             cl = n.workers,
             split(d, by = c("sat.files.ix", "overpass")),
             function(chunk) chunk
-                [, c("y.sat", vnames) :=
+                [, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
                    {r = read_satellite_raster(
                         satellite.product,
                         the.tile,
                         satellite_hdf_files[chunk$sat.files.ix[1], path],
                         overpass[1])
-                    r[[c(y.sat, vnames)]][cell.local]}]
+                    resol = terra::res(r)
+                    cbind(
+                        r[[c(y.sat, vnames)]][cell.local],
+                        rbindlist(lapply(cell.local, function(cell)
+                           {xy = terra::xyFromCell(r, cell)
+                            values = terra::crop(r[[y.sat]], terra::ext(
+                                xy[,1] - resol[1] * window.radius,
+                                xy[,1] + resol[1] * window.radius,
+                                xy[,2] - resol[2] * window.radius,
+                                xy[,2] + resol[2] * window.radius))[]
+                            data.frame(
+                                y.sat.mean = mean(values, na.rm = T),
+                                y.sat.present = mean(!is.na(values)))})))}]
                 [!is.na(y.sat), -"time.diff"]))
                   # Keep only cases where we have the satellite
                   # outcome of interest.
