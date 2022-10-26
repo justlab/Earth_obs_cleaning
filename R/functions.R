@@ -275,16 +275,15 @@ make_traindata = function(
                         the.tile,
                         satellite_hdf_files[chunk$sat.files.ix[1], path],
                         overpass[1])
-                    resol = terra::res(r)
                     cbind(
                         r[[c(y.sat, vnames)]][cell.local],
                         rbindlist(lapply(cell.local, function(cell)
-                           {xy = terra::xyFromCell(r, cell)
-                            values = terra::crop(snap = "out", r[[y.sat]], terra::ext(
-                                xy[,1] - resol[1] * window.radius,
-                                xy[,1] + resol[1] * window.radius,
-                                xy[,2] - resol[2] * window.radius,
-                                xy[,2] + resol[2] * window.radius))[]
+                           {rc = terra::rowColFromCell(r, cell)
+                            row = rc[,1] + (-window.radius : window.radius)
+                            col = rc[,2] + (-window.radius : window.radius)
+                            values = r[[y.sat]][
+                                row[0 <= row & row <= nrow(r)],
+                                col[0 <= col & col <= ncol(r)]][[1]]
                             data.frame(
                                 y.sat.mean = mean(values, na.rm = T),
                                 y.sat.present = mean(!is.na(values)))})))}]
