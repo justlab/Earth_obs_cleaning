@@ -280,7 +280,7 @@ make_traindata = function(
                         r[[c(y.sat, vnames)]][cell.local],
                         rbindlist(lapply(cell.local, function(cell)
                            {xy = terra::xyFromCell(r, cell)
-                            values = terra::crop(r[[y.sat]], terra::ext(
+                            values = terra::crop(snap = "out", r[[y.sat]], terra::ext(
                                 xy[,1] - resol[1] * window.radius,
                                 xy[,1] + resol[1] * window.radius,
                                 xy[,2] - resol[2] * window.radius,
