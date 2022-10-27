@@ -171,8 +171,8 @@ make_traindata = function(
     temporal.matchup.seconds = (if (daily.sat(satellite.product))
         8 * 60 else
         30)
-    window.radius = 5L
-      # The window will be `1 + 2*window.radius` cells on each side.
+
+    terra::terraOptions(progress = 0)
 
     message("Assembling ground data")
     aer_filtered = aer_filtered[, c(
@@ -264,29 +264,37 @@ make_traindata = function(
         vnames = intersect(
             str_replace(features, "qa_best", "AOD_QA"),
             names(r.example))
+        windowed.features = str_subset(features, "\\Ay\\.sat\\.")
+        window.radii = sort(unique(as.integer(
+            str_extract(windowed.features, "(?<=.)\\d+\\Z"))))
         message("Reading satellite data")
+        mk.windowed.features = function(window.radius, r, cell.local)
+            rbindlist(lapply(cell.local, function(cell)
+               {rc = terra::rowColFromCell(r, cell)
+                row = rc[,1] + (-window.radius : window.radius)
+                col = rc[,2] + (-window.radius : window.radius)
+                values = r[[y.sat]][
+                    row[0 <= row & row <= nrow(r)],
+                    col[0 <= col & col <= ncol(r)]][[1]]
+                d = data.frame(
+                    y.sat.mean = mean(values, na.rm = T),
+                    y.sat.present = mean(!is.na(values)))
+                setnames(d, paste0(names(d), ".", window.radius))
+                d}))
         d = rbindlist(pblapply(
             cl = n.workers,
             split(d, by = c("sat.files.ix", "overpass")),
             function(chunk) chunk
-                [, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
+                [, c("y.sat", vnames, windowed.features) :=
                    {r = read_satellite_raster(
                         satellite.product,
                         the.tile,
                         satellite_hdf_files[chunk$sat.files.ix[1], path],
                         overpass[1])
-                    cbind(
-                        r[[c(y.sat, vnames)]][cell.local],
-                        rbindlist(lapply(cell.local, function(cell)
-                           {rc = terra::rowColFromCell(r, cell)
-                            row = rc[,1] + (-window.radius : window.radius)
-                            col = rc[,2] + (-window.radius : window.radius)
-                            values = r[[y.sat]][
-                                row[0 <= row & row <= nrow(r)],
-                                col[0 <= col & col <= ncol(r)]][[1]]
-                            data.frame(
-                                y.sat.mean = mean(values, na.rm = T),
-                                y.sat.present = mean(!is.na(values)))})))}]
+                    cbind(r[[c(y.sat, vnames)]][cell.local],
+                        do.call(cbind, lapply(window.radii,
+                            mk.windowed.features, r, cell.local))
+                          [, mget(windowed.features)])}]
                 [!is.na(y.sat), -"time.diff"]))
                   # Keep only cases where we have the satellite
                   # outcome of interest.
