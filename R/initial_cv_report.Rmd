@@ -29,6 +29,15 @@ Git commit: `r commit` `r uncommitted`
 
 Rendered: `r Sys.time()`
 
+Workflow definition:
+
+```{r echo = F}
+DT::datatable(t(as.data.frame(as.list(Wf))),
+              fillContainer = FALSE,
+              autoHideNavigation = TRUE,
+              options = list(pageLength = 50))
+```
+
 In the below, time differences are in minutes.
 
 ```{r echo = F}
