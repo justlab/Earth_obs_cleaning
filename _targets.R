@@ -48,10 +48,7 @@ agg_level = 10
 agg_thresh = 3
 features = c(
     "y.sat", "time.sat",
-    sapply(c(5, 15, 45), function(ws)
-      # Define buffered predictors for each window radius. Each buffer
-      # is a square `2*wr + 1` cells wide on a side.
-        sprintf("y.sat.%s.%d", c("mean", "present"), ws)),
+    "y.sat.mean", "y.sat.present",
     "AOD_Uncertainty",
     "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
     (if (Wf$satellite.product == "mcd19a2")
