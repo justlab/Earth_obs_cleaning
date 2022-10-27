@@ -634,77 +634,58 @@ initial_cv_dart <- function(
   c(list(by_var = by_var, bin_list = bin_list, mDT_wPred = mDT), cv_results)
 }
 
-#' Summarize CV statistics on all initial_cv objects
+#' Summarize CV statistics.
 #'
-#' @param cv_list list of all CV output objects; may include every year, both
-#'   satellites, and both objective functions
-#' @return data.table summarizing CV statistics for each loss and satellite
-cv_summary <- function(cv_list){
-  stats_list = vector(mode = "list", length = length(cv_list))
-  difftimes_list = vector(mode = "list", length = length(cv_list))
-  for(i in 1:length(cv_list)){
-    cv = cv_list[[i]]
-    dt = data.table::copy(cv$mDT_wPred)
-    dt[, aodhat := MCD19_AOD_470nm - diff_AOD_pred]
-    stats = performance_metrics(dt,
-                                ground_truth = "AOD_470nm",
-                                eo_raw = "MCD19_AOD_470nm",
-                                eo_pred = "aodhat")
-    stats$sat <- str_extract(names(cv_list)[[i]], 'terra|aqua')
-    stats$loss <- str_match(names(cv_list)[[i]], 'cv_(l[12])_')[,2]
-    stats_list[[i]] <- stats
-    difftimes_list[[i]] <- round(summary(as.numeric(abs(cv$mDT_wPred$rj_difftime))),0)
-  }
-  # prediction summary stats
-  statsDT = rbindlist(lapply(stats_list, as.data.table))
-  # setcolorder(statsDT, c('sat', 'loss',
-  #                      'MAE_uncorr', 'MAE_corr', 'MAE_change',
-  #                      'rmse', 'MAD_mcd19', 'MAD_aodhat', 'MAD_change'))
-  # difftime distribution
-  difftimeDT = rbindlist(lapply(difftimes_list, function(x) as.list(x)))
-  difftimeDT[, c('sat', 'loss') := statsDT[, .(sat, loss)]]
-  setcolorder(difftimeDT, c('sat', 'loss'))
+#' @param d The data table `mDT_wPred` returned by `initial_cv_dart`.
+cv.summary = function(d)
+   {d = d[, .(
+        site,
+        time.sat = lubridate::as_datetime(time.sat),
+        time.ground,
+        y.sat,
+        y.ground,
+        y.ground.pred = y.sat - y.diff_pred)]
+    rbind(
+        d[, c(list(Year = "all"), eval(performance.j))],
+        d[, keyby = .(Year = year(time.sat)), eval(performance.j)])}
 
-  setkey(statsDT, sat, loss)
-  setkey(difftimeDT, sat, loss)
-  list(stats = statsDT, difftimes = difftimeDT)
-}
+performance.j = quote(
+   {mse = function(x, y) mean((x - y)^2)
+    sdn = function(x) sqrt(mse(x, mean(x)))
+    tqs = unname(quantile(
+        abs(as.numeric(difftime(units = "mins",
+            time.sat, time.ground))),
+        c(.25, .5, .75)))
+    list(
+        "Cases" = .N,
+        "Sites" = length(unique(site)),
+        "RMSE, raw" = sqrt(mse(y.ground, y.sat)),
+        "RMSE, corrected" = sqrt(mse(y.ground, y.ground.pred)),
+        "Proportion of raw MSE" = mse(y.ground, y.ground.pred) / mse(y.ground, y.sat),
+        "Median, ground" = median(y.ground),
+        "SD, ground" = sdn(y.ground),
+        "SD, raw" = sdn(y.sat),
+        "SD, corrected" = sdn(y.ground.pred),
+        "Bias, raw" = mean(y.sat - y.ground),
+        "Bias, corrected" = mean(y.ground.pred - y.ground),
+        "Correlation, raw" = cor(y.sat, y.ground),
+        "Correlation, corrected" = cor(y.ground.pred, y.ground),
+        "Time difference, Q1" = tqs[1],
+        "Time difference, median" = tqs[2],
+        "Time difference, Q3" = tqs[3])})
 
-#' Calculate performance metrics on a data.table
-#'
-#' Comparative cross-validation performance metrics with raw and corrected values.
-#' Takes a \code{data.table} and can be run across strata with a \code{by} statement.
-performance_metrics <- function(dt, ground_truth, eo_raw, eo_pred, digits = 3){
-  truth = quote(get(ground_truth))
-  raw = quote(get(eo_raw))
-  pred = quote(get(eo_pred))
-  mae = function(v1, v2) mean(abs(v1 - v2))
-  mad = function(v1) mean(abs(v1 - median(v1)))
-  mse = function(v1, v2) mean((v1 - v2)^2)
-  # rmse = function(v1, v2) sqrt(mean((v1 - v2)^2))
-  mean_bias = function(v1, v2) mean(v1 - v2)
-  r = function(x) round(x, digits)
-  list(
-    # MAE_raw = r(mae(dt[, eval(raw)], dt[, eval(truth)])),
-    # MAE_pred   = r(mae(dt[, eval(pred)], dt[, eval(truth)])),
-    # MAD_truth= r(mad(dt[, eval(truth)])),
-    # MAD_pred = r(mad(dt[, eval(pred)])),
-
-    RMSE_raw = r(sqrt(mse(v1 = dt[, eval(raw)], v2 = dt[, eval(truth)]))),
-    RMSE_pred= r(sqrt(mse(v1 = dt[, eval(pred)], v2 = dt[, eval(truth)]))),
-    pct_of_raw_mse = round(100 * (mse(dt[, eval(pred)], dt[, eval(truth)]) / mse(dt[, eval(raw)], dt[, eval(truth)])), 1),
-    SD_truth   = r(sd(dt[, eval(truth)])),
-    SD_raw   = r(sd(dt[, eval(raw)])),
-    SD_pred  = r(sd(dt[, eval(pred)])),
-    bias_raw = r(mean_bias(dt[, eval(raw)], dt[, eval(truth)])),
-    bias_pred = r(mean_bias(dt[, eval(pred)], dt[, eval(truth)])),
-    r_raw = r(cor(dt[, eval(raw)], dt[, eval(truth)])),
-    r_pred = r(cor(dt[, eval(pred)], dt[, eval(truth)])),
-    stn_count  = uniqueN(dt$stn),
-    train_N = dt[, .N],
-    median_truth = r(median(dt[, eval(truth)]))
-  )
-}
+pretty.table.numbers = function(d)
+   {d = copy(d)
+    for (col in names(d)) d[, (col) :=
+       (if (is.integer(get(col)))
+            scales::comma(get(col), accuracy = 1)
+        else if (str_detect(col, "\\ABias"))
+            sprintf("%+.03f", get(col))
+        else if (is.double(get(col)))
+            sprintf("%.03f", get(col))
+        else
+            get(col))]
+    d}
 
 # Prediction ####
 

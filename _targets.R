@@ -161,4 +161,10 @@ list(
     tar_target(full_model, dart_full(
         traindata,
         y_var = "diff_AOD",
-        features = features)))
+        features = features)),
+
+    # Summarize and report on the CV
+    tar_target(cv_summary_table, cv.summary(
+        initial_cv_l2$mDT_wPred)),
+    tar_render(initial_cv_report,
+        'R/initial_cv_report.Rmd'))
