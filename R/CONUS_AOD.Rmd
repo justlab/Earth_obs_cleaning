@@ -40,6 +40,7 @@ suppressPackageStartupMessages(
 # set_flextable_defaults(fonts_ignore=TRUE)
 source(here::here("R/functions.R"))
 source(here::here("R/paper_functions.R"))
+the.sat = tools::toTitleCase(Wf$satellite)
 ```
 
 ```{r git_check, echo=FALSE}
@@ -61,7 +62,7 @@ Rendered: `r Sys.time()`
 
 ## Objective
 
-Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD19A2 for Terra and Aqua satellites across the Continental USA, 2000-2021
+Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD19A2 for `r the.sat` across the Continental USA, 2000-2021
 
 # Introduction
 
@@ -72,55 +73,48 @@ Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD1
 ## Main findings from cross-validation
 
 ```{r table_cv_results, echo=FALSE}
-tar_load(cv_summary_tables)
-result <- (cv_summary_tables$stat)[, !"loss"]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
-    align = "l") %>%
+kbl(pretty.table.numbers(tar_read(cv_summary_table)[1, -"Year"]), align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
   row_spec(0,bold=TRUE) %>% column_spec(1:12, width = "1.1cm")
 ```
 
-Here **raw** is MCD19A2.V006 MAIAC AOD 470nm; **truth** is AERONET AOD interpolated to 470nm; and **pred** is MAIAC after applying an XGBoost modeled correction factor.
+Here **raw** is MCD19A2.V006 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost modeled correction factor.
 
-## Descriptives for the collocated dataset (Terra)
+
+## Descriptives for the collocated dataset (`r the.sat`)
 
 ```{r stratified, echo=FALSE}
-tar_load(initial_cv_l2_terra_conus)
-dt <- initial_cv_l2_terra_conus$mDT_wPred
-if(!"aodhat" %in% colnames(dt)){
-  dt[, aodhat := MCD19_AOD_470nm - diff_AOD_pred]
-}
+dt <- copy(tar_read(initial_cv_l2)$mDT_wPred)
 ```
 
 While our ultimate goal is to improve AOD, our dependent variable for predictive modeling is the difference of the AOD retrieval and the AERONET AOD which is a nicely symmetric and reasonably well-behaved distribution (an estimate of the retrieval error).
 
 ```{r describe_dv, echo=FALSE, eval=TRUE}
-kable(summary(dt[, list(diff_AOD)]))
+kable(summary(dt[, list(y.diff)]))
 ```
 
 ```{r plot_dv, echo=FALSE, eval=TRUE}
-ggplot(dt, aes(x = diff_AOD)) +
+ggplot(dt, aes(x = y.diff)) +
   geom_histogram(binwidth = 0.005) +
   scale_x_continuous("MAIAC AOD minus AERONET AOD") +
   coord_cartesian(xlim = c(-1, 1)) +
   labs(title = paste0("Histogram of difference in colocated AOD (n=",
                       dt[, .N], ")"),
-      caption = paste0("Not shown: ", dt[diff_AOD < -1 | diff_AOD > 1, .N], " AOD differences outside [-1, 1]")) +
+      caption = paste0("Not shown: ", dt[y.diff < -1 | y.diff > 1, .N], " AOD differences outside [-1, 1]")) +
   theme_bw()
 ```
 
 *More still to be added*
 
-## Stratified results for Terra CV dataset
+## Stratified results for `r the.sat` CV dataset
 
 Here we show our performance metrics in different subsets of the cross-validation results. These are all from the same model training, just slicing up how the performance looks in different contexts.
 
 ### Performance by year
 
 ```{r strata_year, echo=FALSE, eval=TRUE}
-result <- dt[, performance_aod(.SD), keyby = year(aer_date)]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+kbl(pretty.table.numbers(tar_read(cv_summary_table)[-1]),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -132,9 +126,11 @@ We expect more 2021 data to show up over time since Level 2.0 data are often qui
 ### Performance by month of year
 
 ```{r strata_month, echo=FALSE}
-result <- dt[, performance_aod(.SD), keyby = month(aer_date)]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
-    align = "l") %>%
+result <- dt[,
+    keyby = .(Month = month(lubridate::as_datetime(time.sat))),
+    eval(performance.j)]
+result[, Month := month.abb[Month]]
+kbl(pretty.table.numbers(result), align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
   row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
@@ -142,9 +138,9 @@ kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
 
 ```{r plot_by_month, echo=FALSE, eval=TRUE, dev='png', dpi=300}
 # Color by quantiles
-dt[, month := factor(month(aer_date), levels = 1:12,
-                     labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))]
-p1 <- ggplot(dt, aes(x = diff_AOD, y = month, fill = factor(stat(quantile)))) +
+dt[, month := factor(month(time.sat),
+                     labels = month.abb)]
+p1 <- ggplot(dt, aes(x = y.diff, y = month, fill = factor(stat(quantile)))) +
   stat_density_ridges(
     geom = "density_ridges_gradient", calc_ecdf = TRUE,
     quantiles = 4, quantile_lines = FALSE
@@ -155,7 +151,7 @@ p1 <- ggplot(dt, aes(x = diff_AOD, y = month, fill = factor(stat(quantile)))) +
   coord_cartesian(xlim = c(-0.25, 0.25)) +
   labs(title = paste0("Histogram of difference in colocated AOD (n=",
                       dt[, .N], ")"),
-      caption = paste0("Not shown: ", dt[diff_AOD < -0.25 | diff_AOD > 0.25, .N], " AOD differences outside [-0.25, 0.25]")) +
+      caption = paste0("Not shown: ", dt[y.diff < -0.25 | y.diff > 0.25, .N], " AOD differences outside [-0.25, 0.25]")) +
   theme_bw()
 suppressMessages(print(p1))
 ```
@@ -163,8 +159,7 @@ suppressMessages(print(p1))
 ### Performance by `qa_best`
 
 ```{r strata_qa, echo=FALSE}
-result <- dt[, performance_aod(.SD), by = qa_best]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+kbl(pretty.table.numbers(dt[, eval(performance.j), by = qa_best]),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -176,9 +171,7 @@ The takeaway here is that even though the RMSE of MAIAC is substantially better 
 ### Performance for higher versus lower AOD (AERONET > 0.6)
 
 ```{r strata_high_aod, echo=FALSE, fig.pos="H"}
-dt[, aod_high := AOD_470nm > 0.6]
-result <- dt[, performance_aod(.SD), by = aod_high]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+kbl(pretty.table.numbers(dt[, eval(performance.j), by = .(aod_high = y.ground > 0.6)]),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -188,9 +181,8 @@ kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
 ### Performance by number of overpasses in collocation that site-day
 
 ```{r strata_overpasses, echo=FALSE, fig.pos="H"}
-dt[, overpasses := .N, by = c("Site_Name", "aer_date")]
-result <- dt[, performance_aod(.SD), keyby = overpasses]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+dt[, overpasses := .N, by = .(site, lubridate::as_date(time.ground))]
+kbl(pretty.table.numbers(dt[, eval(performance.j), keyby = overpasses]),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -238,11 +230,12 @@ conus = st_transform(crs = crs.us.atlas, get_conus())
 tar_load(aer_stations)
 aer_stations_sf <- st_transform(crs = st_crs(conus), st_as_sf(aer_stations, coords = c("lon", "lat"), crs = "epsg:4326"))
 aer_stations_sf <- st_join(aer_stations_sf, conus)
-dt <- merge(dt, aer_stations_sf[, c("Site_Name", "STUSPS")], by = "Site_Name")
-# some Site_Names don't fall within land polygons for whatever reason
-dt[is.na(STUSPS), table(Site_Name)]
+colnames(aer_stations_sf)[colnames(aer_stations_sf) == "Site_Name"] = "site"
+dt <- merge(dt, aer_stations_sf[, c("site", "STUSPS")], by = "site")
+# some sites don't fall within land polygons for whatever reason
+dt[is.na(STUSPS), table(site)]
 # where are the sites that didn't fall within a state?
-site_nostate <- st_as_sf(dt[is.na(STUSPS), ][unique(Site_Name), .(Site_Name, `Site_Elevation(m)`, geometry), mult = "first"])
+site_nostate <- st_as_sf(dt[is.na(STUSPS), ][unique(site), .(site, geometry), mult = "first"])
 # ggplot() +
 #   geom_sf(data = conus, fill = NA) +
 #   geom_sf(data = site_nostate, color = "red")
@@ -256,10 +249,10 @@ matched <- st_join(site_nostate,
 # ggplot() +
 #   geom_sf(data = conus, fill = NA) +
 #   geom_sf_text(data = matched, aes(label = STUSPS), color = "red") + theme_minimal()
-dt[as.data.table(matched, key = "Site_Name"), STUSPS := i.STUSPS]
+dt[as.data.table(matched, key = "site"), STUSPS := i.STUSPS]
 
 # where do our data come from (by State)?
-dt[, .(uniqueN(Site_Name), .N), by = STUSPS][order(N, decreasing = T)]
+dt[, .(uniqueN(site), .N), by = STUSPS][order(N, decreasing = T)]
 
 # assign NOAA region from state USPS codes
 dt[, state.noaa.region := factor(
@@ -272,8 +265,8 @@ dt[, state.noaa.region := factor(
 
 ```{r strata_noaa_regions, echo=FALSE, fig.pos="H"}
 # performance by NOAA climate regions
-result <- dt[, performance_aod(.SD), keyby = state.noaa.region]
-kbl(result, col.names = gsub(pattern = "\\.|_", " ", names(result)),
+by.region = dt[, eval(performance.j), keyby = state.noaa.region]
+kbl(pretty.table.numbers(by.region),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -288,13 +281,13 @@ conus$state.noaa.region <- factor(
            names(noaa.regions)[which(sapply(noaa.regions, function(r)
                sa %in% r))]),
    levels = names(noaa.regions))
-conus <- merge(conus, dt[, performance_aod(.SD), keyby = state.noaa.region], by = "state.noaa.region")
-conus_melt <- melt(as.data.table(conus[, c("geometry", "state.noaa.region", "RMSE_raw", "RMSE_pred")]),
+conus <- merge(conus, by.region, by = "state.noaa.region")
+conus_melt <- melt(as.data.table(conus[, c("geometry", "state.noaa.region", "RMSE, raw", "RMSE, corrected")]),
                    id.vars = c("geometry", "state.noaa.region"))
 levels(conus_melt$variable) <- c("MAIAC AOD", "corrected AOD")
 map_region_rmse <- ggplot(conus_melt, aes(geometry = geometry)) +
   geom_sf(aes(fill = value)) +
-  geom_sf(data = dt[, .(.N, geometry = geometry[1]), by = Site_Name], aes(geometry = geometry, size = N), alpha = 0.1) +
+  geom_sf(data = dt[, .(.N, geometry = geometry[1]), by = site], aes(geometry = geometry, size = N), alpha = 0.1) +
   facet_wrap(~variable, ncol = 1) +
   coord_sf(default_crs = st_crs(conus)) +
   scale_size("colocated\nobservations", range = c(1, 3)) +
@@ -309,15 +302,15 @@ map_region_rmse
 
 ```{r error_envelope, echo=FALSE}
 # error envelope for MAIAC is equivalent to that reported in AMT MAIAC publication
-dt[, round(100 * proportions(table(MCD19_AOD_470nm > (AOD_470nm - 0.05 - 0.1*AOD_470nm) & MCD19_AOD_470nm < (AOD_470nm + 0.05 + 0.1*AOD_470nm))))]
+dt[, round(100 * proportions(table(y.sat > (y.ground - 0.05 - 0.1*y.ground) & y.sat < (y.ground + 0.05 + 0.1*y.ground))))]
 # sure looks like we would have a much smaller error envelope (in both additive and multiplicative terms)
-dt[, round(100 * proportions(table(aodhat > (AOD_470nm - 0.025 - 0.055*AOD_470nm) & aodhat < (AOD_470nm + 0.025 + 0.055*AOD_470nm))))]
+dt[, round(100 * proportions(table(y.ground.pred > (y.ground - 0.025 - 0.055*y.ground) & y.ground.pred < (y.ground + 0.025 + 0.055*y.ground))))]
 
 ```
 
 ```{r agreement_plot, echo=FALSE, dev='png', dpi=300}
-p1 <- ggplot(dt[AOD_470nm < 1 & MCD19_AOD_470nm < 1]) +
-  aes(AOD_470nm, MCD19_AOD_470nm) +
+p1 <- ggplot(dt[y.ground < 1 & y.sat < 1]) +
+  aes(y.ground, y.sat) +
   geom_pointdensity(alpha = 0.1, size = 0.6) +
   geom_abline(linetype = "dashed") +
   geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs")) +
@@ -326,11 +319,11 @@ p1 <- ggplot(dt[AOD_470nm < 1 & MCD19_AOD_470nm < 1]) +
   guides(color = "none") +
   theme_bw() +
   theme(aspect.ratio = 1) +
-  labs(caption = paste0("Not shown: ", dt[AOD_470nm > 1 | MCD19_AOD_470nm > 1, .N], " AOD values outside [0, 1]"))
+  labs(caption = paste0("Not shown: ", dt[y.ground > 1 | y.sat > 1, .N], " AOD values outside [0, 1]"))
 
 
-p2  <- ggplot(dt[AOD_470nm < 1 & aodhat > 0 & aodhat < 1]) +
-  aes(AOD_470nm, aodhat) +
+p2  <- ggplot(dt[y.ground < 1 & y.ground.pred > 0 & y.ground.pred < 1]) +
+  aes(y.ground, y.ground.pred) +
   geom_pointdensity(alpha = 0.1, size = 0.6) +
   geom_abline(linetype = "dashed") +
   geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs")) +
@@ -339,19 +332,19 @@ p2  <- ggplot(dt[AOD_470nm < 1 & aodhat > 0 & aodhat < 1]) +
   guides(color = "none") +
   theme_bw() +
   theme(aspect.ratio = 1) +
-  labs(caption = paste0("Not shown: ", dt[AOD_470nm > 1 | aodhat > 1 | aodhat < 0, .N], " AOD values outside [0, 1]"))
+  labs(caption = paste0("Not shown: ", dt[y.ground > 1 | y.ground.pred > 1 | y.ground.pred < 0, .N], " AOD values outside [0, 1]"))
 
 p1 + p2
 ```
 
 ## SHAP interpretation
 
-In decreasing order of variable importance (from Terra collocated cross-validation predictions)
+In decreasing order of variable importance (from `r the.sat` collocated cross-validation predictions)
 
 ```{r shap_rank, echo=FALSE}
 # what do the SHAPs tell us?
-tar_load(initial_cv_l2_terra_conus)
-shaps <- initial_cv_l2_terra_conus$"shap_score"
+tar_load(initial_cv_l2)
+shaps <- initial_cv_l2$"shap_score"
 # sort by importance
 df_shap <- data.frame(meanabsshap = round(sort(sapply(abs(shaps), mean), decreasing = TRUE), 4))
 kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
@@ -363,14 +356,14 @@ kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
 Summary visualization of SHAP contributions
 
 ```{r shap_summary, echo=FALSE, dev='png', dpi=300}
-shap_long <- shap.prep(shap_contrib = initial_cv_l2_terra_conus$shap_score,
-                       X_train = initial_cv_l2_terra_conus$mDT_wPred[, names(initial_cv_l2_terra_conus$shap_score), with = F])
+shap_long <- shap.prep(shap_contrib = initial_cv_l2$shap_score,
+                       X_train = initial_cv_l2$mDT_wPred[, names(initial_cv_l2$shap_score), with = F])
 # **SHAP summary plot**
 shap.plot.summary(shap_long)
 ```
 ```{r shap_features, echo=FALSE, dev='png', dpi=300}
-g1 <- shap.plot.dependence(data_long = shap_long, x = 'dayint', y = 'Column_WV', color_feature = 'Column_WV') + ggtitle("(A) SHAP values of Column WV vs. Time trend")
-# g2 <- shap.plot.dependence(data_long = shap_long, x = 'dayint', y = 'MCD19_AOD_470nm', color_feature = 'MCD19_AOD_470nm') +  ggtitle("(B) SHAP values of MAIAC AOD vs. Time trend")
+g1 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'Column_WV', color_feature = 'Column_WV') + ggtitle("(A) SHAP values of Column WV vs. Time trend")
+# g2 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'y.sat', color_feature = 'y.sat') +  ggtitle("(B) SHAP values of MAIAC AOD vs. Time trend")
 #
 # gridExtra::grid.arrange(g1, g2, ncol = 2)
 g1

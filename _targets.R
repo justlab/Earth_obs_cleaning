@@ -167,4 +167,13 @@ list(
     tar_target(cv_summary_table, cv.summary(
         initial_cv_l2$mDT_wPred)),
     tar_render(initial_cv_report,
-        'R/initial_cv_report.Rmd'))
+        'R/initial_cv_report.Rmd'),
+
+    # Render the CONUS AOD manuscript
+    if (Wf$satellite.product == "mcd19a2") list(
+        tar_render(paper_conus_html, output_format = "html_document",
+            packages = c('sf', 'patchwork'),
+            'R/CONUS_AOD.Rmd', quiet = F),
+        tar_render(paper_conus_pdf, output_format = "pdf_document",
+            packages = c('sf', 'patchwork', 'magick'),
+            'R/CONUS_AOD.Rmd')))
