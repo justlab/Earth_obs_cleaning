@@ -629,6 +629,8 @@ initial_cv_dart <- function(
                               xgb_threads = xgb_threads)
 
   mDT <- cbind(mDT, cv_results$y_pred_dt)
+  mDT[, time.sat := lubridate::as_datetime(time.sat)]
+  mDT[, y.ground.pred := y.sat - y.diff_pred]
 
   # output
   c(list(by_var = by_var, bin_list = bin_list, mDT_wPred = mDT), cv_results)
@@ -638,16 +640,9 @@ initial_cv_dart <- function(
 #'
 #' @param d The data table `mDT_wPred` returned by `initial_cv_dart`.
 cv.summary = function(d)
-   {d = d[, .(
-        site,
-        time.sat = lubridate::as_datetime(time.sat),
-        time.ground,
-        y.sat,
-        y.ground,
-        y.ground.pred = y.sat - y.diff_pred)]
     rbind(
         d[, c(list(Year = "all"), eval(performance.j))],
-        d[, keyby = .(Year = year(time.sat)), eval(performance.j)])}
+        d[, keyby = .(Year = year(time.sat)), eval(performance.j)])
 
 performance.j = quote(
    {mse = function(x, y) mean((x - y)^2)
