@@ -86,9 +86,6 @@ list(
     tar_target(aer_stations, format = 'fst_dt', fread(
         aer_stn_path, col.names = c('Site_Name', 'lon', 'lat', 'elevm'))),
 
-    tar_target(vrt_path, prepare_vrt_directory(
-        intermediate.path())),
-
     tar_target(buff, get_aoi_buffer(
         Wf$region)),
     tar_target(satellite_hdf_files, switch(Wf$satellite.product,
