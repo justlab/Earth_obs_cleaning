@@ -768,9 +768,15 @@ read_satellite_raster = function(
 make_pred_grid = function(satellite.product, earthdata.rows)
    {r = do.call(terra::merge, lapply(1 : nrow(earthdata.rows),
         function(i) with(earthdata.rows[i],
-            read_satellite_raster(satellite.product, tile, path))[[1]]))
-    r$IGNORE = 0L
-    r[[2]]}
+           {r = read_satellite_raster(satellite.product, tile, path)[[1]]
+            r$tile = as.integer(tile)
+            r$cell.local = seq_len(terra::ncell(r))
+            r[[c("tile", "cell.local")]]})))
+    # We need to call `as.integer` again: https://github.com/rspatial/terra/issues/866
+    r$cell.local = as.integer(r$cell.local[])
+    r$tile = factor(as.integer(drop(r$tile[])),
+        labels = levels(earthdata.rows$tile))
+    r}
 
 #' Prepare prediction table. Will predict values for every overpass in the
 #' specified region and dates.

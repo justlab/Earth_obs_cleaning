@@ -55,10 +55,29 @@ features = c(
         c("Column_WV", "qa_best")))
 
 terra.rast.fmt = tar_format(
+  # None of `terra`'s output formats seems to round-trip properly,
+  # so we implement our own.
     read = function(path)
-        terra::rast(path),
+       {o = qs::qread(path)
+        r = terra::rast(
+            nrows = o$rows,
+            ncols = o$cols,
+            ext = o$ext,
+            crs = o$crs)
+        for (lyr in names(o$values))
+            suppressWarnings({r[[lyr]] = o$values[[lyr]]})
+        r},
     write = function(object, path)
-        terra::writeRaster(object, path, filetype = "GTiff"))
+       {r = object
+        qs::qsave(file = path, list(
+            rows = nrow(r),
+            cols = ncol(r),
+            ext = as.vector(terra::ext(r)),
+            crs = terra::crs(r),
+            values = `names<-`(
+                lapply(names(r), function(lyr)
+                    as.data.frame(r[[lyr]], na.rm = F)[[1]]),
+                names(r))))})
 
 pbapply::pboptions(type = "timer")
 
