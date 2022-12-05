@@ -53,6 +53,8 @@ y_var = "diff_AOD"
 
 set.seed(1234)
 
+terra::terraOptions(progress = 0)
+
 # basic AERONET variables to read
 vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Name",
            "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
