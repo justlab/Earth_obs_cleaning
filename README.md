@@ -13,7 +13,7 @@ A Unix-like operating system is assumed. We've developed the project on Ubuntu. 
   - `EARTH_OBS_CLEANING_NTHREADS` (optional): The number of workers to use for some of the concurrent steps.
 - Clone the Earth_obs_cleaning repository and `cd` into it.
 - Start `R` interactively.
-  - `source("renv/activate.R")`
+  - `renv::load()`
   - `renv::restore()`
   - `y`
     - This step will install a lot of dependencies. Some system libraries (e.g., `libglpk-dev` on Debian) are required by some of these required R packages. The required packages depend on your OS, and we're not even sure which are required on Ubuntu, so you get to figure that out yourself. Have fun!
@@ -21,4 +21,4 @@ A Unix-like operating system is assumed. We've developed the project on Ubuntu. 
 
 # The test workflow
 
-Set the environment variable `EARTH_OBS_CLEANING_TEST_SMALL_DATERANGE` to `1`. Then, in an interactive R session, say `source("renv/activate.R")`. Say `targets::tar_make(initial_cv_l2_terra_conus)` to try cross-validation with a few days of data, or `targets::tar_make(pred_out_1_test_terra_conus)` to try making new predictions for a single day. These are pretty fast, taking only a few minutes, aside from downloading the data. Use `tar_read` (as in `targets::tar_read(initial_cv_l2_terra_conus)`) to see the results.
+Set the environment variable `EARTH_OBS_CLEANING_TEST_SMALL_DATERANGE` to `1`. Then, in an interactive R session, say `renv::load()`. Say `targets::tar_make(initial_cv_l2_terra_conus)` to try cross-validation with a few days of data, or `targets::tar_make(pred_out_1_test_terra_conus)` to try making new predictions for a single day. These are pretty fast, taking only a few minutes, aside from downloading the data. Use `tar_read` (as in `targets::tar_read(initial_cv_l2_terra_conus)`) to see the results.
