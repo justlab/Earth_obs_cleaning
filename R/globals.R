@@ -1,6 +1,8 @@
 library(data.table)
 
-data.dir = Sys.getenv("EARTH_OBS_CLEANING_DATA_DIR")
+config = yaml::read_yaml("config.yaml")
+
+data.dir = config$data.dir
 stopifnot(dir.exists(data.dir))
 geonexl2.dir = file.path(data.dir, "geonexl2")
 intermediate.path = function(...)
@@ -11,16 +13,12 @@ download = function(from, to, ...)
 satellite_hdf_root = file.path(data.dir, 'earthdata')
 dir.create(satellite_hdf_root, showWarnings = F)
 
-n.workers = Sys.getenv("EARTH_OBS_CLEANING_NTHREADS")
-n.workers = (if (n.workers == "")
-    max(1, parallel::detectCores() - 2) else
-    as.integer(n.workers))
+n.workers = config$n.workers
+if (is.null(n.workers))
+    n.workers = max(1, parallel::detectCores() - 2)
 
 # The most general workflow-defining variables.
-Wf = stringr::str_match_all(
-   Sys.getenv("EARTH_OBS_CLEANING_WORKFLOW"),
-   "([^ =]+)=([^ =]+)")[[1]]
-Wf = as.environment(`names<-`(as.list(Wf[,3]), Wf[,2]))
+Wf = as.environment(config$workflow)
 stopifnot(Wf$outcome %in% c("aod"))
 stopifnot(
     Wf$satellite.product == "mcd19a2" &&

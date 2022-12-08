@@ -1,0 +1,10 @@
+data.dir: /tmp/Earth_obs_cleaning_data
+n.workers: 8
+
+workflow:
+    outcome: aod
+    satellite.product: mcd19a2
+    satellite: terra
+    ground.product: aeronet
+    region: conus
+    test_small_daterange: TRUE

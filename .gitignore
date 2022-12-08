@@ -10,3 +10,4 @@ _targets.yaml
 *.html
 *.pdf
 /renv
+/config.yaml

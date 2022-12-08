@@ -36,7 +36,7 @@ all_dates = seq(
     lubridate::make_date(min(process_years)),
     lubridate::make_date(max(process_years), 12, 31),
     by = 1)
-if (Sys.getenv("EARTH_OBS_CLEANING_TEST_SMALL_DATERANGE") != "")
+if (!is.null(Wf$test_small_daterange) && Wf$test_small_daterange)
    {process_years = year(example_date)
     all_dates = example_date + (-1:1)}
 stopifnot(example_date %in% all_dates)
