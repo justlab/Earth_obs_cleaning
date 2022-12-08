@@ -11,9 +11,6 @@ source('R/paper_functions.R')
 library(targets)
 library(tarchetypes)
 
-tar_config_set(
-    config = file.path(data.dir, "targets.yaml"),
-    store = file.path(data.dir, "targets_store"))
 tar_option_set(
     packages = sapply(parse("R/libraries.R")[[1]][-1][[1]][-1],
         function(x) as.character(x[[2]])),

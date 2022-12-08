@@ -1,4 +1,8 @@
-library(data.table)
+renv::load()
+
+suppressPackageStartupMessages(
+   {library(data.table)
+    library(targets)})
 
 config = yaml::read_yaml("config.yaml")
 
@@ -27,6 +31,17 @@ stopifnot(
        Wf$satellite == "goes16")
 stopifnot(Wf$ground.product %in% c("aeronet"))
 stopifnot(Wf$region %in% c("conus"))
+
+# Put the `targets` configuration file and data store in a workflow-
+# specific subdirectory of `data.dir`.
+workflow.dir = file.path(data.dir, "workflows",
+    digest::digest(config$workflow, algo = "murmur32"))
+dir.create(workflow.dir, recursive = T, showWarnings = F)
+yaml::write_yaml(file = file.path(workflow.dir, "targets.yaml"),
+    list(main = list(
+        script = "R/targets.R",
+        store = file.path(workflow.dir, "targets_store"))))
+Sys.setenv(TAR_CONFIG = file.path(workflow.dir, "targets.yaml"))
 
 daily.sat = function(satellite.product = Wf$satellite.product)
   # Whether the satellite product is daily, as opposed to being

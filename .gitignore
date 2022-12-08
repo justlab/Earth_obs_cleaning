@@ -6,7 +6,6 @@
 *.drake
 *.swp
 meta/
-_targets.yaml
 *.html
 *.pdf
 /renv
