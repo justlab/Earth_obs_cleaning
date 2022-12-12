@@ -163,7 +163,7 @@ list(
             stn_var = "site"))),
     tar_target(full_model, dart_full(
         traindata,
-        y_var = "diff_AOD",
+        y_var = "y.diff",
         features = Wf$features)),
 
     # Summarize and report on the CV

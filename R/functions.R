@@ -589,9 +589,7 @@ initial_cv_dart <- function(
   xgb_threads <- get.threads()
 
   mDT <- data.table::copy(setDT(data)) # needed for drake, uncertain about targets
-  if("time.sat" %in% features) {
-    mDT[, time.sat := as.double(time.sat)]
-  }
+  simplify.dt.for.xgboost(mDT)
   if(!is.null(day_var)) {
     mDT[, dayint := as.integer(get(day_var))]
     by_var = "day"
@@ -933,9 +931,8 @@ dart_full <- function(
   progress = TRUE
 ){
   xgb_threads <- get.threads()
-  first_date = min(data_train$aer_date)
   data_train = data_train[, c(features, y_var), with = F]
-
+  simplify.dt.for.xgboost(data_train)
   xdc_out <- xgboost.dart.cvtune(
     # by default, gives 100 rounds, and it is enough by experience
     n.rounds = n_rounds,
@@ -944,17 +941,6 @@ dart_full <- function(
     ivs = features,
     progress = progress,
     nthread = xgb_threads)
-
-  # manually select and store some params
-  param_dart <- c(xdc_out$model$params[c(1,2,4, 6:11)], nrounds = xdc_out$model$niter)
-
-  # save the model
-  # hash important input and output to create a unique name
-  model_out_path = intermediate.path(paste0('full_model_dart_',
-                            targets:::digest_obj64(list(data_train, features, y_var, param_dart)),
-                            '.xgb'))
-  xgboost::xgb.save(xdc_out$model, model_out_path)
-
   # record the prediction
   preds = xdc_out$pred.fun(data_train)
   #rmse_full <- sqrt(mean((preds - data_train[[y_var]])^2))
@@ -975,9 +961,7 @@ dart_full <- function(
        y_preds = preds,
        shap_pred = shap_pred,
        shap_bias = shap_bias,
-       model_out_path = model_out_path,
-       first_date = first_date)
-}
+       model = xgb.save.raw(raw_format = "ubj", xdc_out$model))}
 
 #' Predict the difference between MCD19 and AERONET
 run_preds = function(full_model, features, grid, round_digits, data){
@@ -1149,3 +1133,7 @@ get_conus_buff <- function(){
             st_transform(crs = crs.us.atlas,
                          st_union(x)))
 }
+
+simplify.dt.for.xgboost = function(d)
+    if ("time.sat" %in% colnames(d))
+        d[, time.sat := as.double(time.sat)]
