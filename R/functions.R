@@ -963,30 +963,6 @@ dart_full <- function(
        shap_bias = shap_bias,
        model = xgb.save.raw(raw_format = "ubj", xdc_out$model))}
 
-#' Predict the difference between MCD19 and AERONET
-run_preds = function(full_model, features, grid, round_digits, data){
-  if (!nrow(data))
-      return()
-
-  data = data[!is.na(MCD19_AOD_470nm)]
-  data[, pred_date := as.Date(dayint, '1970-01-01')]
-
-  predvec = predict(
-      xgboost::xgb.load(full_model$model_out_path),
-      as.matrix(data[, features, with = FALSE]))
-  # join predictions
-  r = function(v) as.integer(round(10^round_digits * v))
-  data = data[, .(
-      pred_date,
-      overpass = op_id,
-      cell = as.integer(terra::cellFromXY(grid, cbind(x, y))),
-      value_old = r(MCD19_AOD_470nm),
-      value_new = r(MCD19_AOD_470nm - predvec))]
-  assert(!anyNA(data))
-  setkey(data, pred_date, overpass, cell)
-  data
-}
-
 # Maps ####
 
 #' Compare adjusted AOD to original
