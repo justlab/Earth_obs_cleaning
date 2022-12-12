@@ -164,15 +164,13 @@ get_focal_extent = function(x, c1, r1, radw){
 }
 
 make_traindata = function(
-        satellite.product, the.satellite, features,
+        satellite.product, the.satellite,
+        y.sat.name, features, window.radius,
         aer_filtered, aer_stn, satellite_hdf_files, example_date,
         n.workers)
-   {y.sat = "Optical_Depth_047"
-    temporal.matchup.seconds = (if (daily.sat(satellite.product))
+   {temporal.matchup.seconds = (if (daily.sat(satellite.product))
         8 * 60 else
         30)
-    window.radius = 5L
-      # The window will be `1 + 2*window.radius` cells on each side.
 
     message("Assembling ground data")
     aer_filtered = aer_filtered[, c(
@@ -208,36 +206,13 @@ make_traindata = function(
             return()
 
         # Identify the satellite data for this tile.
-        sat = satellite_hdf_files[tile == the.tile,
-            .(time.sat = time, sat.files.ix)]
-        if (multipass.sat(satellite.product))
-          # Each file contains multiple overpasses and multiple
-          # satellites, stored in different layers. Expand `sat` into
-          # one row per layer, keeping only the satellite of interest.
-           {message("Collecting overpasses")
-            sat = rbindlist(pblapply(cl = n.workers, 1 : nrow(sat), function(i)
-               {path = satellite_hdf_files[sat[i, sat.files.ix], path]
-                if (file.size(path) == 0)
-                    return()
-                orbit.times = str_extract_all(
-                    fromJSON(terra::describe(options = "json", path))
-                        $metadata[[1]]$Orbit_time_stamp,
-                    "\\S+")[[1]]
-                `[`(
-                    sat[i, .(
-                        sat.files.ix,
-                        overpass = seq_along(orbit.times),
-                        satellite = c(T = "terra", A = "aqua")[
-                            str_sub(orbit.times, -1)],
-                        time.sat = as.POSIXct(tz = "UTC",
-                            orbit.times,
-                            "%Y%j%H%M"))],
-                    satellite == the.satellite,
-                    -"satellite")}))
-            if (!nrow(sat))
-                return()}
-        else
-            sat[, overpass := NA_integer_]
+        sat = expand.to.overpasses(
+            satellite_hdf_files[tile == the.tile,
+                .(time.sat = time, sat.files.ix)],
+            satellite_hdf_files,
+            the.satellite, satellite.product, n.workers)
+        if (!nrow(sat))
+            return()
         assert(!anyNA(sat[, -"overpass"]))
         setkey(sat, time.sat)
 
@@ -261,43 +236,9 @@ make_traindata = function(
             head(.SD, 1)]
 
         # Read in the values of the appropriate satellite files.
-        vnames = intersect(
-            str_replace(features, "qa_best", "AOD_QA"),
-            names(r.example))
-        message("Reading satellite data")
-        d = rbindlist(pblapply(
-            cl = n.workers,
-            split(d, by = c("sat.files.ix", "overpass")),
-            function(chunk) chunk
-                [, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
-                   {r = read_satellite_raster(
-                        satellite.product,
-                        the.tile,
-                        satellite_hdf_files[chunk$sat.files.ix[1], path],
-                        overpass[1])
-                    cbind(
-                        r[[c(y.sat, vnames)]][cell.local],
-                        rbindlist(lapply(cell.local, function(cell)
-                           {rc = terra::rowColFromCell(r, cell)
-                            row = rc[,1] + (-window.radius : window.radius)
-                            col = rc[,2] + (-window.radius : window.radius)
-                            values = r[[y.sat]][
-                                row[0 <= row & row <= nrow(r)],
-                                col[0 <= col & col <= ncol(r)]][[1]]
-                            data.frame(
-                                y.sat.mean = mean(values, na.rm = T),
-                                y.sat.present = mean(!is.na(values)))})))}]
-                [!is.na(y.sat), -"time.diff"]))
-                  # Keep only cases where we have the satellite
-                  # outcome of interest.
-
-        if ("AOD_QA" %in% colnames(d))
-           {d[, qa_best := bitwAnd(AOD_QA,
-                bitwShiftL(strtoi("1111", base = 2), 8)) == 0]
-                  # Page 13 of https://web.archive.org/web/20200927141823/https://lpdaac.usgs.gov/documents/110/MCD19_User_Guide_V6.pdf
-            d[, AOD_QA := NULL]}
-
-        d}))
+        get.predictors(
+            d, satellite_hdf_files,
+            satellite.product, y.sat.name, features, window.radius, n.workers)}))
 
     message("Interpolating AOD")
     d[, y.ground := `[`(
@@ -308,6 +249,78 @@ make_traindata = function(
 
     # Calculate the difference.
     d[, y.diff := y.sat - y.ground]
+    d}
+
+expand.to.overpasses = function(d, satellite_hdf_files, the.satellite, satellite.product, n.workers)
+   {if (!multipass.sat(satellite.product))
+        return(cbind(d, overpass := NA_integer_))
+    # Each file contains multiple overpasses and multiple
+    # satellites, stored in different layers. Expand `d` into
+    # one row per layer, keeping only the satellite of interest.
+    message("Collecting overpasses")
+    rbindlist(pblapply(cl = n.workers, 1 : nrow(d), function(i)
+       {path = satellite_hdf_files[d[i, sat.files.ix], path]
+        if (file.size(path) == 0)
+            return()
+        orbit.times = str_extract_all(
+            fromJSON(terra::describe(options = "json", path))
+                $metadata[[1]]$Orbit_time_stamp,
+            "\\S+")[[1]]
+        `[`(
+            d[i, .(
+                sat.files.ix,
+                overpass = seq_along(orbit.times),
+                satellite = c(T = "terra", A = "aqua")[
+                    str_sub(orbit.times, -1)],
+                time.sat = as.POSIXct(tz = "UTC",
+                    orbit.times,
+                    "%Y%j%H%M"))],
+            satellite == the.satellite,
+            -"satellite")}))}
+
+get.predictors = function(
+        d, satellite_hdf_files,
+        satellite.product, y.sat.name, features, window.radius, n.workers)
+   {vnames = intersect(
+        str_replace(features, "qa_best", "AOD_QA"),
+        feature.raster.layers)
+
+    message("Reading predictors from satellite data")
+    d = rbindlist(pblapply(
+        cl = n.workers,
+        split(d, by = c("sat.files.ix", "overpass")),
+        function(chunk) chunk
+            [, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
+               {r = read_satellite_raster(
+                    satellite.product,
+                    satellite_hdf_files[chunk$sat.files.ix[1], tile],
+                    satellite_hdf_files[chunk$sat.files.ix[1], path],
+                    overpass[1])
+                cbind(
+                    r[[c(y.sat.name, vnames)]][cell.local],
+                    rbindlist(lapply(cell.local, function(cell)
+                       {rc = terra::rowColFromCell(r, cell)
+                        row = rc[,1] + (-window.radius : window.radius)
+                        col = rc[,2] + (-window.radius : window.radius)
+                        values = r[[y.sat.name]][
+                            row[0 <= row & row <= nrow(r)],
+                            col[0 <= col & col <= ncol(r)]][[1]]
+                        data.frame(
+                            y.sat.mean = mean(values, na.rm = T),
+                            y.sat.present = mean(!is.na(values)))})))}]
+            [!is.na(y.sat)]))
+              # Keep only cases where we have the satellite
+              # outcome of interest.
+
+    if ("time.diff" %in% colnames(d))
+        d[, time.diff := NULL]
+
+    if ("AOD_QA" %in% colnames(d))
+       {d[, qa_best := bitwAnd(AOD_QA,
+            bitwShiftL(strtoi("1111", base = 2), 8)) == 0]
+              # Page 13 of https://web.archive.org/web/20200927141823/https://lpdaac.usgs.gov/documents/110/MCD19_User_Guide_V6.pdf
+        d[, AOD_QA := NULL]}
+
     d}
 
 derive_mcd19_vars = function(aer_data, n.workers, ...)

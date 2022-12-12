@@ -39,17 +39,8 @@ if (!is.null(Wf$test_small_daterange) && Wf$test_small_daterange)
 stopifnot(example_date %in% all_dates)
 
 buffers_km = c(10, 30, 90, 270)
-pred_round_digits = 5
-  # MCD19A2 AOD has 3 digits of precision, so this is a little more.
 agg_level = 10
 agg_thresh = 3
-features = c(
-    "y.sat", "time.sat",
-    "y.sat.mean", "y.sat.present",
-    "AOD_Uncertainty",
-    "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
-    (if (Wf$satellite.product == "mcd19a2")
-        c("Column_WV", "qa_best")))
 
 terra.rast.fmt = tar_format(
   # None of `terra`'s output formats seems to round-trip properly,
@@ -153,9 +144,8 @@ list(
 
     # This step is where most of the satellite data is read.
     tar_target(traindata, format = 'fst_dt', make_traindata(
-        Wf$satellite.product,
-        Wf$satellite,
-        features,
+        Wf$satellite.product, Wf$satellite,
+        Wf$y.sat, Wf$features, Wf$window.radius,
         aer_filtered,
         as.data.table(aer),
         satellite_hdf_files,
@@ -169,12 +159,12 @@ list(
             traindata,
             absolute = loss == "l1",
             y_var = "y.diff",
-            features = features,
+            features = Wf$features,
             stn_var = "site"))),
     tar_target(full_model, dart_full(
         traindata,
         y_var = "diff_AOD",
-        features = features)),
+        features = Wf$features)),
 
     # Summarize and report on the CV
     tar_target(cv_summary_table, cv.summary(

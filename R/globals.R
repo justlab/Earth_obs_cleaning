@@ -33,6 +33,22 @@ stopifnot(
 stopifnot(Wf$ground.product %in% c("aeronet"))
 stopifnot(Wf$region %in% c("conus"))
 
+# True configurability of these parts is not implemented now
+# but might be added later.
+Wf$y.sat = "Optical_Depth_047"
+Wf$features = c(
+  # Predictors for modeling.
+    "y.sat", "time.sat",
+    "y.sat.mean", "y.sat.present",
+    "AOD_Uncertainty",
+    "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
+    (if (Wf$satellite.product == "mcd19a2")
+        c("Column_WV", "qa_best")))
+Wf$window.radius = 5L
+  # The windows will be `1 + 2*window.radius` cells on each side.
+Wf$pred.round.digits = 5L
+  # MCD19A2 AOD has 3 digits of precision, so this is a little more.
+
 # Put the `targets` configuration file and data store in a workflow-
 # specific subdirectory of `data.dir`.
 workflow.dir = file.path(data.dir, "workflows",
@@ -75,3 +91,8 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
            "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 
 crs_sinu = '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs'
+
+feature.raster.layers = c(
+    "AOD_Uncertainty",
+    "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
+    "Column_WV", "AOD_QA")
