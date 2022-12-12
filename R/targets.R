@@ -6,6 +6,7 @@ source('R/globals.R')
 source('R/data.R')
 source('R/functions.R')
 source('R/xgboost_cv.R')
+source('R/new_preds.R')
 source('R/paper_functions.R')
 
 library(targets)
@@ -128,8 +129,6 @@ list(
             lubridate::as_date(time) == example_date,
             by = tile,
             head(.SD, 1)])),
-    tar_target(ground_obs, format = "fst_dt", get_ground_obs(
-        process_years, pred_grid)),
 
     # AERONET processing for this region
     tar_target(aer, select_stations(
@@ -171,6 +170,17 @@ list(
         initial_cv_l2$mDT_wPred)),
     tar_render(initial_cv_report,
         'R/initial_cv_report.Rmd'),
+
+    # Compare AQS to our predictions
+    tar_target(aqs_obs, format = "fst_dt", get_aqs_obs(
+        process_years, pred_grid)),
+    tar_target(pred_at_aqs_sites, format = "fst_dt", new.preds.compact(
+        dt.start = lubridate::as_datetime(min(aqs_obs$date) - 1),
+        dt.end = lubridate::as_datetime(max(aqs_obs$date) + 1),
+        cells = sort(unique(aqs_obs$cell)),
+        targets = list(pred_grid, satellite_hdf_files, full_model))),
+    tar_target(aqs_comparison, satellite_vs_aqs(
+        pred_at_aqs_sites, aqs_obs)),
 
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2") list(

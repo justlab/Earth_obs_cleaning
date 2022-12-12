@@ -24,7 +24,7 @@ performance_aod <- function(dt, ...){
 #' Agency's (EPA) Air Quality System. The unit is μg/m^3.
 #' File source: https://aqs.epa.gov/aqsweb/airdata/download_files.html#Daily
 #' Documentation: https://aqs.epa.gov/aqsweb/documents/about_aqs_data.html
-get_ground_obs = function(years, grid)
+get_aqs_obs = function(years, grid)
    {aqs.url.root = "https://aqs.epa.gov/aqsweb/airdata"
     parameter.code = 88101L
       # PM_{2.5} from a federally approved reference or equivalent
@@ -55,7 +55,7 @@ get_ground_obs = function(years, grid)
     setcolorder(d)
     d}
 
-#' Get all satellite observations at cells that ever contain AQS
+#' Get all satellite observations and predictions thereof at cells that ever contain AQS
 #' monitors.
 satellite_at_aqs_sites = function(region, years, sat, ground)
    {db = dbConnect(duckdb::duckdb(), ":memory:")
@@ -72,17 +72,22 @@ satellite_at_aqs_sites = function(region, years, sat, ground)
             as.character(outer(1:12, years, sprintf,
                 fmt = "pred_out_%d_%d_%s_%s", sat, region)))))))}
 
-satellite_vs_ground = function(satellite, ground)
-   {d = merge(
-       satellite,
-       ground[, .(date, cell, ground_value = value)],
+satellite_vs_aqs = function(satellite, aqs)
+   {message("Merging with AQS")
+    d = merge(
+       satellite[, .(cell, y.sat.old, y.sat.new,
+           date = lubridate::as_date(time.sat, tz = "Etc/GMT+6"))],
+       aqs[, .(date, cell, y.aqs = value)],
        by = c("date", "cell"))
     # Find the weighted correlation of old and new satellite values
-    # with ground values.
+    # with AQS values. A single cell-day can have more than one
+    # satellite value, more than one AQS value, or both. We consider
+    # all combinations and weight them to sum to 1 per cell-day.
+    message("Computing statistics")
     d[, by = .(date, cell), weight := 1 / .N]
     out = lapply(c("old", "new"), function(sv_type)
         cov.wt(
-            d[, .(get(paste0("satellite_value_", sv_type)), ground_value)],
+            d[, .(get(paste0("y.sat.", sv_type)), y.aqs)],
             wt = d$weight, cor = T, method = "ML")$cor[1, 2])
     names(out) <- c("old", "new")
     out[["nobs"]] = d[, .N]
