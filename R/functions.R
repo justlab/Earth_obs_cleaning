@@ -284,6 +284,9 @@ get.predictors = function(
    {vnames = intersect(
         str_replace(features, "qa_best", "AOD_QA"),
         feature.raster.layers)
+    window.matrix = as.matrix(CJ(
+        row = -window.radius : window.radius,
+        col = -window.radius : window.radius))
 
     message("Reading predictors from satellite data")
     d = rbindlist(pblapply(
@@ -296,18 +299,18 @@ get.predictors = function(
                     satellite_hdf_files[chunk$sat.files.ix[1], tile],
                     satellite_hdf_files[chunk$sat.files.ix[1], path],
                     overpass[1])
+                y.sat.values = drop(r[[y.sat.name]][])
                 cbind(
-                    r[[c(y.sat.name, vnames)]][cell.local],
+                    y.sat.values[cell.local],
+                    r[[vnames]][cell.local],
                     rbindlist(lapply(cell.local, function(cell)
                        {rc = terra::rowColFromCell(r, cell)
-                        row = rc[,1] + (-window.radius : window.radius)
-                        col = rc[,2] + (-window.radius : window.radius)
-                        values = r[[y.sat.name]][
-                            row[0 <= row & row <= nrow(r)],
-                            col[0 <= col & col <= ncol(r)]][[1]]
+                        v = y.sat.values[na.omit(cellFromRowCol(r,
+                            rc[,1] + window.matrix[,1],
+                            rc[,2] + window.matrix[,2]))]
                         data.frame(
-                            y.sat.mean = mean(values, na.rm = T),
-                            y.sat.present = mean(!is.na(values)))})))}]
+                            y.sat.mean = mean(v, na.rm = T),
+                            y.sat.present = mean(!is.na(v)))})))}]
             [!is.na(y.sat)]))
               # Keep only cases where we have the satellite
               # outcome of interest.
