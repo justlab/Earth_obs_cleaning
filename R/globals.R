@@ -71,8 +71,8 @@ multipass.sat = function(satellite.product = Wf$satellite.product)
     satellite.product == "mcd19a2"
 
 satellite_aod_tiles = list(
-    # Selected by hand in QGIS with this shapefile:
-    # http://web.archive.org/web/2022/http://book.ecosens.org/wp-content/uploads/2016/06/modis_grid.zip
+    # Selected by hand in QGIS with https://gist.github.com/Kodiologist/5b8b8eabe5a7043056a41992fdfa4921
+    # and then checked with example rasters.
     conus = rbind(
         data.table(h = 8:13, v = 4),
         data.table(h = 8:12, v = 5),
