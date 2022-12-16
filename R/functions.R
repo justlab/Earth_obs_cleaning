@@ -287,33 +287,37 @@ get.predictors = function(
     window.matrix = as.matrix(CJ(
         row = -window.radius : window.radius,
         col = -window.radius : window.radius))
+    chunks = split(d, by = c("sat.files.ix", "overpass"))
+    parallel.outside = length(chunks) > 5
+    xlapply = function(do.pblapply, ...)
+        if (do.pblapply)
+            pblapply(cl = n.workers, ...)
+        else
+            lapply(...)
 
     message("Reading predictors from satellite data")
-    d = rbindlist(pblapply(
-        cl = n.workers,
-        split(d, by = c("sat.files.ix", "overpass")),
-        function(chunk) chunk
-            [, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
-               {r = read_satellite_raster(
-                    satellite.product,
-                    satellite_hdf_files[chunk$sat.files.ix[1], tile],
-                    satellite_hdf_files[chunk$sat.files.ix[1], path],
-                    overpass[1])
-                y.sat.values = drop(r[[y.sat.name]][])
-                cbind(
-                    y.sat.values[cell.local],
-                    r[[vnames]][cell.local],
-                    rbindlist(lapply(cell.local, function(cell)
-                       {rc = terra::rowColFromCell(r, cell)
-                        v = y.sat.values[na.omit(cellFromRowCol(r,
-                            rc[,1] + window.matrix[,1],
-                            rc[,2] + window.matrix[,2]))]
-                        data.frame(
-                            y.sat.mean = mean(v, na.rm = T),
-                            y.sat.present = mean(!is.na(v)))})))}]
-            [!is.na(y.sat)]))
-              # Keep only cases where we have the satellite
-              # outcome of interest.
+    d = rbindlist(xlapply(parallel.outside, chunks, \(chunk) chunk
+        [, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
+           {r = read_satellite_raster(
+                satellite.product,
+                satellite_hdf_files[chunk$sat.files.ix[1], tile],
+                satellite_hdf_files[chunk$sat.files.ix[1], path],
+                overpass[1])
+            y.sat.values = drop(r[[y.sat.name]][])
+            cbind(
+                y.sat.values[cell.local],
+                r[[vnames]][cell.local],
+                rbindlist(xlapply(!parallel.outside, cell.local, \(cell)
+                   {rc = terra::rowColFromCell(r, cell)
+                    v = y.sat.values[na.omit(cellFromRowCol(r,
+                        rc[,1] + window.matrix[,1],
+                        rc[,2] + window.matrix[,2]))]
+                    data.frame(
+                        y.sat.mean = mean(v, na.rm = T),
+                        y.sat.present = mean(!is.na(v)))})))}]
+        [!is.na(y.sat)]))
+          # Keep only cases where we have the satellite
+          # outcome of interest.
 
     if ("time.diff" %in% colnames(d))
         d[, time.diff := NULL]
