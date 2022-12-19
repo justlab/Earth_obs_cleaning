@@ -9,16 +9,16 @@
 #' @param new_crs the CRS to set the result to
 #' @return a subset of geometry points within the given polygon
 select_stations <- function(stations, reg_polygon, new_crs){
-  stations = stations[Site_Name != "CART_SITE"]
-    # This station is in the same place as "Cart_Site" and has
-    # relatively few observations. It's not clear to what degree it's
-    # a duplicate.
-  aerpts = st_transform(crs = st_crs(reg_polygon),
-      st_as_sf(stations, coords = c("lon", "lat"), crs = crs.lonlat))
-  aerpts <- st_transform(crs = new_crs,
-      aerpts[st_intersects(aerpts, reg_polygon, sparse = FALSE),])
-  `rownames<-`(aerpts[withr::with_collate("C", order(aerpts$Site_Name)),],
-      NULL)
+  stations = stations[
+      Site_Name != "CART_SITE" &
+        # This station is in the same place as "Cart_Site" and has
+        # relatively few observations. It's not clear to what degree it's
+        # a duplicate.
+      in.sf(lon, lat, crs.lonlat, reg_polygon)]
+  setkey(stations, Site_Name)
+  stations[, c("x", "y") :=
+      convert.crs(cbind(lon, lat), crs.lonlat, new_crs)]
+  stations
 }
 
 #' Load Aeronet AOD measurement data from text files sourced from downloaded
@@ -181,8 +181,7 @@ make_traindata = function(
     setkey(aer_filtered, site, time.ground)
     ground = aer_filtered[, .(site, time.ground)]
     ground[, c("x_satcrs", "y_satcrs") := aer_stn[
-        .(ground$site), on = "Site_Name",
-        as.data.table(st_coordinates(geometry))]]
+        .(ground$site), on = "Site_Name", .(x, y)]]
     setkey(ground, time.ground)
 
     satellite_hdf_files = copy(satellite_hdf_files)
@@ -1103,6 +1102,12 @@ get_conus <- function(){
       x[!(x$STUSPS %in% c("AK", "HI", "PR")),]
 }
 
+in.sf = function(x, y, crs, region)
+# Return a logical vector indicating whether each (x, y) point is in the
+# specified region (an `sf` object).
+    drop(st_intersects(sparse = F,
+        convert.crs(cbind(x, y), crs, terra::crs(region), sf = T),
+        region))
 
 #' get_conus_buff
 #' @return sf object of buffered CONUS area

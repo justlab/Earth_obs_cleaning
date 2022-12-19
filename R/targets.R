@@ -139,14 +139,14 @@ list(
         dates = all_dates,
         get_stn_data(
             aod_dir = aer_files_path,
-            stations = sf::st_drop_geometry(aer)))),
+            stations = aer))),
 
     # This step is where most of the satellite data is read.
     tar_target(traindata, format = 'fst_dt', make_traindata(
         Wf$satellite.product, Wf$satellite,
         Wf$y.sat, Wf$features, Wf$window.radius,
         aer_filtered,
-        as.data.table(aer),
+        aer,
         satellite_hdf_files,
         example_date,
         n.workers = pmin(8L, n.workers))),
