@@ -369,5 +369,26 @@ g1 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'Column_WV
 g1
 ```
 
+## Maps of new predictions
+
+### Median MSE day
+
+```{r pred.map.median.mse, echo = F}
+pred.map(
+    tar_read(T.median.mse.map.data)$pred, tar_read(pred_grid),
+    bg.sf = get_conus(), color.scale.name = "AOD",
+    limits = list(lon = c(-107, Inf), lat = c(-Inf, 37)),
+    quantile.cap = .99)
+```
+
+This map shows a tile on `r tar_read(T.median.mse.map.data)$date`.
+
+### Baltimore
+
+```{r pred.map.balitmore, echo = F}
+pred.map(
+    tar_read(T.baltimore.map.data), tar_read(pred_grid),
+    bg.sf = get_conus(), color.scale.name = "AOD")
+```
 
 *End of report*

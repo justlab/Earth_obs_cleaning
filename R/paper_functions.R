@@ -94,3 +94,106 @@ satellite_vs_aqs = function(satellite, aqs)
     out[["celldays"]] = d[, sum(weight)]
     out
     }
+
+median.mse.map.data = function(
+      y.sat.name, the.satellite, satellite.product, n.workers,
+      d, pred_grid, buff, satellite_hdf_files, full_model)
+   {# Get the date with the median MSE.
+    date = (d
+        [, by = .(date = lubridate::as_date(time.sat, tz = "UTC")),
+            .(mse = mean((y.ground - y.ground.pred)^2))]
+        [which.min(mse - median(mse)), date])
+
+    # Get overpasses for this data.
+    sat = satellite_hdf_files[time == date]
+    sat[, sat.files.ix := .I]
+    overpasses = merge(by = "sat.files.ix", sat,
+        expand.to.overpasses(sat, sat,
+            the.satellite, satellite.product, n.workers))
+
+    # Find the local cell indices we'd want to map.
+    message("Getting raster cells")
+    overpass.local.cells = pblapply(1 : nrow(overpasses), cl = n.workers, \(i)
+       {r = with(overpasses[i], read_satellite_raster(
+            Wf$satellite.product, tile, path, overpass))[[y.sat.name]]
+        # Get only cells with non-missing values.
+        d = as.data.table(as.data.frame(r,
+            na.rm = T, cell = T, xy = T))
+        if (!nrow(d))
+            return(integer())
+        # Get only cells in the study area.
+        d[in.sf(x, y, terra::crs(r), buff), cell]})
+
+    # Choose the tile-time with the most non-missing values.
+    oi = which.max(sapply(overpass.local.cells, length))
+    # Get the prediction-grid cell for each local cell.
+    message("Getting cell indices")
+    cells = (as.data.table(as.data.frame(pred_grid, cells = T))
+        [tile == overpasses[oi, tile]]
+        [cell.local %in% overpass.local.cells[[oi]], cell])
+    assert(length(cells) == length(overpass.local.cells[[oi]]))
+
+    # Make the predictions and return.
+    list(
+        date = date,
+        time.sat = overpasses[oi, time.sat],
+        tile = overpasses[oi, tile],
+        pred = new.preds(
+            overpasses[oi, time.sat],
+            overpasses[oi, time.sat],
+            cells,
+            targets = list(pred_grid, satellite_hdf_files, full_model)))}
+
+baltimore.map.data = function(pred_grid, buff, satellite_hdf_files, full_model)
+   {tiles = c("h11v05", "h12v05")
+    dt = lubridate::as_datetime("2015-06-10T15:40:00Z")
+
+    message("Getting cell indices")
+    cells = (as.data.table(as.data.frame(pred_grid, cells = T, xy = T))
+       [tile %in% tiles]
+       [in.sf(x, y, terra::crs(pred_grid), buff), cell])
+
+    new.preds(
+        dt, dt, cells,
+        targets = list(pred_grid, satellite_hdf_files, full_model))}
+
+pred.map = function(
+        d, pred_grid, bg.sf, color.scale.name,
+        limits = NULL, quantile.cap = NULL)
+   {reproject.res = .009
+
+    g1 = pred_grid
+    g1$y.sat.old = NA_real_
+    g1$y.sat.new = NA_real_
+    g1$y.sat.old[d$cell] = d$y.sat.old
+    g1$y.sat.new[d$cell] = d$y.sat.new
+    g1 = terra::trim(g1[[c("y.sat.old", "y.sat.new")]])
+    g = terra::trim(terra::project(
+        g1,
+        paste0("epsg:", crs.lonlat),
+        res = reproject.res))
+    #print(data.table(
+    #    Grid = c("Original", "Reprojected"),
+    #    "Non-NA cells" = scales::comma(c(sum(!is.na(g1[])), sum(!is.na(g[]))))))
+
+    d = melt(
+        as.data.table(as.data.frame(g, xy = T, na.rm = F)),
+        id.vars = c("x", "y"))
+    setnames(d, c("x", "y"), c("lon", "lat"))
+    if (!is.null(limits))
+        d = d[
+            limits$lon[1] <= lon & lon <= limits$lon[2] &
+            limits$lat[1] <= lat & lat <= limits$lat[2]]
+    if (!is.null(quantile.cap))
+        d[, value := pmin(quantile(value, quantile.cap, na.rm = T), value)]
+
+    ggplot() +
+        geom_raster(aes(lon, lat, fill = value), data = d) +
+        scale_fill_distiller(name = color.scale.name,
+            palette = "Spectral", na.value = "transparent") +
+        geom_sf(data = bg.sf, fill = NA, size = .1) +
+        facet_grid(rows = "variable", labeller = labeller(variable =
+            c(y.sat.old = "Original", y.sat.new = "Corrected"))) +
+        coord_sf(expand = F,
+            xlim = range(d$lon), ylim = range(d$lat)) +
+        theme_void()}

@@ -22,6 +22,8 @@ new.preds = function(dt.start, dt.end, cells = NULL, targets = NULL)
     dt.end = lubridate::with_tz(dt.end, "UTC")
     if (is.null(cells))
         cells = which(!is.na(drop(grid$tile[])))
+    if (is.double(cells))
+        cells = as.integer(cells)
     assert(is.integer(cells) && all(
         1L <= cells & cells <= terra::ncell(grid)))
     message("Cells: ", scales::comma(length(cells)))

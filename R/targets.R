@@ -182,6 +182,13 @@ list(
     tar_target(aqs_comparison, satellite_vs_aqs(
         pred_at_aqs_sites, aqs_obs)),
 
+    # Data for maps
+    tar_target(T.median.mse.map.data, median.mse.map.data(
+        Wf$y.sat, Wf$satellite, Wf$satellite.product, config$n.workers,
+        initial_cv_l2$mDT_wPred, pred_grid, buff, satellite_hdf_files, full_model)),
+    tar_target(T.baltimore.map.data, baltimore.map.data(
+        pred_grid, buff, satellite_hdf_files, full_model)),
+
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2") list(
         tar_render(paper_conus_html, output_format = "html_document",
