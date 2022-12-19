@@ -745,7 +745,7 @@ read_satellite_raster = function(
         c("cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle"),
         function(vname)
            {r = terra::rast(paste0(
-                str_replace(r1@ptr$filenames[1], ":grid1km:[A-Za-z0-9_]+\\Z",
+                str_replace(r1@ptr$filenames()[1], ":grid1km:[A-Za-z0-9_]+\\Z",
                     ":grid5km:"),
                 vname))
             if (!is.na(overpass))
@@ -783,8 +783,6 @@ make_pred_grid = function(satellite.product, earthdata.rows)
             r$tile = as.integer(tile)
             r$cell.local = seq_len(terra::ncell(r))
             r[[c("tile", "cell.local")]]})))
-    # We need to call `as.integer` again: https://github.com/rspatial/terra/issues/866
-    r$cell.local = as.integer(r$cell.local[])
     r$tile = factor(as.integer(drop(r$tile[])),
         labels = levels(earthdata.rows$tile))
     r}
