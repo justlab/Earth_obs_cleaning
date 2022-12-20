@@ -322,9 +322,27 @@ get.predictors = function(
         d[, time.diff := NULL]
 
     if ("AOD_QA" %in% colnames(d))
-       {d[, qa_best := bitwAnd(AOD_QA,
-            bitwShiftL(strtoi("1111", base = 2), 8)) == 0]
-              # Page 13 of https://web.archive.org/web/20200927141823/https://lpdaac.usgs.gov/documents/110/MCD19_User_Guide_V6.pdf
+       {# See page 13 of https://web.archive.org/web/20200927141823/https://lpdaac.usgs.gov/documents/110/MCD19_User_Guide_V6.pdf
+        # Some variables produced here may not be used in training,
+        # but may still be used for stratifying CV results.
+        bits = function(x, bit.index.lo, bit.index.hi)
+            bitwAnd(
+                bitwShiftL(1L, bit.index.hi - bit.index.lo + 1L) - 1L,
+                bitwShiftR(x, bit.index.lo))
+        d[, qa_land := structure(class = "factor",
+            bits(AOD_QA, 3L, 4L) + 1L,
+            levels = c("Land", "Water", "Snow", "Ice"))]
+        d[, qa_adjacent := structure(class = "factor",
+            bits(AOD_QA, 5L, 7L) + 1L,
+            levels = c(
+                "Normal", "AdjacentClouds", "Surrounded",
+                "AdjacentSingleCloudy", "AdjacentSnow", "PreviousSnow"))]
+        assert(d[, all(as.integer(qa_adjacent) <= 5L)])
+        d[, qa_best := bits(AOD_QA, 8L, 11L) == 0L]
+        d[, qa_model := structure(class = "factor",
+            bits(AOD_QA, 13L, 14L) + 1L,
+            levels = c("Background", "Smoke", "Dust"))]
+        assert(d[, all(as.integer(qa_model) <= 3L)])
         d[, AOD_QA := NULL]}
 
     d}
