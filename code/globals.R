@@ -31,7 +31,14 @@ stopifnot(
     Wf$satellite.product == "geonexl2" &&
        Wf$satellite == "goes16")
 stopifnot(Wf$ground.product %in% c("aeronet"))
-stopifnot(Wf$region %in% c("conus"))
+stopifnot(
+    # The region can be a special string…
+    Wf$region == "conus" ||
+    # …or a filepath…
+    startsWith(Wf$region, "/") ||
+    # …or a URL, ending with an appropriate file extension.
+    startsWith(Wf$region, "http:") ||
+    startsWith(Wf$region, "https:"))
 
 # True configurability of these parts is not implemented now
 # but might be added later.
@@ -76,7 +83,11 @@ satellite_aod_tiles = list(
     conus = rbind(
         data.table(h = 8:13, v = 4),
         data.table(h = 8:12, v = 5),
-        data.table(h = 8:10, v = 6))[, sprintf("h%02dv%02d", h, v)])
+        data.table(h = 8:10, v = 6))[, sprintf("h%02dv%02d", h, v)],
+    "other" =
+      # This is a cheat for the moment, until we have an automatic way
+      # to choose tiles.
+        c("h18v03", "h18v04", "h17v04"))
 
 # for reporting purpose
 y_var = "diff_AOD"

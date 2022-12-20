@@ -99,7 +99,8 @@ list(
                 satellites = (if (Wf$satellite %in% c("terra", "aqua"))
                     "terra.and.aqua" else
                     stop()),
-                tiles = satellite_aod_tiles[[Wf$region]],
+                tiles = satellite_aod_tiles[[
+                    if (Wf$region == "conus") Wf$region else "other"]],
                 dates = all_dates)
             setnames(d, "date", "time")
             d},

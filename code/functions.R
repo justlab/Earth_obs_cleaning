@@ -539,16 +539,22 @@ dart_full <- function(
        shap_bias = shap_bias,
        model = xgb.save.raw(raw_format = "ubj", xdc_out$model))}
 
-#' get_aoi_buffer
-#' @param aoiname the region to to use for selection buffer
-#' @return sf object of region buffer
-get_aoi_buffer <- function(aoiname){
-  switch(aoiname,
-    "conus" = buff <- get_conus_buff(),
-    stop("Unsupported aoi name:", aoiname)
-  )
-  buff
-}
+get_aoi_buffer = function(region)
+   {buffer.size.m = 5000
+
+    region = (
+        if (region == "conus")
+            get_conus()
+        else if (startsWith(region, "/"))
+            read_sf(region)
+        else
+           {path = tempfile(fileext = paste0(".",
+                tools::file_ext(region)))
+            assert(0 == download.file(region, path))
+            read_sf(path)})
+
+    # Unify the region and buffer it out.
+    st_buffer(dist = buffer.size.m, st_union(region))}
 
 #' get_conus
 #' @return sf object of states in CONUS
@@ -567,17 +573,6 @@ in.sf = function(x, y, crs, region)
     drop(st_intersects(sparse = F,
         convert.crs(cbind(x, y), crs, terra::crs(region), sf = T),
         region))
-
-#' get_conus_buff
-#' @return sf object of buffered CONUS area
-get_conus_buff <- function(){
-  buffer.size.m = 5000
-
-  x = get_conus()
-  st_buffer(dist = buffer.size.m,
-            st_transform(crs = crs.us.atlas,
-                         st_union(x)))
-}
 
 simplify.dt.for.xgboost = function(d)
     if ("time.sat" %in% colnames(d))
