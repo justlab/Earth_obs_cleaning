@@ -53,8 +53,8 @@ get_aqs_obs = function(years, grid)
       # PM_{2.5} from a federally approved reference or equivalent
       # method (FRM/FEM).
 
-    assert(file.exists("openssl_workaround.conf"))
-    Sys.setenv(OPENSSL_CONF = "openssl_workaround.conf")
+    assert(file.exists("code/openssl_workaround.conf"))
+    Sys.setenv(OPENSSL_CONF = "code/openssl_workaround.conf")
     d = rbindlist(lapply(years, function(the.year)
        {fname = sprintf("daily_%d_%d.zip", parameter.code, the.year)
         d = fread(

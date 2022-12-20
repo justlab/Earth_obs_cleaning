@@ -2,18 +2,18 @@
 # * Setup
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-source('R/globals.R')
-source('R/data.R')
-source('R/functions.R')
-source('R/xgboost_cv.R')
-source('R/new_preds.R')
-source('R/paper_functions.R')
+source('code/globals.R')
+source('code/data.R')
+source('code/functions.R')
+source('code/xgboost_cv.R')
+source('code/new_preds.R')
+source('code/paper_functions.R')
 
 library(targets)
 library(tarchetypes)
 
 tar_option_set(
-    packages = sapply(parse("R/libraries.R")[[1]][-1][[1]][-1],
+    packages = sapply(parse("code/libraries.R")[[1]][-1][[1]][-1],
         function(x) as.character(x[[2]])),
     format = 'qs',
     workspace_on_error = TRUE,
@@ -169,7 +169,7 @@ list(
     tar_target(cv_summary_table, cv.summary(
         initial_cv_l2$mDT_wPred)),
     tar_render(initial_cv_report,
-        'R/initial_cv_report.Rmd'),
+        'writing/initial_cv_report.Rmd'),
 
     # Compare AQS to our predictions
     tar_target(aqs_obs, format = "fst_dt", get_aqs_obs(
@@ -193,7 +193,7 @@ list(
     if (Wf$satellite.product == "mcd19a2") list(
         tar_render(paper_conus_html, output_format = "html_document",
             packages = c('sf', 'patchwork'),
-            'R/CONUS_AOD.Rmd', quiet = F),
+            'writing/CONUS_AOD.Rmd', quiet = F),
         tar_render(paper_conus_pdf, output_format = "pdf_document",
             packages = c('sf', 'patchwork', 'magick'),
-            'R/CONUS_AOD.Rmd')))
+            'writing/CONUS_AOD.Rmd')))

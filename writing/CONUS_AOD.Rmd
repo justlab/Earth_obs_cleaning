@@ -38,8 +38,8 @@ suppressPackageStartupMessages(
     # library(flextable)
   })
 # set_flextable_defaults(fonts_ignore=TRUE)
-source(here::here("R/functions.R"))
-source(here::here("R/paper_functions.R"))
+source(here::here("code/functions.R"))
+source(here::here("code/paper_functions.R"))
 the.sat = tools::toTitleCase(Wf$satellite)
 ```
 

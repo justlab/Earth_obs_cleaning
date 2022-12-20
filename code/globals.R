@@ -56,7 +56,7 @@ workflow.dir = file.path(data.dir, "workflows",
 dir.create(workflow.dir, recursive = T, showWarnings = F)
 yaml::write_yaml(file = file.path(workflow.dir, "targets.yaml"),
     list(main = list(
-        script = "R/targets.R",
+        script = "code/targets.R",
         store = file.path(workflow.dir, "targets_store"))))
 Sys.setenv(TAR_CONFIG = file.path(workflow.dir, "targets.yaml"))
 
