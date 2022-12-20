@@ -20,6 +20,27 @@ performance_aod <- function(dt, ...){
                       eo_pred = "aodhat")
 }
 
+#' Try out empirical error envelope parameters
+#'
+empirical.error.envelope <- function(dt,
+                                     add.term = seq(0.01, 0.1, by = 0.01),
+                                     mult.term = seq(0.05, 0.3, by = 0.01),
+                                     threshold = 0.6,
+                                     coverage = 2/3){
+  terms <- CJ(add.term, mult.term)
+  coverage.percent <- function(i, dt, ...) {
+    temp <- unlist(i)
+    with(dt, mean(y.sat > y.ground - temp[["add.term"]] - temp[["mult.term"]]*y.ground &
+                            y.sat < y.ground + temp[["add.term"]] + temp[["mult.term"]]*y.ground))
+  }
+  terms[, cov.low := coverage.percent(.SD, dt[y.ground <= threshold]), by = row.names(terms)]
+  terms[, cov.high := coverage.percent(.SD, dt[y.ground > threshold]), by = row.names(terms)]
+  terms[, cov.overall := coverage.percent(.SD, dt), by = row.names(terms)]
+  # return the parameter combo with the smallest abs diff from desired coverage
+  terms <- terms[order(abs(coverage - cov.low) + abs(coverage - cov.high), decreasing = FALSE),]
+  terms
+}
+
 #' Get observations of PM_{2.5} from the Environmental Protection
 #' Agency's (EPA) Air Quality System. The unit is μg/m^3.
 #' File source: https://aqs.epa.gov/aqsweb/airdata/download_files.html#Daily
