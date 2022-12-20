@@ -355,13 +355,14 @@ kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
 ```
 Summary visualization of SHAP contributions
 
-```{r shap_summary, echo=FALSE, dev='png', dpi=300}
+```{r shap_summary, echo=FALSE, dev='png', dpi=300, eval=FALSE}
 shap_long <- shap.prep(shap_contrib = initial_cv_l2$shap_score,
                        X_train = initial_cv_l2$mDT_wPred[, names(initial_cv_l2$shap_score), with = F])
 # **SHAP summary plot**
 shap.plot.summary(shap_long)
 ```
-```{r shap_features, echo=FALSE, dev='png', dpi=300}
+
+```{r shap_features, echo=FALSE, dev='png', dpi=300, eval=FALSE}
 g1 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'Column_WV', color_feature = 'Column_WV') + ggtitle("(A) SHAP values of Column WV vs. Time trend")
 # g2 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'y.sat', color_feature = 'y.sat') +  ggtitle("(B) SHAP values of MAIAC AOD vs. Time trend")
 #
