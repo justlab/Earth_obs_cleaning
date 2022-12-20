@@ -23,18 +23,20 @@ performance_aod <- function(dt, ...){
 #' Try out empirical error envelope parameters
 #'
 empirical.error.envelope <- function(dt,
-                                     add.term = seq(0.01, 0.1, by = 0.01),
-                                     mult.term = seq(0.05, 0.3, by = 0.01),
+                                     obs = "y.ground",
+                                     pred = "y.sat",
+                                     add.term = seq(0.01, 0.1, by = 0.005),
+                                     mult.term = seq(0.05, 0.3, by = 0.005),
                                      threshold = 0.6,
                                      coverage = 2/3){
   terms <- CJ(add.term, mult.term)
   coverage.percent <- function(i, dt, ...) {
     temp <- unlist(i)
-    with(dt, mean(y.sat > y.ground - temp[["add.term"]] - temp[["mult.term"]]*y.ground &
-                            y.sat < y.ground + temp[["add.term"]] + temp[["mult.term"]]*y.ground))
+    with(dt, mean(get(pred) > get(obs) - temp[["add.term"]] - temp[["mult.term"]]*get(obs) &
+                            get(pred) < get(obs) + temp[["add.term"]] + temp[["mult.term"]]*get(obs)))
   }
-  terms[, cov.low := coverage.percent(.SD, dt[y.ground <= threshold]), by = row.names(terms)]
-  terms[, cov.high := coverage.percent(.SD, dt[y.ground > threshold]), by = row.names(terms)]
+  terms[, cov.low := coverage.percent(.SD, dt[get(obs) <= threshold]), by = row.names(terms)]
+  terms[, cov.high := coverage.percent(.SD, dt[get(obs) > threshold]), by = row.names(terms)]
   terms[, cov.overall := coverage.percent(.SD, dt), by = row.names(terms)]
   # return the parameter combo with the smallest abs diff from desired coverage
   terms <- terms[order(abs(coverage - cov.low) + abs(coverage - cov.high), decreasing = FALSE),]

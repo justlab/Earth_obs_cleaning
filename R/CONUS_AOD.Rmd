@@ -307,7 +307,12 @@ dt[, round(100 * proportions(table(y.sat > (y.ground - 0.05 - 0.1*y.ground) & y.
 dt[, round(100 * proportions(table(y.ground.pred > (y.ground - 0.025 - 0.055*y.ground) & y.ground.pred < (y.ground + 0.025 + 0.055*y.ground))))]
 
 # now with our error envelope function
-system.time(envelope <- empirical.error.envelope(dt)); head(envelope)
+envelope.sat <- empirical.error.envelope(dt, pred = "y.sat") 
+head(envelope.sat)
+
+# and for the corrected data
+envelope.ground.pred <- empirical.error.envelope(dt, pred = "y.ground.pred") 
+head(envelope.ground.pred)
 ```
 
 ```{r agreement_plot, echo=FALSE, dev='png', dpi=300}
