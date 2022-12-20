@@ -300,12 +300,14 @@ map_region_rmse
 
 ## Agreement Plots
 
-```{r error_envelope, echo=FALSE}
+```{r error_envelope, echo=TRUE}
 # error envelope for MAIAC is equivalent to that reported in AMT MAIAC publication
 dt[, round(100 * proportions(table(y.sat > (y.ground - 0.05 - 0.1*y.ground) & y.sat < (y.ground + 0.05 + 0.1*y.ground))))]
 # sure looks like we would have a much smaller error envelope (in both additive and multiplicative terms)
 dt[, round(100 * proportions(table(y.ground.pred > (y.ground - 0.025 - 0.055*y.ground) & y.ground.pred < (y.ground + 0.025 + 0.055*y.ground))))]
 
+# now with our error envelope function
+system.time(envelope <- empirical.error.envelope(dt)); head(envelope)
 ```
 
 ```{r agreement_plot, echo=FALSE, dev='png', dpi=300}
