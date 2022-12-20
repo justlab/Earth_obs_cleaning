@@ -80,26 +80,6 @@ get.threads <- function(){
   parallel::detectCores()%/%2
 }
 
-#' A wrapped function to run xgboost model.
-#'
-#' @param X predictors, Notice that **should NOT contains Y**.
-#' @param Y dependent variable Y.
-#' @param xgb_param a list of hyperparameters selected, contains nrounds
-#' @return xgboost model object
-#'
-rfe.fit <- function(X, Y, xgb_param){
-  if (!is.null(xgb_param$seed)) set.seed(xgb_param$seed) else set.seed(1234)
-  xgb_threads <- get.threads()
-  # message(paste("xgb_param is", unlist(xgb_param)))
-  xgboost::xgboost(data = as.matrix(X),
-                    label = as.matrix(Y),
-                    params = xgb_param[names(xgb_param) != 'nrounds'],
-                    nrounds = xgb_param$nrounds,
-                    verbose = FALSE,
-                    nthread = xgb_threads,
-                    early_stopping_rounds = 8)
-}
-
 #' bin the data into the specified number of folds by day or by station.
 #'
 #' Internal function for cv

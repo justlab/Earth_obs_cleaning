@@ -1,25 +1,5 @@
 # contains functions used in generating the CONUS_AOD paper
 
-#' Print a nice html table using the `DT` package
-#'
-dtwrapper <- function(dt){
-  DT::datatable(dt,
-                rownames = FALSE,
-                fillContainer = FALSE,
-                autoHideNavigation = TRUE,
-                options = list(pageLength = 50,
-                               autoWidth = TRUE))
-}
-
-#' Performance metrics for MCD19A2 AOD
-#'
-performance_aod <- function(dt, ...){
-  performance_metrics(dt,
-                      ground_truth = "AOD_470nm",
-                      eo_raw = "MCD19_AOD_470nm",
-                      eo_pred = "aodhat")
-}
-
 #' Try out empirical error envelope parameters
 #'
 empirical.error.envelope <- function(dt,
@@ -77,23 +57,6 @@ get_aqs_obs = function(years, grid)
     setkey(d, date, cell, lon, lat)
     setcolorder(d)
     d}
-
-#' Get all satellite observations and predictions thereof at cells that ever contain AQS
-#' monitors.
-satellite_at_aqs_sites = function(region, years, sat, ground)
-   {db = dbConnect(duckdb::duckdb(), ":memory:")
-    on.exit(dbDisconnect(db))
-    dbWriteTable(db, "AQSCells", ground[, .(cell = unique(cell))])
-    dbGetQuery(db, sprintf(
-        "select %s from AQSCells natural join read_parquet([%s])",
-        "pred_date as date,
-            overpass, cell,
-            value_old as satellite_value_old,
-            value_new as satellite_value_new",
-        paste(collapse = ",", shQuote(file.path(
-            tar_store(), "objects",
-            as.character(outer(1:12, years, sprintf,
-                fmt = "pred_out_%d_%d_%s_%s", sat, region)))))))}
 
 satellite_vs_aqs = function(satellite, aqs)
    {message("Merging with AQS")

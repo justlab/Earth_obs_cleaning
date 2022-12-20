@@ -3,7 +3,6 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 source('code/globals.R')
-source('code/data.R')
 source('code/functions.R')
 source('code/xgboost_cv.R')
 source('code/new_preds.R')
@@ -38,10 +37,6 @@ if (!is.null(Wf$test_small_daterange) && Wf$test_small_daterange)
    {process_years = year(example_date)
     all_dates = example_date + (-1:1)}
 stopifnot(example_date %in% all_dates)
-
-buffers_km = c(10, 30, 90, 270)
-agg_level = 10
-agg_thresh = 3
 
 terra.rast.fmt = tar_format(
   # None of `terra`'s output formats seems to round-trip properly,
