@@ -148,13 +148,11 @@ list(
           # Using a lot more workers on Coco seems to be slower.
 
     # Modeling
-    tar_map(values = list(loss = c("l1", "l2")),
-        tar_target(initial_cv, initial_cv_dart(
-            traindata,
-            absolute = loss == "l1",
-            y_var = "y.diff",
-            features = Wf$features,
-            stn_var = "site"))),
+    tar_target(initial_cv, initial_cv_dart(
+        traindata,
+        y_var = "y.diff",
+        features = Wf$features,
+        stn_var = "site")),
     tar_target(full_model, dart_full(
         traindata,
         y_var = "y.diff",
@@ -162,7 +160,7 @@ list(
 
     # Summarize and report on the CV
     tar_target(cv_summary_table, cv.summary(
-        initial_cv_l2$mDT_wPred)),
+        initial_cv$mDT_wPred)),
     tar_render(initial_cv_report,
         'writing/initial_cv_report.Rmd'),
 
@@ -180,7 +178,7 @@ list(
     # Data for maps
     tar_target(T.median.mse.map.data, median.mse.map.data(
         Wf$y.sat, Wf$satellite, Wf$satellite.product, config$n.workers,
-        initial_cv_l2$mDT_wPred, pred_grid, buff, satellite_hdf_files, full_model)),
+        initial_cv$mDT_wPred, pred_grid, buff, satellite_hdf_files, full_model)),
     tar_target(T.baltimore.map.data, baltimore.map.data(
         pred_grid, buff, satellite_hdf_files, full_model)),
 

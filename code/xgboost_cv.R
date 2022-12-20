@@ -8,12 +8,11 @@
 #' @param xgb_threads xgb_threads passed from parent function
 #' @param by_var string of "stn" or "day" passed from parent function
 #' @param progress whether to show progress bars, default TRUE
-#' @param absolute whether to use absolute loss (rather than square loss)
 #' @param ... other arguments
 #'
 run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
                           index_train, index_test, xgb_threads, by_var, n_rounds,
-                          progress = TRUE, seed = 1234, absolute = F, ...){
+                          progress = TRUE, seed = 1234, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   Y <-  dataXY_df[, ..y_var]
   data_X <- dataXY_df[, -..y_var]
@@ -38,8 +37,8 @@ run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
       # by default, gives 100 rounds, and it is enough by experience
       n.rounds = n_rounds,
       d = dataXY_df[index_train[[i]],], dv = y_var, ivs = colnames(data_X),
-      objective = (if (absolute) "logcosh" else "reg:squarederror"),
-      eval_metric = (if (absolute) "mae" else "rmse"),
+      objective = "reg:squarederror",
+      eval_metric = "rmse",
       progress = progress, nthread = xgb_threads)
     # manually select and store some params
     xgb_param_dart <- c(rsxgb0$model$params[c(1,2,4, 6:11)], nrounds = rsxgb0$model$niter)

@@ -85,7 +85,7 @@ Here **raw** is MCD19A2.V006 MAIAC AOD 470nm; **ground** is AERONET AOD interpol
 ## Descriptives for the collocated dataset (`r the.sat`)
 
 ```{r stratified, echo=FALSE}
-dt <- copy(tar_read(initial_cv_l2)$mDT_wPred)
+dt <- copy(tar_read(initial_cv)$mDT_wPred)
 ```
 
 While our ultimate goal is to improve AOD, our dependent variable for predictive modeling is the difference of the AOD retrieval and the AERONET AOD which is a nicely symmetric and reasonably well-behaved distribution (an estimate of the retrieval error).
@@ -350,8 +350,8 @@ In decreasing order of variable importance (from `r the.sat` collocated cross-va
 
 ```{r shap_rank, echo=FALSE}
 # what do the SHAPs tell us?
-tar_load(initial_cv_l2)
-shaps <- initial_cv_l2$"shap_score"
+tar_load(initial_cv)
+shaps <- initial_cv$"shap_score"
 # sort by importance
 df_shap <- data.frame(meanabsshap = round(sort(sapply(abs(shaps), mean), decreasing = TRUE), 4))
 kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
@@ -363,8 +363,8 @@ kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
 Summary visualization of SHAP contributions
 
 ```{r shap_summary, echo=FALSE, dev='png', dpi=300, eval=FALSE}
-shap_long <- shap.prep(shap_contrib = initial_cv_l2$shap_score,
-                       X_train = initial_cv_l2$mDT_wPred[, names(initial_cv_l2$shap_score), with = F])
+shap_long <- shap.prep(shap_contrib = initial_cv$shap_score,
+                       X_train = initial_cv$mDT_wPred[, names(initial_cv_l2$shap_score), with = F])
 # **SHAP summary plot**
 shap.plot.summary(shap_long)
 ```
