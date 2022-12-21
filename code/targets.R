@@ -75,15 +75,15 @@ list(
     tar_target(aer_stn_path, download(
         "https://aeronet.gsfc.nasa.gov/aeronet_locations_v3.txt",
         "aeronet_stations.txt")),
+    tar_target(aer_orig_obs_path, download(
+        "https://aeronet.gsfc.nasa.gov/data_push/V3/AOD/AOD_Level20_All_Points_V3.tar.gz",
+        "aeronet_observations.tar.gz")),
     tar_target(aer_files_path,
-       {p = download(
-            "https://aeronet.gsfc.nasa.gov/data_push/V3/AOD/AOD_Level20_All_Points_V3.tar.gz",
-            "aeronet_observations.tar.gz")
-        assert(0 == unlink(intermediate.path("aeronet"),
+       {assert(0 == unlink(intermediate.path("aeronet"),
             recursive = T))
         assert(dir.create(intermediate.path("aeronet")))
         assert(0 == system2("tar", shQuote(c(
-            "--extract", "--file", p,
+            "--extract", "--file", aer_orig_obs_path,
             "--directory", intermediate.path("aeronet")))))
         intermediate.path("aeronet/AOD/AOD20/ALL_POINTS/")}),
     tar_target(aer_stations, format = 'fst_dt', fread(

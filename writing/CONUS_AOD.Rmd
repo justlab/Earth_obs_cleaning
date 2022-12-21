@@ -68,6 +68,8 @@ Evaluate the performance of the `Earth_obs_cleaning` software tool on MAIAC MCD1
 
 # Methods
 
+We used a copy of the AERONET observations that was last modified `r lubridate::as_date(lubridate::with_tz(tz = "UTC", file.mtime(tar_read(aer_orig_obs_path))))`.
+
 # Results
 
 ## Main findings from cross-validation
