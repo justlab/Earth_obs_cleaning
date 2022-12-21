@@ -1,5 +1,19 @@
 # Contains most functions required for the AOD cleaning targets workflow
 
+satellite.tiles = function(buff)
+# Get the names of the MODIS tiles needed to cover the buffer.
+   {tiles = st_zm(drop = T, read_sf(layer = "Features", download(
+        "http://web.archive.org/web/2021id_/https://modis.ornl.gov/files/modis_sin.kmz",
+          # Linked to from https://forum.earthdata.nasa.gov/viewtopic.php?p=13468#p13458
+        "modis_tiles.kmz",
+        curl = "-L")))
+    tiles = str_match(
+        tiles[st_intersects(sparse = F, tiles,
+            st_transform(buff, crs = st_crs(tiles))),]$Name,
+        "h:(\\d+) v:(\\d+)")
+    sort(sprintf("h%02dv%02d",
+        as.integer(tiles[,2]), as.integer(tiles[,3])))}
+
 #' Return AERONET points that intersect the polygon describing the area of
 #' interest.
 #'

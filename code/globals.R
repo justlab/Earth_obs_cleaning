@@ -77,18 +77,6 @@ multipass.sat = function(satellite.product = Wf$satellite.product)
   # each file.
     satellite.product == "mcd19a2"
 
-satellite_aod_tiles = list(
-    # Selected by hand in QGIS with https://gist.github.com/Kodiologist/5b8b8eabe5a7043056a41992fdfa4921
-    # and then checked with example rasters.
-    conus = rbind(
-        data.table(h = 8:13, v = 4),
-        data.table(h = 8:12, v = 5),
-        data.table(h = 8:10, v = 6))[, sprintf("h%02dv%02d", h, v)],
-    "other" =
-      # This is a cheat for the moment, until we have an automatic way
-      # to choose tiles.
-        c("h18v03", "h18v04", "h17v04"))
-
 # for reporting purpose
 y_var = "diff_AOD"
 
