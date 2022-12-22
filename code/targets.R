@@ -111,11 +111,10 @@ list(
         aer_stations,
         buff,
         terra::crs(pred_grid))),
-    tar_target(aer_filtered, format = 'fst_dt', filter_aer_bydate(
-        dates = Wf$dates,
+    tar_target(aer_filtered, format = 'fst_dt',
         get_stn_data(
             aod_dir = aer_files_path,
-            stations = aer))),
+            stations = aer)[aer_date %in% Wf$dates]),
 
     # This step is where most of the satellite data is read.
     tar_target(traindata, format = 'fst_dt', make_traindata(

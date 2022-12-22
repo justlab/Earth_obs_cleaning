@@ -290,16 +290,6 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
   }
 }
 
-#' Filter data.table of AERONET observations to only those in the given dates
-#'
-#' @param aer_data AERONET observation data.table with a date column `aer_date`
-#' @param dates vector of dates to filter the AERONET observation
-#' @return data.table of AERONET observations in the given dates
-#'
-filter_aer_bydate <- function(aer_data, dates){
-  aer_data[aer_date %in% dates, ]
-}
-
 # Interpolate AERONET AOD to the desired wavelength.
 interpolate_aod <- function(aer_data)
    {# N.B. All computations with wavelengths here are in micrometers,
