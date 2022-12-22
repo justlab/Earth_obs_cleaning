@@ -107,8 +107,6 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
            "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
            "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 
-crs_sinu = '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs'
-
 feature.raster.layers = c(
     "AOD_Uncertainty",
     "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
