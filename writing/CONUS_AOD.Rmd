@@ -388,3 +388,7 @@ pred.map(
 ```
 
 *End of report*
+
+## Comparison with AQS
+
+We examined `r l = tar_read(satellite.vs.aqs); scales::comma(l$nobs)` observations of AQS on `r scales::comma(l$celldays)` cell-days. The correlation of the observations with the original satellite values was `r sprintf("%.03f", l$old)`, compared to `r sprintf("%.03f", l$new)` with our corrected values.
