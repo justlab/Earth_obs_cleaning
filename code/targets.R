@@ -165,8 +165,7 @@ list(
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2") list(
         tarchetypes::tar_render(paper_conus_html, output_format = "html_document",
-            packages = c('sf', 'patchwork'),
             'writing/CONUS_AOD.Rmd', quiet = F),
         tarchetypes::tar_render(paper_conus_pdf, output_format = "pdf_document",
-            packages = c('sf', 'patchwork', 'magick'),
+            packages = c('magick'),
             'writing/CONUS_AOD.Rmd')))

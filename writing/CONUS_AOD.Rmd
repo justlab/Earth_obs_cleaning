@@ -21,25 +21,11 @@ knitr::opts_knit$set(root.dir = here::here())
 
 ```{r basics, echo=FALSE}
 suppressPackageStartupMessages(
-  {library(targets)
-    library(Just.universal)
-    library(data.table)
-    library(DT)
-    library(patchwork)
-    library(ggplot2)
+   {library(patchwork)
     library(ggridges)
     library(ggpointdensity)
-    library(sf)
-    library(Just.universal)
-    library(knitr)
     library(kableExtra)
-    library(RColorBrewer)
-    library(SHAPforxgboost)
-    # library(flextable)
   })
-# set_flextable_defaults(fonts_ignore=TRUE)
-source(here::here("code/functions.R"))
-source(here::here("code/paper_functions.R"))
 the.sat = tools::toTitleCase(Wf$satellite)
 ```
 
