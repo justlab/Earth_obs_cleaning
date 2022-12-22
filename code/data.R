@@ -278,7 +278,7 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
       dt
     }
 
-    file_list <- lapply(unlist(aer_files_dir), read_aod, date_start = date_start, date_end = date_end)
+    file_list <- pblapply(unlist(aer_files_dir), read_aod, date_start = date_start, date_end = date_end)
     aer_data <- rbindlist(file_list)
 
     aer_data[, aer_date := as.Date(stn_time)]
