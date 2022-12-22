@@ -2,7 +2,7 @@ in.sf = function(x, y, crs, region)
 # Return a logical vector indicating whether each (x, y) point is in the
 # specified region (an `sf` object).
     drop(st_intersects(sparse = F,
-        convert.crs(cbind(x, y), crs, terra::crs(region), sf = T),
+        convert.crs(cbind(x, y), crs, st_crs(region), sf = T),
         region))
 
 pretty.table.numbers = function(d)

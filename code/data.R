@@ -72,7 +72,7 @@ expand.to.overpasses = function(d, satellite_hdf_files, the.satellite, satellite
         if (file.size(path) == 0)
             return()
         orbit.times = str_extract_all(
-            fromJSON(terra::describe(options = "json", path))
+            jsonlite::fromJSON(terra::describe(options = "json", path))
                 $metadata[[1]]$Orbit_time_stamp,
             "\\S+")[[1]]
         `[`(
@@ -118,7 +118,7 @@ get.predictors = function(
                 r[[vnames]][cell.local],
                 rbindlist(xlapply(!parallel.outside, cell.local, \(cell)
                    {rc = terra::rowColFromCell(r, cell)
-                    v = y.sat.values[na.omit(cellFromRowCol(r,
+                    v = y.sat.values[na.omit(terra::cellFromRowCol(r,
                         rc[,1] + window.matrix[,1],
                         rc[,2] + window.matrix[,2]))]
                     data.frame(

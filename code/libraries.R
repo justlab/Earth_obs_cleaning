@@ -1,17 +1,10 @@
 suppressPackageStartupMessages(
    {library(stringr)
-    library(raster)
-    library(jsonlite)
-    library(tibble)
-    library(fst)
     library(sf)
-    library(magrittr)
     library(ggplot2)
     library(SHAPforxgboost)
     library(Just.universal)
     library(xgboost)
-    library(parallel)
     library(data.table)
-    library(arrow)
-    library(DBI)
     library(pbapply)})
+loadNamespace("fst")  # Used for targets with `format = "fst_dt"`

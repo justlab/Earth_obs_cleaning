@@ -9,7 +9,6 @@ source('code/modeling.R')
 source('code/paper_functions.R')
 
 library(targets)
-library(tarchetypes)
 
 tar_option_set(
     packages = sapply(parse("code/libraries.R")[[1]][-1][[1]][-1],
@@ -161,7 +160,7 @@ list(
     # Summarize and report on the CV
     tar_target(cv_summary_table, cv.summary(
         initial_cv$mDT_wPred)),
-    tar_render(initial_cv_report,
+    tarchetypes::tar_render(initial_cv_report,
         'writing/initial_cv_report.Rmd'),
 
     # Compare AQS to our predictions
@@ -184,9 +183,9 @@ list(
 
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2") list(
-        tar_render(paper_conus_html, output_format = "html_document",
+        tarchetypes::tar_render(paper_conus_html, output_format = "html_document",
             packages = c('sf', 'patchwork'),
             'writing/CONUS_AOD.Rmd', quiet = F),
-        tar_render(paper_conus_pdf, output_format = "pdf_document",
+        tarchetypes::tar_render(paper_conus_pdf, output_format = "pdf_document",
             packages = c('sf', 'patchwork', 'magick'),
             'writing/CONUS_AOD.Rmd')))
