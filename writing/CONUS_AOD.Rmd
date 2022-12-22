@@ -126,8 +126,9 @@ kbl(pretty.table.numbers(result), align = "l") %>%
 
 ```{r plot_by_month, echo=FALSE, eval=TRUE, dev='png', dpi=300}
 # Color by quantiles
-dt[, month := factor(month(time.sat),
-                     labels = month.abb)]
+dt[, month := structure(class = "factor",
+                        month(time.sat),
+                        levels = month.abb)]
 p1 <- ggplot(dt, aes(x = y.diff, y = month, fill = factor(stat(quantile)))) +
   stat_density_ridges(
     geom = "density_ridges_gradient", calc_ecdf = TRUE,
