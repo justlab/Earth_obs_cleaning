@@ -342,7 +342,7 @@ interpolate_aod <- function(aer_data)
 make_traindata = function(
         satellite.product, the.satellite,
         y.sat.name, features, window.radius,
-        aer_filtered, aer_stn, satellite_hdf_files, example_date,
+        aer_filtered, aer_stn, satellite_hdf_files, date.example,
         n.workers)
    {temporal.matchup.seconds = (if (daily.sat(satellite.product))
         8 * 60 else
@@ -373,7 +373,7 @@ make_traindata = function(
         r.example = read_satellite_raster(satellite.product, the.tile,
             satellite_hdf_files[j = path[1],
                 tile == the.tile &
-                lubridate::as_date(time) == example_date])
+                lubridate::as_date(time) == date.example])
         d = cbind(ground, cell.local = terra::cellFromXY(
             r.example,
             ground[, .(x_satcrs, y_satcrs)]))[!is.na(cell.local)]

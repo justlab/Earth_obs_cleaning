@@ -19,24 +19,6 @@ tar_option_set(
     memory = "transient",
     garbage_collection = TRUE)
 
-example_date = switch(Wf$satellite.product,
-  # This should be a date for which the satellite data of interest
-  # exists on all tiles.
-    mcd19a2 = as.Date("2010-07-03"),
-    geonexl2 = as.Date("2018-07-03"))
-process_years = switch(Wf$satellite.product,
-    mcd19a2 = 2000 : 2021,
-    geonexl2 = 2018 : 2019)
-
-all_dates = seq(
-    lubridate::make_date(min(process_years)),
-    lubridate::make_date(max(process_years), 12, 31),
-    by = 1)
-if (!is.null(Wf$test_small_daterange) && Wf$test_small_daterange)
-   {process_years = year(example_date)
-    all_dates = example_date + (-1:1)}
-stopifnot(example_date %in% all_dates)
-
 terra.rast.fmt = tar_format(
   # None of `terra`'s output formats seems to round-trip properly,
   # so we implement our own.
@@ -99,7 +81,7 @@ list(
                     "terra.and.aqua" else
                     stop()),
                 tiles = satellite.tiles(buff),
-                dates = all_dates)
+                dates = Wf$dates)
             setnames(d, "date", "time")
             d},
         geonexl2 =
@@ -116,11 +98,11 @@ list(
                         "GO16_ABI12A_%Y%j%H%M_"),
                     tile = factor(basename(dirname(paths))),
                     path = paths),
-                lubridate::as_date(time) %in% all_dates)})),
+                lubridate::as_date(time) %in% Wf$dates)})),
     tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
         Wf$satellite.product,
         satellite_hdf_files[
-            lubridate::as_date(time) == example_date,
+            lubridate::as_date(time) == Wf$date.example,
             by = tile,
             head(.SD, 1)])),
 
@@ -130,7 +112,7 @@ list(
         buff,
         terra::crs(pred_grid))),
     tar_target(aer_filtered, format = 'fst_dt', filter_aer_bydate(
-        dates = all_dates,
+        dates = Wf$dates,
         get_stn_data(
             aod_dir = aer_files_path,
             stations = aer))),
@@ -142,7 +124,7 @@ list(
         aer_filtered,
         aer,
         satellite_hdf_files,
-        example_date,
+        Wf$date.example,
         n.workers = pmin(8L, n.workers))),
           # Using a lot more workers on Coco seems to be slower.
 
@@ -165,7 +147,7 @@ list(
 
     # Compare AQS to our predictions
     tar_target(aqs_obs, format = "fst_dt", get_aqs_obs(
-        process_years, pred_grid)),
+        Wf$years, pred_grid)),
     tar_target(pred_at_aqs_sites, format = "fst_dt", new.preds.compact(
         dt.start = lubridate::as_datetime(min(aqs_obs$date) - 1),
         dt.end = lubridate::as_datetime(max(aqs_obs$date) + 1),

@@ -40,8 +40,26 @@ stopifnot(
     startsWith(Wf$region, "http:") ||
     startsWith(Wf$region, "https:"))
 
-# True configurability of these parts is not implemented now
+# True configurability of other `Wf` items is not implemented now
 # but might be added later.
+
+Wf$years = switch(Wf$satellite.product,
+    mcd19a2 = 2000 : 2021,
+    geonexl2 = 2018 : 2019)
+Wf$dates = seq(
+    lubridate::make_date(min(Wf$years)),
+    lubridate::make_date(max(Wf$years), 12, 31),
+    by = 1)
+Wf$date.example = switch(Wf$satellite.product,
+  # This should be a date for which the satellite data of interest
+  # exists on all tiles.
+    mcd19a2 = as.Date("2010-07-03"),
+    geonexl2 = as.Date("2018-07-03"))
+if (!is.null(Wf$test_small_daterange) && Wf$test_small_daterange)
+   {Wf$years = year(Wf$date.example)
+    Wf$dates = Wf$date.example + (-1:1)}
+stopifnot(Wf$date.example %in% Wf$dates)
+
 Wf$y.sat = "Optical_Depth_047"
 Wf$features = c(
   # Predictors for modeling.
