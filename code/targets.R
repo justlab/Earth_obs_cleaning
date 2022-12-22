@@ -70,9 +70,9 @@ list(
     tar_target(aer_stations, format = 'fst_dt', fread(
         aer_stn_path, col.names = c('Site_Name', 'lon', 'lat', 'elevm'))),
 
-    tar_target(buff, get_aoi_buffer(
+    tar_target(region.shape, get.region.shape(
         Wf$region)),
-    tar_target(satellite_hdf_files, switch(Wf$satellite.product,
+    tar_target(satellite.files, switch(Wf$satellite.product,
         mcd19a2 =
            {d = get.earthdata(
                 satellite_hdf_root,
@@ -80,7 +80,7 @@ list(
                 satellites = (if (Wf$satellite %in% c("terra", "aqua"))
                     "terra.and.aqua" else
                     stop()),
-                tiles = satellite.tiles(buff),
+                tiles = satellite.tiles(region.shape),
                 dates = Wf$dates)
             setnames(d, "date", "time")
             d},
@@ -99,9 +99,9 @@ list(
                     tile = factor(basename(dirname(paths))),
                     path = paths),
                 lubridate::as_date(time) %in% Wf$dates)})),
-    tar_target(pred_grid, format = terra.rast.fmt, make_pred_grid(
+    tar_target(pred.grid, format = terra.rast.fmt, get.pred.grid(
         Wf$satellite.product,
-        satellite_hdf_files[
+        satellite.files[
             lubridate::as_date(time) == Wf$date.example,
             by = tile,
             head(.SD, 1)])),
@@ -109,58 +109,58 @@ list(
     # AERONET processing for this region
     tar_target(aer, select_stations(
         aer_stations,
-        buff,
-        terra::crs(pred_grid))),
+        region.shape,
+        terra::crs(pred.grid))),
     tar_target(aer_filtered, format = 'fst_dt',
         get_stn_data(
             aod_dir = aer_files_path,
             stations = aer)[aer_date %in% Wf$dates]),
 
     # This step is where most of the satellite data is read.
-    tar_target(traindata, format = 'fst_dt', make_traindata(
+    tar_target(traindata, format = 'fst_dt', get.traindata(
         Wf$satellite.product, Wf$satellite,
         Wf$y.sat, Wf$features, Wf$window.radius,
         aer_filtered,
         aer,
-        satellite_hdf_files,
+        satellite.files,
         Wf$date.example,
         n.workers = pmin(8L, n.workers))),
           # Using a lot more workers on Coco seems to be slower.
 
     # Modeling
-    tar_target(initial_cv, initial_cv_dart(
+    tar_target(cv, cv_dart(
         traindata,
         y_var = "y.diff",
         features = Wf$features,
         stn_var = "site")),
-    tar_target(full_model, dart_full(
+    tar_target(model.full, dart_full(
         traindata,
         y_var = "y.diff",
         features = Wf$features)),
 
     # Summarize and report on the CV
-    tar_target(cv_summary_table, cv.summary(
-        initial_cv$mDT_wPred)),
-    tarchetypes::tar_render(initial_cv_report,
-        'writing/initial_cv_report.Rmd'),
+    tar_target(cv.summary, get.cv.summary(
+        cv$mDT_wPred)),
+    tarchetypes::tar_render(cv_report,
+        'writing/cv_report.Rmd'),
 
     # Compare AQS to our predictions
-    tar_target(aqs_obs, format = "fst_dt", get_aqs_obs(
-        Wf$years, pred_grid)),
-    tar_target(pred_at_aqs_sites, format = "fst_dt", new.preds.compact(
-        dt.start = lubridate::as_datetime(min(aqs_obs$date) - 1),
-        dt.end = lubridate::as_datetime(max(aqs_obs$date) + 1),
-        cells = sort(unique(aqs_obs$cell)),
-        targets = list(pred_grid, satellite_hdf_files, full_model))),
-    tar_target(aqs_comparison, satellite_vs_aqs(
-        pred_at_aqs_sites, aqs_obs)),
+    tar_target(aqs.obs, format = "fst_dt", get.aqs.obs(
+        Wf$years, pred.grid)),
+    tar_target(pred.at.aqs.sites, format = "fst_dt", new.preds.compact(
+        dt.start = lubridate::as_datetime(min(aqs.obs$date) - 1),
+        dt.end = lubridate::as_datetime(max(aqs.obs$date) + 1),
+        cells = sort(unique(aqs.obs$cell)),
+        targets = list(pred.grid, satellite.files, model.full))),
+    tar_target(satellite.vs.aqs, get.satellite.vs.aqs(
+        pred.at.aqs.sites, aqs.obs)),
 
     # Data for maps
-    tar_target(T.median.mse.map.data, median.mse.map.data(
+    tar_target(median.mse.map.data, get.median.mse.map.data(
         Wf$y.sat, Wf$satellite, Wf$satellite.product, config$n.workers,
-        initial_cv$mDT_wPred, pred_grid, buff, satellite_hdf_files, full_model)),
-    tar_target(T.baltimore.map.data, baltimore.map.data(
-        pred_grid, buff, satellite_hdf_files, full_model)),
+        cv$mDT_wPred, pred.grid, region.shape, satellite.files, model.full)),
+    tar_target(baltimore.map.data, get.baltimore.map.data(
+        pred.grid, region.shape, satellite.files, model.full)),
 
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2") list(

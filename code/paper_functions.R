@@ -27,7 +27,7 @@ empirical.error.envelope <- function(dt,
 #' Agency's (EPA) Air Quality System. The unit is μg/m^3.
 #' File source: https://aqs.epa.gov/aqsweb/airdata/download_files.html#Daily
 #' Documentation: https://aqs.epa.gov/aqsweb/documents/about_aqs_data.html
-get_aqs_obs = function(years, grid)
+get.aqs.obs = function(years, grid)
    {aqs.url.root = "https://aqs.epa.gov/aqsweb/airdata"
     parameter.code = 88101L
       # PM_{2.5} from a federally approved reference or equivalent
@@ -58,7 +58,7 @@ get_aqs_obs = function(years, grid)
     setcolorder(d)
     d}
 
-satellite_vs_aqs = function(satellite, aqs)
+get.satellite.vs.aqs = function(satellite, aqs)
    {message("Merging with AQS")
     d = merge(
        satellite[, .(cell, y.sat.old, y.sat.new,
@@ -81,9 +81,9 @@ satellite_vs_aqs = function(satellite, aqs)
     out
     }
 
-median.mse.map.data = function(
+get.median.mse.map.data = function(
       y.sat.name, the.satellite, satellite.product, n.workers,
-      d, pred_grid, buff, satellite_hdf_files, full_model)
+      d, pred.grid, region.shape, satellite.files, model.full)
    {# Get the date with the median MSE.
     date = (d
         [, by = .(date = lubridate::as_date(time.sat, tz = "UTC")),
@@ -91,7 +91,7 @@ median.mse.map.data = function(
         [which.min(mse - median(mse)), date])
 
     # Get overpasses for this data.
-    sat = satellite_hdf_files[time == date]
+    sat = satellite.files[time == date]
     sat[, sat.files.ix := .I]
     overpasses = merge(by = "sat.files.ix", sat,
         expand.to.overpasses(sat, sat,
@@ -108,13 +108,13 @@ median.mse.map.data = function(
         if (!nrow(d))
             return(integer())
         # Get only cells in the study area.
-        d[in.sf(x, y, terra::crs(r), buff), cell]})
+        d[in.sf(x, y, terra::crs(r), region.shape), cell]})
 
     # Choose the tile-time with the most non-missing values.
     oi = which.max(sapply(overpass.local.cells, length))
     # Get the prediction-grid cell for each local cell.
     message("Getting cell indices")
-    cells = (as.data.table(as.data.frame(pred_grid, cells = T))
+    cells = (as.data.table(as.data.frame(pred.grid, cells = T))
         [tile == overpasses[oi, tile]]
         [cell.local %in% overpass.local.cells[[oi]], cell])
     assert(length(cells) == length(overpass.local.cells[[oi]]))
@@ -128,27 +128,27 @@ median.mse.map.data = function(
             overpasses[oi, time.sat],
             overpasses[oi, time.sat],
             cells,
-            targets = list(pred_grid, satellite_hdf_files, full_model)))}
+            targets = list(pred.grid, satellite.files, model.full)))}
 
-baltimore.map.data = function(pred_grid, buff, satellite_hdf_files, full_model)
+get.baltimore.map.data = function(pred.grid, region.shape, satellite.files, model.full)
    {tiles = c("h11v05", "h12v05")
     dt = lubridate::as_datetime("2015-06-10T15:40:00Z")
 
     message("Getting cell indices")
-    cells = (as.data.table(as.data.frame(pred_grid, cells = T, xy = T))
+    cells = (as.data.table(as.data.frame(pred.grid, cells = T, xy = T))
        [tile %in% tiles]
-       [in.sf(x, y, terra::crs(pred_grid), buff), cell])
+       [in.sf(x, y, terra::crs(pred.grid), region.shape), cell])
 
     new.preds(
         dt, dt, cells,
-        targets = list(pred_grid, satellite_hdf_files, full_model))}
+        targets = list(pred.grid, satellite.files, model.full))}
 
 pred.map = function(
-        d, pred_grid, bg.sf, color.scale.name,
+        d, pred.grid, bg.sf, color.scale.name,
         limits = NULL, quantile.cap = NULL)
    {reproject.res = .009
 
-    g1 = pred_grid
+    g1 = pred.grid
     g1$y.sat.old = NA_real_
     g1$y.sat.new = NA_real_
     g1$y.sat.old[d$cell] = d$y.sat.old

@@ -26,7 +26,7 @@ get.threads <- function(){
 #' @param stn_var if binning by stations, provide the station column name
 #' @param day_var if binning by days, provide the day column name
 # Depends on functions in xgboost_cv_RFE.R
-initial_cv_dart <- function(
+cv_dart <- function(
   data,
   y_var,
   features,
@@ -228,8 +228,8 @@ helper.pack.bins = function(object.sizes, n.bins){
 
 #' Summarize CV statistics.
 #'
-#' @param d The data table `mDT_wPred` returned by `initial_cv_dart`.
-cv.summary = function(d)
+#' @param d The data table `mDT_wPred` returned by `cv_dart`.
+get.cv.summary = function(d)
     rbind(
         d[, c(list(Year = "all"), eval(performance.j))],
         d[, keyby = .(Year = year(time.sat)), eval(performance.j)])
@@ -312,12 +312,12 @@ new.preds = function(dt.start, dt.end, cells = NULL, targets = NULL)
   # - `dt.start` and `dt.end` specify a range of datetimes to make
   #   predictions for, as `POSIXct` objects.
   # - `cells`, if provided, should be a vector of cell numbers of
-  #   `pred_grid`. Otherwise, we use all cells.
+  #   `pred.grid`. Otherwise, we use all cells.
    {if (is.null(targets))
        {message("Reading targets")
-        grid = tar_read(pred_grid)
-        sat = tar_read(satellite_hdf_files)
-        model = tar_read(full_model)}
+        grid = tar_read(pred.grid)
+        sat = tar_read(satellite.files)
+        model = tar_read(model.full)}
     else
        {grid = targets[[1]]
         sat = targets[[2]]

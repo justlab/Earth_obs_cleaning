@@ -41,7 +41,7 @@ DT::datatable(t(as.data.frame(as.list(Wf))),
 In the below, time differences are in minutes.
 
 ```{r echo = F}
-DT::datatable(pretty.table.numbers(tar_read(cv_summary_table)),
+DT::datatable(pretty.table.numbers(tar_read(cv.summary)),
               rownames = FALSE,
               fillContainer = FALSE,
               autoHideNavigation = TRUE,

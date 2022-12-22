@@ -19,4 +19,4 @@ A Unix-like operating system is assumed. We've developed the project on Ubuntu. 
 
 # The test workflow
 
-Ensure `test_small_daterange` in the configuration file is `TRUE`. Then, in an interactive R session, say `source("code/globals.R")`. Say `tar_make(initial_cv)` to try cross-validation with a few days of data. This is pretty fast, taking only a few minutes, aside from downloading the data. Use `tar_read` (as in `tar_read(initial_cv)`) to see the results.
+Ensure `test.small.daterange` in the configuration file is `TRUE`. Then, in an interactive R session, say `source("code/globals.R")`. Say `tar_make(initial_cv)` to try cross-validation with a few days of data. This is pretty fast, taking only a few minutes, aside from downloading the data. Use `tar_read` (as in `tar_read(initial_cv)`) to see the results.

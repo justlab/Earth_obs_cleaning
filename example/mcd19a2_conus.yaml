@@ -7,4 +7,4 @@ workflow:
     satellite: terra
     ground.product: aeronet
     region: conus
-    test_small_daterange: TRUE
+    test.small.daterange: TRUE

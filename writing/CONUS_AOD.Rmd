@@ -75,7 +75,7 @@ We used a copy of the AERONET observations that was last modified `r lubridate::
 ## Main findings from cross-validation
 
 ```{r table_cv_results, echo=FALSE}
-kbl(pretty.table.numbers(tar_read(cv_summary_table)[1, -"Year"]), align = "l") %>%
+kbl(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]), align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
   row_spec(0,bold=TRUE) %>% column_spec(1:12, width = "1.1cm")
@@ -87,7 +87,7 @@ Here **raw** is MCD19A2.V006 MAIAC AOD 470nm; **ground** is AERONET AOD interpol
 ## Descriptives for the collocated dataset (`r the.sat`)
 
 ```{r stratified, echo=FALSE}
-dt <- copy(tar_read(initial_cv)$mDT_wPred)
+dt <- copy(tar_read(cv)$mDT_wPred)
 ```
 
 While our ultimate goal is to improve AOD, our dependent variable for predictive modeling is the difference of the AOD retrieval and the AERONET AOD which is a nicely symmetric and reasonably well-behaved distribution (an estimate of the retrieval error).
@@ -116,7 +116,7 @@ Here we show our performance metrics in different subsets of the cross-validatio
 ### Performance by year
 
 ```{r strata_year, echo=FALSE, eval=TRUE}
-kbl(pretty.table.numbers(tar_read(cv_summary_table)[-1]),
+kbl(pretty.table.numbers(tar_read(cv.summary)[-1]),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -352,8 +352,8 @@ In decreasing order of variable importance (from `r the.sat` collocated cross-va
 
 ```{r shap_rank, echo=FALSE}
 # what do the SHAPs tell us?
-tar_load(initial_cv)
-shaps <- initial_cv$"shap_score"
+tar_load(cv)
+shaps <- cv$"shap_score"
 # sort by importance
 df_shap <- data.frame(meanabsshap = round(sort(sapply(abs(shaps), mean), decreasing = TRUE), 4))
 kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
@@ -365,8 +365,8 @@ kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
 Summary visualization of SHAP contributions
 
 ```{r shap_summary, echo=FALSE, dev='png', dpi=300, eval=FALSE}
-shap_long <- shap.prep(shap_contrib = initial_cv$shap_score,
-                       X_train = initial_cv$mDT_wPred[, names(initial_cv_l2$shap_score), with = F])
+shap_long <- shap.prep(shap_contrib = cv$shap_score,
+                       X_train = cv$mDT_wPred[, names(cv$shap_score), with = F])
 # **SHAP summary plot**
 shap.plot.summary(shap_long)
 ```
@@ -385,19 +385,19 @@ g1
 
 ```{r pred.map.median.mse, echo = F}
 pred.map(
-    tar_read(T.median.mse.map.data)$pred, tar_read(pred_grid),
+    tar_read(median.mse.map.data)$pred, tar_read(pred.grid),
     bg.sf = get_conus(), color.scale.name = "AOD",
     limits = list(lon = c(-107, Inf), lat = c(-Inf, 37)),
     quantile.cap = .99)
 ```
 
-This map shows a tile on `r tar_read(T.median.mse.map.data)$date`.
+This map shows a tile on `r tar_read(median.mse.map.data)$date`.
 
 ### Baltimore
 
-```{r pred.map.balitmore, echo = F}
+```{r pred.map.baltimore, echo = F}
 pred.map(
-    tar_read(T.baltimore.map.data), tar_read(pred_grid),
+    tar_read(baltimore.map.data), tar_read(pred.grid),
     bg.sf = get_conus(), color.scale.name = "AOD")
 ```
 

@@ -6,6 +6,6 @@ workflow:
     satellite.product: mcd19a2
     satellite: terra
     ground.product: aeronet
-    test_small_daterange: TRUE
+    test.small.daterange: TRUE
     region: https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_FRA_0.json
       # Linked from https://gadm.org/download_country.html

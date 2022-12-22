@@ -55,7 +55,7 @@ Wf$date.example = switch(Wf$satellite.product,
   # exists on all tiles.
     mcd19a2 = as.Date("2010-07-03"),
     geonexl2 = as.Date("2018-07-03"))
-if (!is.null(Wf$test_small_daterange) && Wf$test_small_daterange)
+if (!is.null(Wf$test.small.daterange) && Wf$test.small.daterange)
    {Wf$years = year(Wf$date.example)
     Wf$dates = Wf$date.example + (-1:1)}
 stopifnot(Wf$date.example %in% Wf$dates)

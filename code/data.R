@@ -2,7 +2,7 @@
 ## * Region geometry
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-get_aoi_buffer = function(region)
+get.region.shape = function(region)
    {buffer.size.m = 5000
 
     region = (
@@ -34,7 +34,7 @@ get_conus <- function(){
 ## * Satellite data
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-satellite.tiles = function(buff)
+satellite.tiles = function(region.shape)
 # Get the names of the MODIS tiles needed to cover the buffer.
    {tiles = st_zm(drop = T, read_sf(layer = "Features", download(
         "http://web.archive.org/web/2021id_/https://modis.ornl.gov/files/modis_sin.kmz",
@@ -43,13 +43,13 @@ satellite.tiles = function(buff)
         curl = "-L")))
     tiles = str_match(
         tiles[st_intersects(sparse = F, tiles,
-            st_transform(buff, crs = st_crs(tiles))),]$Name,
+            st_transform(region.shape, crs = st_crs(tiles))),]$Name,
         "h:(\\d+) v:(\\d+)")
     sort(sprintf("h%02dv%02d",
         as.integer(tiles[,2]), as.integer(tiles[,3])))}
 
 #' Compute the grid on which all predictions will be made.
-make_pred_grid = function(satellite.product, earthdata.rows)
+get.pred.grid = function(satellite.product, earthdata.rows)
    {r = do.call(terra::merge, lapply(1 : nrow(earthdata.rows),
         function(i) with(earthdata.rows[i],
            {r = read_satellite_raster(satellite.product, tile, path)[[1]]
@@ -60,7 +60,7 @@ make_pred_grid = function(satellite.product, earthdata.rows)
         labels = levels(earthdata.rows$tile))
     r}
 
-expand.to.overpasses = function(d, satellite_hdf_files, the.satellite, satellite.product, n.workers)
+expand.to.overpasses = function(d, satellite.files, the.satellite, satellite.product, n.workers)
    {if (!multipass.sat(satellite.product))
         return(cbind(d, overpass := NA_integer_))
     # Each file contains multiple overpasses and multiple
@@ -68,7 +68,7 @@ expand.to.overpasses = function(d, satellite_hdf_files, the.satellite, satellite
     # one row per layer, keeping only the satellite of interest.
     message("Collecting overpasses")
     rbindlist(pblapply(cl = n.workers, 1 : nrow(d), function(i)
-       {path = satellite_hdf_files[d[i, sat.files.ix], path]
+       {path = satellite.files[d[i, sat.files.ix], path]
         if (file.size(path) == 0)
             return()
         orbit.times = str_extract_all(
@@ -88,7 +88,7 @@ expand.to.overpasses = function(d, satellite_hdf_files, the.satellite, satellite
             -"satellite")}))}
 
 get.predictors = function(
-        d, satellite_hdf_files,
+        d, satellite.files,
         satellite.product, y.sat.name, features, window.radius, n.workers)
    {vnames = intersect(
         str_replace(features, "qa_best", "AOD_QA"),
@@ -109,8 +109,8 @@ get.predictors = function(
         [, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
            {r = read_satellite_raster(
                 satellite.product,
-                satellite_hdf_files[chunk$sat.files.ix[1], tile],
-                satellite_hdf_files[chunk$sat.files.ix[1], path],
+                satellite.files[chunk$sat.files.ix[1], tile],
+                satellite.files[chunk$sat.files.ix[1], path],
                 overpass[1])
             y.sat.values = drop(r[[y.sat.name]][])
             cbind(
@@ -329,10 +329,10 @@ interpolate_aod <- function(aer_data)
 ## * Full training data
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-make_traindata = function(
+get.traindata = function(
         satellite.product, the.satellite,
         y.sat.name, features, window.radius,
-        aer_filtered, aer_stn, satellite_hdf_files, date.example,
+        aer_filtered, aer_stn, satellite.files, date.example,
         n.workers)
    {temporal.matchup.seconds = (if (daily.sat(satellite.product))
         8 * 60 else
@@ -350,10 +350,10 @@ make_traindata = function(
         .(ground$site), on = "Site_Name", .(x, y)]]
     setkey(ground, time.ground)
 
-    satellite_hdf_files = copy(satellite_hdf_files)
-    satellite_hdf_files[, sat.files.ix := .I]
+    satellite.files = copy(satellite.files)
+    satellite.files[, sat.files.ix := .I]
 
-    all.tiles = unique(satellite_hdf_files$tile)
+    all.tiles = unique(satellite.files$tile)
     d = rbindlist(lapply(all.tiles, function(the.tile)
        {message(sprintf("Getting training data for tile %s (%d / %d)",
             the.tile, match(the.tile, all.tiles), length(all.tiles)))
@@ -361,7 +361,7 @@ make_traindata = function(
         # Set satellite cell indices for the ground data, dropping
         # ground data outside of this tile.
         r.example = read_satellite_raster(satellite.product, the.tile,
-            satellite_hdf_files[j = path[1],
+            satellite.files[j = path[1],
                 tile == the.tile &
                 lubridate::as_date(time) == date.example])
         d = cbind(ground, cell.local = terra::cellFromXY(
@@ -372,9 +372,9 @@ make_traindata = function(
 
         # Identify the satellite data for this tile.
         sat = expand.to.overpasses(
-            satellite_hdf_files[tile == the.tile,
+            satellite.files[tile == the.tile,
                 .(time.sat = time, sat.files.ix)],
-            satellite_hdf_files,
+            satellite.files,
             the.satellite, satellite.product, n.workers)
         if (!nrow(sat))
             return()
@@ -402,7 +402,7 @@ make_traindata = function(
 
         # Read in the values of the appropriate satellite files.
         get.predictors(
-            d, satellite_hdf_files,
+            d, satellite.files,
             satellite.product, y.sat.name, features, window.radius, n.workers)}))
 
     message("Interpolating AOD")
