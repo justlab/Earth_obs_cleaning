@@ -5,22 +5,22 @@
 empirical.error.envelope <- function(dt,
                                      obs = "y.ground",
                                      pred = "y.sat",
-                                     add.term = seq(0.01, 0.1, by = 0.005),
-                                     mult.term = seq(0.05, 0.3, by = 0.005),
+                                     add.term = seq(0.01, 0.05, by = 0.0025),
+                                     mult.term = seq(0.1, 0.25, by = 0.0025),
                                      threshold = 0.6,
                                      coverage = 2/3){
-  terms <- CJ(add.term, mult.term)
-  coverage.percent <- function(i, dt, ...) {
+  envelope.terms <- CJ(add.term, mult.term)
+  coverage.percent <- function(i, dt) {
     temp <- unlist(i)
     with(dt, mean(get(pred) > get(obs) - temp[["add.term"]] - temp[["mult.term"]]*get(obs) &
                             get(pred) < get(obs) + temp[["add.term"]] + temp[["mult.term"]]*get(obs)))
   }
-  terms[, cov.low := coverage.percent(.SD, dt[get(obs) <= threshold]), by = row.names(terms)]
-  terms[, cov.high := coverage.percent(.SD, dt[get(obs) > threshold]), by = row.names(terms)]
-  terms[, cov.overall := coverage.percent(.SD, dt), by = row.names(terms)]
+  terms[, cov.low := coverage.percent(.SD, dt[get(obs) <= threshold]), by = row.names(envelope.terms)]
+  terms[, cov.high := coverage.percent(.SD, dt[get(obs) > threshold]), by = row.names(envelope.terms)]
+  terms[, cov.overall := coverage.percent(.SD, dt), by = row.names(envelope.terms)]
   # return the parameter combo with the smallest abs diff from desired coverage
-  terms <- terms[order(abs(coverage - cov.low) + abs(coverage - cov.high), decreasing = FALSE),]
-  terms
+  envelope.terms <- envelope.terms[order(abs(coverage - cov.low) + abs(coverage - cov.high), decreasing = FALSE),]
+  envelope.terms
 }
 
 #' Get observations of PM_{2.5} from the Environmental Protection
