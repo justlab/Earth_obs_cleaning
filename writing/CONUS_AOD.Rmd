@@ -287,22 +287,27 @@ map_region_rmse <- ggplot(conus_melt, aes(geometry = geometry)) +
 map_region_rmse
 ```
 
-## Agreement Plots
+## Error Envelope
 
-```{r error_envelope, echo=TRUE}
+The most important difference in our comparison of MAIAC AOD with AERONET observations versus prior validation analyses is the single-pixel comparison (substantially closer spatiotemporal matchups). Here we only include comparisons over CONUS which restricts the range of AOD and aerosol properties.
+
+```{r error_envelope_AMT2018, echo=TRUE}
 # error envelope for MAIAC is equivalent to that reported in AMT MAIAC publication
 dt[, round(100 * proportions(table(y.sat > (y.ground - 0.05 - 0.1*y.ground) & y.sat < (y.ground + 0.05 + 0.1*y.ground))))]
-# sure looks like we would have a much smaller error envelope (in both additive and multiplicative terms)
-dt[, round(100 * proportions(table(y.ground.pred > (y.ground - 0.025 - 0.055*y.ground) & y.ground.pred < (y.ground + 0.025 + 0.055*y.ground))))]
+```
 
+```{r error_envelope, echo=TRUE}
 # now with our error envelope function
-envelope.sat <- empirical.error.envelope(dt, pred = "y.sat") 
-head(envelope.sat)
+envelope.sat <- empirical.error.envelope(dt, pred = "y.sat")
+kable(head(envelope.sat), digits = 4)
 
 # and for the corrected data
-envelope.ground.pred <- empirical.error.envelope(dt, pred = "y.ground.pred") 
-head(envelope.ground.pred)
+envelope.ground.pred <- empirical.error.envelope(dt, pred = "y.ground.pred")
+kable(head(envelope.ground.pred), digits = 4)
+
 ```
+
+## Agreement Plots
 
 ```{r agreement_plot, echo=FALSE, dev='png', dpi=300}
 p1 <- ggplot(dt[y.ground < 1 & y.sat < 1]) +
@@ -370,6 +375,8 @@ g1
 
 ### Median MSE day
 
+This map shows a tile on `r tar_read(median.mse.map.data)$date`.
+
 ```{r pred.map.median.mse, echo = F}
 pred.map(
     tar_read(median.mse.map.data)$pred, tar_read(pred.grid),
@@ -378,9 +385,9 @@ pred.map(
     quantile.cap = .99)
 ```
 
-This map shows a tile on `r tar_read(median.mse.map.data)$date`.
-
 ### Baltimore
+
+A day with long-range transported smoke from Canadian wildfires.
 
 ```{r pred.map.baltimore, echo = F}
 pred.map(
@@ -388,8 +395,8 @@ pred.map(
     bg.sf = get_conus(), color.scale.name = "AOD")
 ```
 
-*End of report*
-
 ## Comparison with AQS
 
 We examined `r l = tar_read(satellite.vs.aqs); scales::comma(l$nobs)` observations of AQS on `r scales::comma(l$celldays)` cell-days. The correlation of the observations with the original satellite values was `r sprintf("%.03f", l$old)`, compared to `r sprintf("%.03f", l$new)` with our corrected values.
+
+*End of report*
