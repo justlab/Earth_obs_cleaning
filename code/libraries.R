@@ -7,4 +7,5 @@ suppressPackageStartupMessages(
     library(xgboost)
     library(data.table)
     library(pbapply)})
-loadNamespace("fst")  # Used for targets with `format = "fst_dt"`
+loadNamespace("fst")    # Used for targets with `format = "fst_dt"`
+loadNamespace("quarto") # Used by `tarchetypes::tar_quarto`

@@ -168,4 +168,6 @@ list(
             'writing/CONUS_AOD.Rmd', quiet = F),
         tarchetypes::tar_render(paper_conus_pdf, output_format = "pdf_document",
             packages = c('magick'),
-            'writing/CONUS_AOD.Rmd')))
+            'writing/CONUS_AOD.Rmd'),
+        tarchetypes::tar_quarto(quarto_example,
+            'writing/quarto_example.qmd', quiet = F)))
