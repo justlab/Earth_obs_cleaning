@@ -16,4 +16,4 @@ pretty.table.numbers = function(d)
             sprintf("%.03f", get(col))
         else
             get(col))]
-    d}
+    d[]}
