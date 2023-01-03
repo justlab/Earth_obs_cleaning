@@ -79,6 +79,8 @@ Wf$pred.round.digits = 5L
 workflow.dir = file.path(data.dir, "workflows",
     digest::digest(config$workflow, algo = "murmur32"))
 dir.create(workflow.dir, recursive = T, showWarnings = F)
+yaml::write_yaml(file = file.path(workflow.dir, "workflow.yaml"),
+    config$workflow)
 yaml::write_yaml(file = file.path(workflow.dir, "targets.yaml"),
     list(main = list(
         script = "code/targets.R",
