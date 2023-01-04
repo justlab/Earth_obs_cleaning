@@ -1,14 +1,15 @@
 ---
-title: "Running `Earth_obs_cleaning` on MCD19A2: Results from CONUS"
+title: "Reducing retrieval error in MAIAC AOD with the `Earth_obs_cleaning` machine-learning workflow: Results from CONUS"
 header-includes:
   - \usepackage{float}
   - \floatplacement{figure}{H}  #make every figure with caption = h, this was the fix
-  - \usepackage{helvet} \renewcommand\familydefault{\sfdefault}
+  - \usepackage{helvet} 
+  - \renewcommand{\familydefault}{\sfdefault}
+bibliography: references.json
+csl: https://www.zotero.org/styles/atmospheric-measurement-techniques
 output_format:
-  pdf_document: default
   html_document: default
 always_allow_html: true
-bibliography: references.json
 knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = encoding,
   output_dir = "output", output_format = "all") })
