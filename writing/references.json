@@ -58,5 +58,138 @@
         "title": "Advancing methodologies for applying machine learning and evaluating spatiotemporal models of fine particulate matter (PM2.5) using satellite data over large regions",
         "type": "article-journal",
         "volume": "239"
+    },
+    {
+        "DOI": "10.5067/MODIS/MCD19A2.006",
+        "URL": "https://lpdaac.usgs.gov/products/mcd19a2v006/",
+        "accessed": {
+            "date-parts": [
+                [
+                    2022,
+                    6,
+                    9
+                ]
+            ]
+        },
+        "author": [
+            {
+                "family": "Lyapustin,  Alexei",
+                "given": ""
+            },
+            {
+                "family": "Wang,  Yujie",
+                "given": ""
+            }
+        ],
+        "id": "lyapustinalexei2018",
+        "issued": {
+            "date-parts": [
+                [
+                    2018
+                ]
+            ]
+        },
+        "libraryid": "",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "NASA EOSDIS Land Processes DAAC",
+        "title": "MCD19A2 MODIS/Terra+Aqua Land Aerosol Optical Depth Daily L2G Global 1km SIN Grid V006",
+        "type": "dataset"
+    },
+    {
+        "DOI": "10.3390/rs10050803",
+        "PMCID": "PMC6497138",
+        "PMID": "31057954",
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "De Carli",
+                "given": "Margherita M."
+            },
+            {
+                "family": "Shtein",
+                "given": "Alexandra"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Remote Sensing",
+        "container-title-short": "Remote Sens (Basel)",
+        "id": "just2018",
+        "issue": "5",
+        "issued": {
+            "date-parts": [
+                [
+                    2018,
+                    5
+                ]
+            ]
+        },
+        "language": "eng",
+        "libraryid": "",
+        "page": "803",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "title": "Correcting Measurement Error in Satellite Aerosol Optical Depth with Machine Learning for Modeling PM2.5 in the Northeastern USA",
+        "type": "article-journal",
+        "volume": "10"
+    },
+    {
+        "DOI": "10.1080/10962247.2016.1161674",
+        "URL": "https://www.tandfonline.com/doi/full/10.1080/10962247.2016.1161674",
+        "accessed": {
+            "date-parts": [
+                [
+                    2022,
+                    12,
+                    28
+                ]
+            ]
+        },
+        "author": [
+            {
+                "family": "Dreessen",
+                "given": "Joel"
+            },
+            {
+                "family": "Sullivan",
+                "given": "John"
+            },
+            {
+                "family": "Delgado",
+                "given": "Ruben"
+            }
+        ],
+        "container-title": "Journal of the Air & Waste Management Association",
+        "container-title-short": "Journal of the Air & Waste Management Association",
+        "id": "dreessen2016",
+        "issue": "9",
+        "issued": {
+            "date-parts": [
+                [
+                    2016,
+                    9,
+                    1
+                ]
+            ]
+        },
+        "language": "en",
+        "libraryid": "",
+        "page": "842-862",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "title": "Observations and impacts of transported Canadian wildfire smoke on ozone and aerosol air quality in the Maryland region on June 9–12, 2015",
+        "type": "article-journal",
+        "volume": "66"
     }
 ]
