@@ -448,7 +448,6 @@ This map shows a tile on `r tar_read(median.mse.map.data)$date`.
 pred.map(
     tar_read(median.mse.map.data)$pred, tar_read(pred.grid),
     bg.sf = get_conus(), color.scale.name = "AOD",
-    limits = list(lon = c(-107, Inf), lat = c(-Inf, 37)),
     quantile.cap = .99)
 ```
 
