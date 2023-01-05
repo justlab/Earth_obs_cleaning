@@ -4,10 +4,11 @@ title: "Reducing retrieval error in MAIAC AOD with the `Earth_obs_cleaning` mach
 bibliography: references.json
 csl: https://www.zotero.org/styles/atmospheric-measurement-techniques
 
+echo: FALSE
 df-print: kable
 ---
 
-```{r basics, echo=FALSE}
+```{r basics}
 source.files = "globals libraries util data modeling paper_functions"
 for (filename in strsplit(source.files, " ")[[1]])
      source(sprintf("code/%s.R", filename))
@@ -20,7 +21,7 @@ suppressPackageStartupMessages(
 the.sat = tools::toTitleCase(Wf$satellite)
 ```
 
-```{r git_check, echo=FALSE}
+```{r git_check}
 {
 s = function(cmd) suppressWarnings(system(cmd,
     intern = TRUE, ignore.stderr = TRUE))
@@ -121,7 +122,7 @@ Beyond cross-validation performance, we also sought to evaluate the utility of a
 
 ## Main findings from cross-validation
 
-```{r get_cv, echo=FALSE}
+```{r get_cv}
 dt <- copy(tar_read(cv)$mDT_wPred)
 ```
 
@@ -129,11 +130,11 @@ dt <- copy(tar_read(cv)$mDT_wPred)
 
 After collocation there were \## matched AOD retrievals from \## AERONET sites in CONUS. The median absolute difference from the labeled overpass time (one per 1200-km wide tile) and the time of the matched AERONET observation was \## minutes (25^th^ and 75^th^ percentiles of \## and \## minutes, respectively). While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian. 
 
-```{r describe_dv, echo=FALSE, eval=TRUE}
+```{r describe_dv, eval=TRUE}
 kable(summary(dt[, list(y.diff)]))
 ```
 
-```{r plot_dv, echo=FALSE, eval=TRUE}
+```{r plot_dv, eval=TRUE}
 ggplot(dt, aes(x = y.diff)) +
   geom_histogram(binwidth = 0.005) +
   scale_x_continuous("MAIAC AOD minus AERONET AOD") +
@@ -145,7 +146,7 @@ ggplot(dt, aes(x = y.diff)) +
 
 Table \## includes the performance metrics for the full cross-validated training data set. Here **raw** is MCD19A2.V006 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost-modeled correction term.
 
-```{r table_cv_results, echo=FALSE}
+```{r table_cv_results}
 kbl(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]), align = "l", caption = "Table ##. Cross validation results for the entire training set") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -158,7 +159,7 @@ Here we show our performance metrics in different subsets of the cross-validatio
 
 ### Performance by year
 
-```{r strata_year, echo=FALSE, eval=TRUE}
+```{r strata_year, eval=TRUE}
 kbl(pretty.table.numbers(tar_read(cv.summary)[-1, .SD, .SDcols = -patterns("Q[1-9]")]),
     align = "l") %>%
   kable_styling(position = "left",
@@ -168,7 +169,7 @@ kbl(pretty.table.numbers(tar_read(cv.summary)[-1, .SD, .SDcols = -patterns("Q[1-
 
 ### Performance by month of year
 
-```{r strata_month, echo=FALSE}
+```{r strata_month}
 result <- dt[,
     keyby = .(Month = month(lubridate::as_datetime(time.sat))),
     eval(performance.j)]
@@ -179,7 +180,7 @@ kbl(pretty.table.numbers(result[, .SD, .SDcols = -patterns("Time")]), align = "l
   row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
 ```
 
-```{r plot_by_month, echo=FALSE, eval=FALSE, dev='png', dpi=300}
+```{r plot_by_month, eval=FALSE, dev='png', dpi=300}
 # Color by quantiles
 dt[, month := structure(class = "factor",
                         month(time.sat),
@@ -202,7 +203,7 @@ suppressMessages(print(p1))
 
 ### Performance by NOAA climate regions
 
-```{r noaa_setup, echo=FALSE}
+```{r noaa_setup}
 noaa.regions = list(
   # https://www.ncdc.noaa.gov/monitoring-references/maps/us-climate-regions.php
     Ohio.Valley = c("IL", "IN", "KY", "MO", "OH", "TN", "WV"), #previously 'Central'
@@ -274,7 +275,7 @@ dt[, state.noaa.region := factor(
    levels = names(noaa.regions))]
 ```
 
-```{r strata_noaa_regions, echo=FALSE, fig.pos="H"}
+```{r strata_noaa_regions, fig.pos="H"}
 # performance by NOAA climate regions
 by.region = dt[, eval(performance.j), keyby = state.noaa.region]
 kbl(pretty.table.numbers(by.region[, .SD, .SDcols = -patterns("Time")]),
@@ -284,7 +285,7 @@ kbl(pretty.table.numbers(by.region[, .SD, .SDcols = -patterns("Time")]),
   row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
 ```
 
-```{r noaa_region_plot, echo=FALSE, dev='png', dpi=300}
+```{r noaa_region_plot, dev='png', dpi=300}
 ## map of performance by NOAA regions
 conus$state.noaa.region <- factor(
    sapply(conus$STUSPS, USE.NAMES = F,
@@ -312,7 +313,7 @@ map_region_rmse
 
 ### Performance for higher versus lower AOD (AERONET \> 0.6)
 
-```{r strata_high_aod, echo=FALSE, fig.pos="H"}
+```{r strata_high_aod, fig.pos="H"}
 by.highaod = dt[, eval(performance.j), by = .(aod_high = y.ground > 0.6)]
 kbl(pretty.table.numbers(by.highaod[, .SD, .SDcols = -patterns("Time")]),
     align = "l") %>%
@@ -323,13 +324,13 @@ kbl(pretty.table.numbers(by.highaod[, .SD, .SDcols = -patterns("Time")]),
 
 ### Performance by restriction of matchup calipers
 
-```{r strata_timecalipers, echo=FALSE, fig.pos="H"}
+```{r strata_timecalipers, fig.pos="H"}
 
 ```
 
 ### Performance by number of overpasses in collocation that site-day
 
-```{r strata_overpasses, echo=FALSE, fig.pos="H"}
+```{r strata_overpasses, fig.pos="H"}
 dt[, overpasses := .N, by = .(site, lubridate::as_date(time.ground))]
 by.overpasses = dt[, eval(performance.j), keyby = overpasses]
 kbl(pretty.table.numbers(by.overpasses[, .SD, .SDcols = -patterns("Time")]),
@@ -341,7 +342,7 @@ kbl(pretty.table.numbers(by.overpasses[, .SD, .SDcols = -patterns("Time")]),
 
 ### Performance by `qa_best`
 
-```{r strata_qa, echo=FALSE}
+```{r strata_qa}
 by.qabest = dt[, eval(performance.j), by = qa_best]
 kbl(pretty.table.numbers(by.qabest[, .SD, .SDcols = -patterns("Time")]),
     align = "l") %>%
@@ -356,12 +357,12 @@ The takeaway here is that even though the RMSE of MAIAC is substantially better 
 
 The most important difference in our comparison of MAIAC AOD with AERONET observations versus prior validation analyses is the single-pixel comparison whereas prior analyses use averaging over much larger space and time regions. In this manuscript, we only include comparisons over CONUS which limits the diversity of aerosol properties and most training data are in relatively low AOD conditions.
 
-```{r error_envelope_AMT2018, echo=FALSE}
+```{r error_envelope_AMT2018}
 # error envelope for MAIAC is equivalent to that reported in AMT MAIAC publication
 dt[, round(100 * mean(y.sat > (y.ground - 0.05 - 0.1*y.ground) & y.sat < (y.ground + 0.05 + 0.1*y.ground)))][1]
 ```
 
-```{r error_envelope, echo=FALSE}
+```{r error_envelope}
 # now with our error envelope function
 envelope.sat <- empirical.error.envelope(dt, pred = "y.sat")
 kable(head(envelope.sat, 1), digits = 4)
@@ -374,7 +375,7 @@ kable(head(envelope.ground.pred, 1), digits = 4)
 
 ## Agreement Plots
 
-```{r agreement_plot, echo=FALSE, dev='png', dpi=300}
+```{r agreement_plot, dev='png', dpi=300}
 p1 <- ggplot(dt[y.ground < 1 & y.sat < 1]) +
   aes(y.ground, y.sat) +
   geom_pointdensity(alpha = 0.1, size = 0.6) +
@@ -407,7 +408,7 @@ p1 + p2
 
 In decreasing order of variable importance (from `r the.sat` collocated cross-validation predictions)
 
-```{r shap_rank, echo=FALSE}
+```{r shap_rank}
 # what do the SHAPs tell us?
 tar_load(cv)
 shaps <- cv$"shap_score"
@@ -422,14 +423,14 @@ kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
 
 Summary visualization of SHAP contributions
 
-```{r shap_summary, echo=FALSE, dev='png', dpi=300, eval=FALSE}
+```{r shap_summary, dev='png', dpi=300, eval=FALSE}
 shap_long <- shap.prep(shap_contrib = cv$shap_score,
                        X_train = cv$mDT_wPred[, names(cv$shap_score), with = F])
 # **SHAP summary plot**
 shap.plot.summary(shap_long)
 ```
 
-```{r shap_features, echo=FALSE, dev='png', dpi=300, eval=FALSE}
+```{r shap_features, dev='png', dpi=300, eval=FALSE}
 g1 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'Column_WV', color_feature = 'Column_WV') + ggtitle("(A) SHAP values of Column WV vs. Time trend")
 # g2 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'y.sat', color_feature = 'y.sat') +  ggtitle("(B) SHAP values of MAIAC AOD vs. Time trend")
 #
@@ -443,7 +444,7 @@ g1
 
 This map shows a tile on `r tar_read(median.mse.map.data)$date`.
 
-```{r pred.map.median.mse, echo = F, eval=FALSE}
+```{r pred.map.median.mse, eval=FALSE}
 pred.map(
     tar_read(median.mse.map.data)$pred, tar_read(pred.grid),
     bg.sf = get_conus(), color.scale.name = "AOD",
@@ -455,7 +456,7 @@ pred.map(
 
 A day with long-range transported smoke from Canadian wildfires.
 
-```{r pred.map.baltimore, echo = F, eval=FALSE}
+```{r pred.map.baltimore, eval=FALSE}
 pred.map(
     tar_read(baltimore.map.data), tar_read(pred.grid),
     bg.sf = get_conus(), color.scale.name = "AOD")
