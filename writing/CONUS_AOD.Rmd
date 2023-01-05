@@ -1,26 +1,16 @@
 ---
 title: "Reducing retrieval error in MAIAC AOD with the `Earth_obs_cleaning` machine-learning workflow: Results from CONUS"
-header-includes:
-  - \usepackage{float}
-  - \floatplacement{figure}{H}  #make every figure with caption = h, this was the fix
-  - \usepackage{helvet} 
-  - \renewcommand{\familydefault}{\sfdefault}
+
 bibliography: references.json
 csl: https://www.zotero.org/styles/atmospheric-measurement-techniques
-output_format:
-  html_document: default
-always_allow_html: true
-knit: (function(inputFile, encoding) {
-  rmarkdown::render(inputFile, encoding = encoding,
-  output_dir = "output", output_format = "all") })
+
+df-print: kable
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = here::here())
-```
-
 ```{r basics, echo=FALSE}
+source.files = "globals libraries util data modeling paper_functions"
+for (filename in strsplit(source.files, " ")[[1]])
+     source(sprintf("code/%s.R", filename))
 suppressPackageStartupMessages(
    {library(patchwork)
     library(ggridges)
