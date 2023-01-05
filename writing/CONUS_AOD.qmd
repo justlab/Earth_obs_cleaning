@@ -357,10 +357,7 @@ The takeaway here is that even though the RMSE of MAIAC is substantially better 
 
 The most important difference in our comparison of MAIAC AOD with AERONET observations versus prior validation analyses is the single-pixel comparison whereas prior analyses use averaging over much larger space and time regions. In this manuscript, we only include comparisons over CONUS which limits the diversity of aerosol properties and most training data are in relatively low AOD conditions.
 
-```{r error_envelope_AMT2018}
-# error envelope for MAIAC is equivalent to that reported in AMT MAIAC publication
-dt[, round(100 * mean(y.sat > (y.ground - 0.05 - 0.1*y.ground) & y.sat < (y.ground + 0.05 + 0.1*y.ground)))][1]
-```
+The original error envelope (reported in the AMT MAIAC publication) had `r dt[, round(100 * mean(y.sat > (y.ground - 0.05 - 0.1*y.ground) & y.sat < (y.ground + 0.05 + 0.1*y.ground)))][1]`% coverage in our data.
 
 ```{r error_envelope}
 # now with our error envelope function
