@@ -163,8 +163,6 @@ list(
         pred.grid, region.shape, satellite.files, model.full)),
 
     # Render the CONUS AOD manuscript
-    if (Wf$satellite.product == "mcd19a2") list(
+    if (Wf$satellite.product == "mcd19a2")
         tarchetypes::tar_quarto(paper_conus_html,
-            'writing/CONUS_AOD.qmd', quiet = F),
-        tarchetypes::tar_quarto(quarto_example,
-            'writing/quarto_example.qmd', quiet = F)))
+            'writing/CONUS_AOD.qmd', quiet = F))
