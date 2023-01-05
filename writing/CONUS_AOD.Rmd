@@ -25,7 +25,6 @@ suppressPackageStartupMessages(
    {library(patchwork)
     library(ggridges)
     library(ggpointdensity)
-    library(ggdist)
     library(kableExtra)
   })
 the.sat = tools::toTitleCase(Wf$satellite)
