@@ -4,6 +4,10 @@ title: "Reducing retrieval error in MAIAC AOD with the `Earth_obs_cleaning` mach
 bibliography: references.json
 csl: https://www.zotero.org/styles/atmospheric-measurement-techniques
 
+format: 
+  html:
+    embed-resources: true
+
 echo: FALSE
 df-print: kable
 ---
