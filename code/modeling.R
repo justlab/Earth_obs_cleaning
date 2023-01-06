@@ -57,7 +57,8 @@ cv_dart <- function(
   y_var_pred_whole <- paste0(y_var, "_pred_whole") # name of the predicted y
 
   # bin data into specified number of folds
-  temp <- prepare.bin(mDT, by_var = by_var, k_fold = k_fold)
+  temp <- with.temp.seed(mDT,
+    prepare.bin(mDT, by_var = by_var, k_fold = k_fold))
   mDT <- temp$data
   bin_list <- temp$bin # list of values of selected variable (stn or day) by fold
   rm(temp)
@@ -83,7 +84,6 @@ cv_dart <- function(
                               n_rounds = n_rounds,
                               y_var = y_var,
                               progress = progress,
-                              seed = 1234,
                               index_train = index_train,
                               index_test = index_test,
                               xgb_threads = xgb_threads)
@@ -110,7 +110,7 @@ cv_dart <- function(
 #'
 run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
                           index_train, index_test, xgb_threads, by_var, n_rounds,
-                          progress = TRUE, seed = 1234, ...){
+                          progress = TRUE, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   Y <-  dataXY_df[, ..y_var]
   data_X <- dataXY_df[, -..y_var]
@@ -127,8 +127,7 @@ run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
   BIAS0 <- rep(NA_real_, k_fold)
   # loop for each fold
 
-  if(!(is.null(seed) || is.na(seed))) set.seed(seed)
-  for (i in 1:k_fold){
+  with.temp.seed(dataXY_df, for (i in 1:k_fold){
     cat('number of obs in testing fold', i, 'is:', nrow(data_X[index_test[[i]], ]), '\n')
 
     rsxgb0 <- xgboost.dart.cvtune(
@@ -154,7 +153,7 @@ run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
 
     xgb_param_list1[[paste0(by_var, i)]] <- unlist(xgb_param_dart)
     xgb_param_list2[[paste0(by_var, i)]] <- xgb_param_dart
-  }
+  })
   cat("loop finished\n")
   rmse_all_folds <- sqrt(mean((y_pred_dt$y_pred - dataXY_df[[y_var]])^2))
   # features ranked by SHAP
@@ -276,14 +275,14 @@ dart_full <- function(
   xgb_threads <- get.threads()
   data_train = data_train[, c(features, y_var), with = F]
   simplify.dt.for.xgboost(data_train)
-  xdc_out <- xgboost.dart.cvtune(
+  xdc_out <- with.temp.seed(data_train, xgboost.dart.cvtune(
     # by default, gives 100 rounds, and it is enough by experience
     n.rounds = n_rounds,
     d = data_train,
     dv = y_var,
     ivs = features,
     progress = progress,
-    nthread = xgb_threads)
+    nthread = xgb_threads))
   # record the prediction
   preds = xdc_out$pred.fun(data_train)
   #rmse_full <- sqrt(mean((preds - data_train[[y_var]])^2))

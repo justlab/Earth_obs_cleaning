@@ -100,8 +100,6 @@ multipass.sat = function(satellite.product = Wf$satellite.product)
 # for reporting purpose
 y_var = "diff_AOD"
 
-set.seed(1234)
-
 terra::terraOptions(progress = 0)
 
 # basic AERONET variables to read
