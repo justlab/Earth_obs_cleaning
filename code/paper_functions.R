@@ -81,6 +81,53 @@ get.satellite.vs.aqs = function(satellite, aqs)
     out
     }
 
+
+aqs.cycle.epoch = as.Date("1999-12-20")
+# It appears that sampling calendars (examples below) can be
+# constructed as 12-, 6-, and 3-day cycles from this date.
+# http://web.archive.org/web/20211130060423id_/https://www.epa.gov/sites/default/files/2020-01/documents/calendar2016.pdf
+# http://web.archive.org/web/20211120074317id_/https://www.epa.gov/sites/default/files/2020-01/documents/2019_sampling_schedule.pdf
+# http://web.archive.org/web/20230110153500id_/https://www.epa.gov/system/files/documents/2022-10/2023%20sampling%20schedule.pdf
+
+cheating = function(satellite, aqs)
+   {min.obs = 5L
+    cycle.lens = c(12L, 6L, 3L)
+
+    message("Finding cycles")
+    cycles = aqs[, keyby = .(lon, lat, cell, year(date)), .(
+        site.year = factor(paste0("sy", .GRP)),
+        cycle = (\()
+           {if (.N < min.obs)
+                return(NA_integer_)
+            for (candidate in cycle.lens)
+                if (all(date %in% seq(aqs.cycle.epoch, max(date),
+                        by = candidate)))
+                    return(candidate)
+            NA_integer_})())]
+
+    message("Merging satellite data with AQS stations")
+    d = merge(
+       satellite[,
+          {date = lubridate::as_date(time.sat, tz = "Etc/GMT+6")
+           .(cell, y.sat.old, y.sat.new, date, year = year(date))}],
+       cycles[!is.na(cycle)],
+       by = c("cell", "year"))
+
+    the.cycle = 6L
+    d = d[cycle == the.cycle]
+    d[, cycle.day := date %in%
+        seq(aqs.cycle.epoch, max(date), by = the.cycle)]
+
+    d[, day := scale(as.integer(date))]
+
+    message("Fitting")
+    ms = lapply(c("y.sat.old", "y.sat.new"), function(dv)
+       {d[, (dv) := get(dv) / 10^Wf$pred.round.digits]
+        lme4::lmer(data = d, get(dv) ~
+            cycle.day + day + I(day^2) + (1 | site.year))})
+
+    ms}
+
 get.median.mse.map.data = function(
       y.sat.name, the.satellite, satellite.product, n.workers,
       d, pred.grid, region.shape, satellite.files, model.full)
