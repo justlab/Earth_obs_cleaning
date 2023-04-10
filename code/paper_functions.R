@@ -49,7 +49,7 @@ get.aqs.obs = function(years, grid)
             Sample.Duration %in% c("24 HOUR", "24-HR BLK AVG") &
                 Event.Type != "Excluded",
             .(date = Date.Local, lon = Longitude, lat = Latitude,
-               value = Arithmetic.Mean)]}))
+                value = Arithmetic.Mean)]}))
 
     d[, cell := as.integer(terra::cellFromXY(grid,
         convert.crs(cbind(lon, lat), crs.lonlat, terra::crs(grid))))]
