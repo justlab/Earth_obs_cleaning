@@ -6,15 +6,21 @@ get.region.shape = function(region)
    {buffer.size.m = 5000
 
     region = (
+        # The region can be a special string…
         if (region == "conus")
             get_conus()
+        # …or an absolute filepath…
         else if (startsWith(region, "/"))
             read_sf(region)
-        else
+        # …or a URL, ending with an appropriate file extension…
+        else if (startsWith(region, "http:") || startsWith(region, "https:"))
            {path = tempfile(fileext = paste0(".",
                 tools::file_ext(region)))
             assert(0 == download.file(region, path))
-            read_sf(path)})
+            read_sf(path)}
+        # …or extended well-known text (EWKT).
+        else
+            st_as_sfc(region))
 
     # Unify the region and buffer it out.
     st_buffer(dist = buffer.size.m, st_union(region))}

@@ -31,14 +31,7 @@ stopifnot(
     Wf$satellite.product == "geonexl2" &&
        Wf$satellite == "goes16")
 stopifnot(Wf$ground.product %in% c("aeronet"))
-stopifnot(
-    # The region can be a special string…
-    Wf$region == "conus" ||
-    # …or a filepath…
-    startsWith(Wf$region, "/") ||
-    # …or a URL, ending with an appropriate file extension.
-    startsWith(Wf$region, "http:") ||
-    startsWith(Wf$region, "https:"))
+stopifnot(is.character(Wf$region))
 
 # True configurability of other `Wf` items is not implemented now
 # but might be added later.
