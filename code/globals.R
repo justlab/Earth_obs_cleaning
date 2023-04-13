@@ -24,34 +24,40 @@ if (is.null(n.workers))
 
 # The most general workflow-defining variables.
 Wf = as.environment(config$workflow)
-stopifnot(Wf$outcome %in% c("aod"))
 stopifnot(
-    Wf$satellite.product == "mcd19a2" &&
-       Wf$satellite %in% c("terra", "aqua") ||
-    Wf$satellite.product == "geonexl2" &&
-       Wf$satellite == "goes16")
-stopifnot(Wf$ground.product %in% c("aeronet"))
+    Wf$outcome == "aod" &&
+        Wf$satellite.product == "mcd19a2" &&
+        Wf$satellite %in% c("terra", "aqua") &&
+        Wf$ground.product == "aeronet" ||
+    Wf$outcome == "aod" &&
+        Wf$satellite.product == "geonexl2" &&
+        Wf$satellite == "goes16" &&
+        Wf$ground.product == "aeronet" ||
+    Wf$outcome == "no2" &&
+        Wf$satellite.product == "tropomi" &&
+        Wf$satellite == "sentinel5p" &&
+        Wf$ground.product == "pandonia")
 stopifnot(is.character(Wf$region))
 
 # True configurability of other `Wf` items is not implemented now
 # but might be added later.
 
-Wf$years = switch(Wf$satellite.product,
-    mcd19a2 = 2000 : 2021,
-    geonexl2 = 2018 : 2019)
-Wf$dates = seq(
-    lubridate::make_date(min(Wf$years)),
-    lubridate::make_date(max(Wf$years), 12, 31),
-    by = 1)
+Wf$dates = switch(Wf$satellite.product,
+    mcd19a2 = c("2000-01-01", "2021-12-31"),
+    geonexl2 = c("2018-01-01", "2019-12-31"),
+    tropomi = c("2021-07-01", "2022-12-31"))
+      # The former is the first day of the latest version of the
+      # TROPOMI nitrogen-dioxide product.
+Wf$dates = seq(as.Date(Wf$dates[1]), as.Date(Wf$dates[2]), by = 1)
 Wf$date.example = switch(Wf$satellite.product,
   # This should be a date for which the satellite data of interest
   # exists on all tiles.
     mcd19a2 = as.Date("2010-07-03"),
-    geonexl2 = as.Date("2018-07-03"))
+    geonexl2 = as.Date("2018-07-03"),
+    tropomi = as.Date("2021-08-01"))
 if (!is.null(Wf$test.small.daterange) && Wf$test.small.daterange)
-   {Wf$years = year(Wf$date.example)
-    Wf$dates = Wf$date.example + (-1:1)}
-stopifnot(Wf$date.example %in% Wf$dates)
+    Wf$dates = Wf$date.example + (-1:1)
+Wf$years = sort(unique(year(Wf$dates)))
 
 Wf$y.sat = "Optical_Depth_047"
 Wf$features = c(
