@@ -55,15 +55,31 @@ satellite.tiles = function(region.shape)
         as.integer(tiles[,2]), as.integer(tiles[,3])))}
 
 #' Compute the grid on which all predictions will be made.
-get.pred.grid = function(satellite.product, earthdata.rows)
-   {r = do.call(terra::merge, lapply(1 : nrow(earthdata.rows),
-        function(i) with(earthdata.rows[i],
-           {r = read_satellite_raster(satellite.product, tile, path)[[1]]
-            r$tile = as.integer(tile)
-            r$cell.local = seq_len(terra::ncell(r))
-            r[[c("tile", "cell.local")]]})))
-    r$tile = factor(as.integer(drop(r$tile[])),
-        labels = levels(earthdata.rows$tile))
+get.pred.grid = function(satellite.product, region.shape, earthdata.rows)
+   {if (satellite.product == "tropomi")
+      # The product itself is ungridded. We'll make our own lon-lat
+      # grid.
+       {degree.digits = 2
+        b = (
+            round(digits = degree.digits,
+                st_bbox(st_transform(crs = crs.lonlat, region.shape))) +
+            c(-1, -1, 1, 1) * 10^(-degree.digits))
+        r = terra::rast(
+            xmin = b[1], ymin = b[2],
+            xmax = b[3], ymax = b[4],
+            res = 10^(-degree.digits),
+            crs = paste0("epsg:", crs.lonlat))
+        r$IGNORE = 1L}
+    else
+      # Combine the grids of all satellite tiles.
+       {r = do.call(terra::merge, lapply(1 : nrow(earthdata.rows),
+            function(i) with(earthdata.rows[i],
+               {r = read_satellite_raster(satellite.product, tile, path)[[1]]
+                r$tile = as.integer(tile)
+                r$cell.local = seq_len(terra::ncell(r))
+                r[[c("tile", "cell.local")]]})))
+        r$tile = factor(as.integer(drop(r$tile[])),
+           labels = levels(earthdata.rows$tile))}
     r}
 
 expand.to.overpasses = function(d, satellite.files, the.satellite, satellite.product, n.workers)

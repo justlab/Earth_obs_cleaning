@@ -101,6 +101,7 @@ list(
                 lubridate::as_date(time) %in% Wf$dates)})),
     tar_target(pred.grid, format = terra.rast.fmt, get.pred.grid(
         Wf$satellite.product,
+        region.shape,
         satellite.files[
             lubridate::as_date(time) == Wf$date.example,
             by = tile,
