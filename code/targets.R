@@ -76,7 +76,7 @@ list(
         mcd19a2 =
            {d = get.earthdata(
                 satellite_hdf_root,
-                product = "MCD19A2.006",
+                product = "MCD19A2.061",
                 satellites = (if (Wf$satellite %in% c("terra", "aqua"))
                     "terra.and.aqua" else
                     stop()),
