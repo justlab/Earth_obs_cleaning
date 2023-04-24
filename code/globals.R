@@ -43,7 +43,7 @@ stopifnot(is.character(Wf$region))
 # but might be added later.
 
 Wf$dates = switch(Wf$satellite.product,
-    mcd19a2 = c("2000-01-01", "2021-12-31"),
+    mcd19a2 = c("2000-01-01", "2022-12-31"),
     geonexl2 = c("2018-01-01", "2019-12-31"),
     tropomi = c("2021-07-01", "2022-12-31"))
       # The former is the first day of the latest version of the
