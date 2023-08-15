@@ -161,29 +161,6 @@ kbl(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]), align = "l", caption
 
 Here we show our performance metrics in different subsets of the cross-validation results. These are all from the same model training, just slicing up how the performance looks in different contexts.
 
-### Performance by year
-
-```{r strata_year}
-kbl(pretty.table.numbers(tar_read(cv.summary)[-1, .SD, .SDcols = -patterns("Q[1-9]")]),
-    align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
-```
-
-### Performance by month of year
-
-```{r strata_month}
-result <- dt[,
-    keyby = .(Month = month(lubridate::as_datetime(time.sat))),
-    eval(performance.j)]
-result[, Month := month.abb[Month]]
-kbl(pretty.table.numbers(result[, .SD, .SDcols = -patterns("Time")]), align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
-```
-
 ### Performance by NOAA climate regions
 
 ```{r noaa_setup}
@@ -294,23 +271,24 @@ map_region_rmse <- ggplot(conus_melt, aes(geometry = geometry)) +
 map_region_rmse
 ```
 
+### Performance by month of year
+
+```{r strata_month}
+result <- dt[,
+    keyby = .(Month = month(lubridate::as_datetime(time.sat))),
+    eval(performance.j)]
+result[, Month := month.abb[Month]]
+kbl(pretty.table.numbers(result[, .SD, .SDcols = -patterns("Time")]), align = "l") %>%
+  kable_styling(position = "left",
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
+```
+
 ### Performance for higher versus lower AOD (AERONET \> 0.6)
 
 ```{r strata_high_aod, fig.pos="H"}
 by.highaod = dt[, eval(performance.j), by = .(aod_high = y.ground > 0.6)]
 kbl(pretty.table.numbers(by.highaod[, .SD, .SDcols = -patterns("Time")]),
-    align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
-```
-
-### Performance by number of overpasses in collocation that site-day
-
-```{r strata_overpasses, fig.pos="H"}
-dt[, overpasses := .N, by = .(site, lubridate::as_date(time.ground))]
-by.overpasses = dt[, eval(performance.j), keyby = overpasses]
-kbl(pretty.table.numbers(by.overpasses[, .SD, .SDcols = -patterns("Time")]),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -456,6 +434,28 @@ Our workflow is not a gap-filling method and thus corrected results have the sam
 # Data availability
 
 # Supplement
+
+## Performance by year
+
+```{r strata_year}
+kbl(pretty.table.numbers(tar_read(cv.summary)[-1, .SD, .SDcols = -patterns("Q[1-9]")]),
+    align = "l") %>%
+  kable_styling(position = "left",
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
+```
+
+## Performance by number of overpasses in collocation that site-day
+
+```{r strata_overpasses, fig.pos="H"}
+dt[, overpasses := .N, by = .(site, lubridate::as_date(time.ground))]
+by.overpasses = dt[, eval(performance.j), keyby = overpasses]
+kbl(pretty.table.numbers(by.overpasses[, .SD, .SDcols = -patterns("Time")]),
+    align = "l") %>%
+  kable_styling(position = "left",
+                latex_options=c("HOLD_position","scale_down")) %>%
+  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
+```
 
 # Author contributions
 
