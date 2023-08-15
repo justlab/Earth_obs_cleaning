@@ -238,7 +238,9 @@ dt[, state.noaa.region := factor(
 
 ```{r strata_noaa_regions, fig.pos="H"}
 # performance by NOAA climate regions
-by.region = dt[, eval(performance.j), keyby = state.noaa.region]
+by.region = (dt
+    [, eval(performance.j), by = state.noaa.region]
+    [order(`Proportion of raw MSE`)])
 kbl(pretty.table.numbers(by.region),
     align = "l") %>%
   kable_styling(position = "left",
@@ -260,12 +262,9 @@ conus_melt <- melt(as.data.table(conus[, c("geometry", "state.noaa.region", "RMS
 levels(conus_melt$variable) <- c("MAIAC AOD", "corrected AOD")
 map_region_rmse <- ggplot(conus_melt, aes(geometry = geometry)) +
   geom_sf(aes(fill = value)) +
-  geom_sf(data = dt[, .(.N, geometry = geometry[1]), by = site], aes(geometry = geometry, size = N), alpha = 0.1) +
   facet_wrap(~variable, ncol = 1) +
   coord_sf(default_crs = st_crs(conus)) +
-  scale_size("collocated\nobservations", range = c(1, 3)) +
   scale_fill_continuous("Regional\nRMSE") +
-  guides(fill = guide_legend(order = 1), size = guide_legend(order = 2)) + 
   theme_minimal() +
   theme(axis.text = element_blank(),
         panel.grid.major = element_blank())
