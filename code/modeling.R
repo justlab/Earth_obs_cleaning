@@ -236,10 +236,6 @@ get.cv.summary = function(d)
 performance.j = quote(
    {mse = function(x, y) mean((x - y)^2)
     sdn = function(x) sqrt(mse(x, mean(x)))
-    tqs = unname(quantile(
-        abs(as.numeric(difftime(units = "mins",
-            time.sat, time.ground))),
-        c(.25, .5, .75)))
     list(
         "Cases" = .N,
         "Sites" = length(unique(site)),
@@ -253,10 +249,7 @@ performance.j = quote(
         "Bias, raw" = mean(y.sat - y.ground),
         "Bias, corrected" = mean(y.ground.pred - y.ground),
         "Correlation, raw" = cor(y.sat, y.ground),
-        "Correlation, corrected" = cor(y.ground.pred, y.ground),
-        "Time difference, Q1" = tqs[1],
-        "Time difference, median" = tqs[2],
-        "Time difference, Q3" = tqs[3])})
+        "Correlation, corrected" = cor(y.ground.pred, y.ground))})
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## * New predictions

@@ -132,7 +132,7 @@ dt <- copy(tar_read(cv)$mDT_wPred)
 
 <!--# any missingness in predictors to report?-->
 
-After collocation there were \## matched AOD retrievals from \## AERONET sites in CONUS. The median absolute difference from the labeled overpass time (one per 1200-km wide tile) and the time of the matched AERONET observation was \## minutes (25^th^ and 75^th^ percentiles of \## and \## minutes, respectively). While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian. 
+After collocation there were \## matched AOD retrievals from \## AERONET sites in CONUS. The median absolute difference from the labeled overpass time (one per 1200-km wide tile) and the time of the matched AERONET observation was `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["50%"]` s (25^th^ and 75^th^ percentiles of `r tqs["25%"]` and `r tqs["75%"]` s, respectively). While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian. 
 
 ```{r describe_dv}
 kable(summary(dt[, list(y.diff)]))
@@ -238,7 +238,7 @@ dt[, state.noaa.region := factor(
 ```{r strata_noaa_regions, fig.pos="H"}
 # performance by NOAA climate regions
 by.region = dt[, eval(performance.j), keyby = state.noaa.region]
-kbl(pretty.table.numbers(by.region[, .SD, .SDcols = -patterns("Time")]),
+kbl(pretty.table.numbers(by.region),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -278,7 +278,7 @@ result <- dt[,
     keyby = .(Month = month(lubridate::as_datetime(time.sat))),
     eval(performance.j)]
 result[, Month := month.abb[Month]]
-kbl(pretty.table.numbers(result[, .SD, .SDcols = -patterns("Time")]), align = "l") %>%
+kbl(pretty.table.numbers(result), align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
   row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
@@ -288,7 +288,7 @@ kbl(pretty.table.numbers(result[, .SD, .SDcols = -patterns("Time")]), align = "l
 
 ```{r strata_high_aod, fig.pos="H"}
 by.highaod = dt[, eval(performance.j), by = .(aod_high = y.ground > 0.6)]
-kbl(pretty.table.numbers(by.highaod[, .SD, .SDcols = -patterns("Time")]),
+kbl(pretty.table.numbers(by.highaod),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -299,7 +299,7 @@ kbl(pretty.table.numbers(by.highaod[, .SD, .SDcols = -patterns("Time")]),
 
 ```{r strata_qa}
 by.qabest = dt[, eval(performance.j), by = qa_best]
-kbl(pretty.table.numbers(by.qabest[, .SD, .SDcols = -patterns("Time")]),
+kbl(pretty.table.numbers(by.qabest),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -438,7 +438,7 @@ Our workflow is not a gap-filling method and thus corrected results have the sam
 ## Performance by year
 
 ```{r strata_year}
-kbl(pretty.table.numbers(tar_read(cv.summary)[-1, .SD, .SDcols = -patterns("Q[1-9]")]),
+kbl(pretty.table.numbers(tar_read(cv.summary)[-1]),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
@@ -450,7 +450,7 @@ kbl(pretty.table.numbers(tar_read(cv.summary)[-1, .SD, .SDcols = -patterns("Q[1-
 ```{r strata_overpasses, fig.pos="H"}
 dt[, overpasses := .N, by = .(site, lubridate::as_date(time.ground))]
 by.overpasses = dt[, eval(performance.j), keyby = overpasses]
-kbl(pretty.table.numbers(by.overpasses[, .SD, .SDcols = -patterns("Time")]),
+kbl(pretty.table.numbers(by.overpasses),
     align = "l") %>%
   kable_styling(position = "left",
                 latex_options=c("HOLD_position","scale_down")) %>%
