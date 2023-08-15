@@ -184,27 +184,6 @@ kbl(pretty.table.numbers(result[, .SD, .SDcols = -patterns("Time")]), align = "l
   row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
 ```
 
-```{r plot_by_month, dev='png', dpi=300}
-# Color by quantiles
-dt[, month := structure(class = "factor",
-                        month(time.sat),
-                        levels = month.abb)]
-p1 <- ggplot(dt, aes(x = y.diff, y = month, fill = factor(stat(quantile)))) +
-  stat_density_ridges(
-    geom = "density_ridges_gradient", calc_ecdf = TRUE,
-    quantiles = 4, quantile_lines = FALSE
-  ) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey90") +
-  scale_fill_brewer(name = "Quartiles", type = "div") +
-  scale_x_continuous("MAIAC AOD minus AERONET AOD", expand = c(0, 0)) +
-  coord_cartesian(xlim = c(-0.25, 0.25)) +
-  labs(title = paste0("Histogram of difference in colocated AOD (n=",
-                      scales::comma(dt[, .N]), ")"),
-      caption = paste0("Not shown: ", dt[y.diff < -0.25 | y.diff > 0.25, .N], " AOD differences outside [-0.25, 0.25]")) +
-  theme_bw()
-suppressMessages(print(p1))
-```
-
 ### Performance by NOAA climate regions
 
 ```{r noaa_setup}
