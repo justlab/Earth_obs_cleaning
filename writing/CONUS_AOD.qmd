@@ -132,7 +132,8 @@ dt <- copy(tar_read(cv)$mDT_wPred)
 
 <!--# any missingness in predictors to report?-->
 
-After collocation there were \## matched AOD retrievals from \## AERONET sites in CONUS. The median absolute difference from the labeled overpass time (one per 1200-km wide tile) and the time of the matched AERONET observation was `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["50%"]` s (25^th^ and 75^th^ percentiles of `r tqs["25%"]` and `r tqs["75%"]` s, respectively). While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian. 
+After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals from `r uniqueN(dt$site)` AERONET sites in CONUS. The median absolute difference from the labeled overpass time (one per 1200-km wide tile) and the time of the matched AERONET observation was `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["50%"]` s (25^th^ and 75^th^ percentiles of `r tqs["25%"]` and `r tqs["75%"]` s, respectively). While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian. 
+
 
 ```{r describe_dv}
 kable(summary(dt[, list(y.diff)]))
