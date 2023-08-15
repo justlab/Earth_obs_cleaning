@@ -326,12 +326,6 @@ kbl(pretty.table.numbers(by.highaod[, .SD, .SDcols = -patterns("Time")]),
   row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
 ```
 
-### Performance by restriction of matchup calipers
-
-```{r strata_timecalipers, fig.pos="H"}
-
-```
-
 ### Performance by number of overpasses in collocation that site-day
 
 ```{r strata_overpasses, fig.pos="H"}
