@@ -316,32 +316,21 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 ## Agreement Plots
 
 ```{r agreement_plot, dev='png', dpi=300}
-p1 <- ggplot(dt[y.ground < 1 & y.sat < 1]) +
-  aes(y.ground, y.sat) +
-  geom_pointdensity(alpha = 0.1, size = 0.6) +
-  geom_abline(linetype = "dashed") +
-  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs")) +
-  scale_x_continuous("AERONET AOD 470nm", limits = c(0, 1), expand = c(0, 0)) +
-  scale_y_continuous("MAIAC AOD 470nm", limits = c(0, 1), expand = c(0, 0)) +
-  guides(color = "none") +
-  theme_bw() +
-  theme(aspect.ratio = 1) +
-  labs(caption = paste0("Not shown: ", dt[y.ground > 1 | y.sat > 1, .N], " AOD values outside [0, 1]"))
+agreement.plot = \(vname.pred)
+   {i = dt[, between(y.ground, 0, 1) & between(get(vname.pred), 0, 1)]
+    ggplot(dt[i]) +
+        aes(y.ground, get(vname.pred)) +
+        geom_pointdensity(alpha = 0.1, size = 0.6) +
+        geom_abline(linetype = "dashed") +
+        geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs")) +
+        scale_x_continuous("AERONET AOD 470nm", limits = c(0, 1), expand = c(0, 0)) +
+        scale_y_continuous("MAIAC AOD 470nm", limits = c(0, 1), expand = c(0, 0)) +
+        guides(color = "none") +
+        theme_bw() +
+        theme(aspect.ratio = 1) +
+        labs(caption = paste0("Not shown: ", dt[!i, .N], " AOD values outside [0, 1]"))}
 
-
-p2  <- ggplot(dt[y.ground < 1 & y.ground.pred > 0 & y.ground.pred < 1]) +
-  aes(y.ground, y.ground.pred) +
-  geom_pointdensity(alpha = 0.1, size = 0.6) +
-  geom_abline(linetype = "dashed") +
-  geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs")) +
-  scale_x_continuous("AERONET AOD 470nm", limits = c(0, 1), expand = c(0, 0)) +
-  scale_y_continuous("MAIAC AOD 470nm", limits = c(0, 1), expand = c(0, 0)) +
-  guides(color = "none") +
-  theme_bw() +
-  theme(aspect.ratio = 1) +
-  labs(caption = paste0("Not shown: ", dt[y.ground > 1 | y.ground.pred > 1 | y.ground.pred < 0, .N], " AOD values outside [0, 1]"))
-
-p1 + p2
+agreement.plot("y.sat") + agreement.plot("y.ground.pred")
 ```
 
 ## SHAP interpretation
