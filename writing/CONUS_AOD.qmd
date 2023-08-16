@@ -194,7 +194,6 @@ state.noaa.region = factor(
    levels = names(noaa.regions))
 
 # Contiguous US state boundaries
-# will replace with a region defined by Kodi later
 conus = st_transform(crs = crs.us.atlas, get_conus())
 ```
 
