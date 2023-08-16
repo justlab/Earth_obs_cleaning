@@ -1,27 +1,22 @@
 # contains functions used in generating the CONUS_AOD paper
 
-#' Try out empirical error envelope parameters
-#'
-empirical.error.envelope <- function(dt,
-                                     obs = "y.ground",
-                                     pred = "y.sat",
-                                     add.term = seq(0.01, 0.05, by = 0.0025),
-                                     mult.term = seq(0.125, 0.2, by = 0.0025),
-                                     threshold = 0.6,
-                                     coverage = 2/3){
-  envelope.terms <- CJ(add.term, mult.term)
-  coverage.percent <- function(i, dt) {
-    temp <- unlist(i)
-    with(dt, mean(get(pred) > get(obs) - temp[["add.term"]] - temp[["mult.term"]]*get(obs) &
-                            get(pred) < get(obs) + temp[["add.term"]] + temp[["mult.term"]]*get(obs)))
-  }
-  envelope.terms[, cov.low := coverage.percent(.SD, dt[get(obs) <= threshold]), by = row.names(envelope.terms)]
-  envelope.terms[, cov.high := coverage.percent(.SD, dt[get(obs) > threshold]), by = row.names(envelope.terms)]
-  envelope.terms[, cov.overall := coverage.percent(.SD, dt), by = row.names(envelope.terms)]
-  # return the parameter combo with the smallest abs diff from desired coverage
-  envelope.terms <- envelope.terms[order(abs(coverage - cov.low) + abs(coverage - cov.high), decreasing = FALSE),]
-  envelope.terms
-}
+#' Find an error envelope (defined with an additive and multiplicative
+#' term) around some predicted values `pred` that cover a proportion
+#' `target.coverage` of the observed values `obs` above and below `threshold`.
+empirical.error.envelope = \(..., target.coverage = 2/3)
+   {f = envelope.tester(...)
+    optim(c(.05, .1), \(p)
+        sum(abs(target.coverage - f(p[1], p[2]))))}
+
+envelope.tester = \(obs, pred, threshold = 0.6)
+   {get.coverage = \(slice, add, mult)
+        slice[, mean(abs(pred - obs) <= add + mult*pred)]
+    d = data.table(obs, pred)
+    d.lo = d[obs <= threshold]
+    d.hi = d[obs > threshold]
+    \(add, mult) c(
+        lo = get.coverage(d.lo, add, mult),
+        hi = get.coverage(d.hi, add, mult))}
 
 #' Get observations of PM_{2.5} from the Environmental Protection
 #' Agency's (EPA) Air Quality System. The unit is μg/m^3.

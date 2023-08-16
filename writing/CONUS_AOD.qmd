@@ -311,18 +311,7 @@ The takeaway here is that even though the RMSE of MAIAC is substantially better 
 
 The most important difference in our comparison of MAIAC AOD with AERONET observations versus prior validation analyses is the single-pixel comparison whereas prior analyses use averaging over much larger space and time regions. In this manuscript, we only include comparisons over CONUS which limits the diversity of aerosol properties and most training data are in relatively low AOD conditions.
 
-The original error envelope (reported in the AMT MAIAC publication) had `r dt[, round(100 * mean(y.sat > (y.ground - 0.05 - 0.1*y.ground) & y.sat < (y.ground + 0.05 + 0.1*y.ground)))][1]`% coverage in our data.
-
-```{r error_envelope}
-# now with our error envelope function
-envelope.sat <- empirical.error.envelope(dt, pred = "y.sat")
-kable(head(envelope.sat, 1), digits = 4)
-
-# and for the corrected data
-envelope.ground.pred <- empirical.error.envelope(dt, pred = "y.ground.pred")
-kable(head(envelope.ground.pred, 1), digits = 4)
-
-```
+We use Nelder-Mead optimization to construct new error envelopes with coverage as close to 2/3 as possible for each of two subsets of the data: observations less than or equal to 0.6, and observations greater than 0.6. The results are an envelope with `r f = \(pred) {ps = empirical.error.envelope(obs = dt$y.ground, pred)$par; sprintf("additive part %.03f and multiplicative part %.03f", ps[1], ps[2])}; f(dt$y.sat)` for the raw satellite values, and an envelope with `r f(dt$y.ground.pred)` for our predictions. The original error envelope (reported in the AMT MAIAC publication), applied to the raw satellite values, has coverage `r x = envelope.tester(obs = dt$y.ground, pred = dt$y.sat)(.05, .1); sprintf("%.03f", x["lo"])` in the low subset and `r sprintf("%.03f", x["hi"])` in the high subset.
 
 ## Agreement Plots
 
