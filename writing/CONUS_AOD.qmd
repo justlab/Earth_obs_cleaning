@@ -317,18 +317,24 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 
 ```{r agreement_plot, dev='png', dpi=300}
 agreement.plot = \(vname.pred)
-   {i = dt[, between(y.ground, 0, 1) & between(get(vname.pred), 0, 1)]
-    ggplot(dt[i]) +
-        aes(y.ground, get(vname.pred)) +
-        geom_pointdensity(alpha = 0.1, size = 0.6) +
+   {d = dt[, .(y.ground, y.pred = get(vname.pred))]
+    i = d[, between(y.ground, 0, 1) & between(y.pred, 0, 1)]
+    sample.obs = data.table(y.ground = seq(0, 1, len = 1000))
+    ps = empirical.error.envelope(obs = d$y.ground, d$y.pred)$par
+    sample.obs[, envelope.hi := y.ground + ps[1] + ps[2]*y.ground]
+    sample.obs[, envelope.lo := y.ground - ps[1] - ps[2]*y.ground]
+    ggplot() +
+        geom_pointdensity(data = d, aes(y.ground, y.pred),
+            alpha = 0.1, size = 0.6) +
         geom_abline(linetype = "dashed") +
-        geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs")) +
-        scale_x_continuous("AERONET AOD 470nm", limits = c(0, 1), expand = c(0, 0)) +
-        scale_y_continuous("MAIAC AOD 470nm", limits = c(0, 1), expand = c(0, 0)) +
+        geom_line(data = sample.obs, aes(y.ground, envelope.hi)) +
+        geom_line(data = sample.obs, aes(y.ground, envelope.lo)) +
+        xlab("AERONET AOD 470nm") +
+        ylab("MAIAC AOD 470nm") +
         guides(color = "none") +
         theme_bw() +
-        theme(aspect.ratio = 1) +
-        labs(caption = paste0("Not shown: ", dt[!i, .N], " AOD values outside [0, 1]"))}
+        coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = F) +
+        labs(caption = paste0("Not shown: ", d[!i, .N], " AOD values outside [0, 1]"))}
 
 agreement.plot("y.sat") + agreement.plot("y.ground.pred")
 ```
