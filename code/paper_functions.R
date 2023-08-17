@@ -1,16 +1,17 @@
 # contains functions used in generating the CONUS_AOD paper
 
-#' Find an error envelope (defined with an additive and multiplicative
-#' term) around some predicted values `pred` that cover a proportion
-#' `target.coverage` of the observed values `obs` above and below `threshold`.
+#' Find an "error envelope" with an additive and multiplicative
+#' term in the fashion of Dark Target validation
+#' https://darktarget.gsfc.nasa.gov/validation
 empirical.error.envelope = \(..., target.coverage = 2/3)
    {f = envelope.tester(...)
     optim(c(.05, .1), \(p)
         sum(abs(target.coverage - f(p[1], p[2]))))}
 
 envelope.tester = \(obs, pred, threshold = 0.6)
-   {get.coverage = \(slice, add, mult)
-        slice[, mean(abs(pred - obs) <= add + mult*pred)]
+   {get.coverage = \(slice, add, mult) slice[, mean(
+        pred >= obs - add - mult*obs &
+        pred <= obs + add + mult*obs)]
     d = data.table(obs, pred)
     d.lo = d[obs <= threshold]
     d.hi = d[obs > threshold]
