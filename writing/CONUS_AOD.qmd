@@ -367,7 +367,9 @@ g1 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'Column_WV
 g1
 ```
 
-## Maps of new predictions
+## New predictions
+
+For the model trained on all the data, the selected hyperparameters were `r v = tar_read(model.full)$hyperparams; paste0(collapse = ", ", sprintf("%s = %s", names(v), v))`.
 
 ### Median MSE day
 

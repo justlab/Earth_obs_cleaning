@@ -123,7 +123,7 @@ run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
   y_pred_dt <- data.table(y_pred = rep(NA_real_, n_row))
   shap_score <- as.data.table(matrix(rep(NA_real_, n_row*n_col), ncol = n_col))
   names(shap_score) <- names(data_X)
-  xgb_param_list1 <- xgb_param_list2 <- list()
+  hyperparams = data.table()
   BIAS0 <- rep(NA_real_, k_fold)
   # loop for each fold
 
@@ -137,8 +137,7 @@ run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
       objective = "reg:squarederror",
       eval_metric = "rmse",
       progress = progress, nthread = xgb_threads)
-    # manually select and store some params
-    xgb_param_dart <- c(rsxgb0$model$params[c(1,2,4, 6:11)], nrounds = rsxgb0$model$niter)
+    hyperparams = rbind(hyperparams, rsxgb0$hyperparams)
     xgbmod <- rsxgb0$model
 
     # fit model
@@ -150,9 +149,6 @@ run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
     BIAS0[i] <- first(shap_pred$BIAS)
     shap_pred[, BIAS := NULL]
     shap_score[index_test[[i]],] <- shap_pred # record the SHAP values (for whole model)
-
-    xgb_param_list1[[paste0(by_var, i)]] <- unlist(xgb_param_dart)
-    xgb_param_list2[[paste0(by_var, i)]] <- xgb_param_dart
   })
   cat("loop finished\n")
   rmse_all_folds <- sqrt(mean((y_pred_dt$y_pred - dataXY_df[[y_var]])^2))
@@ -165,8 +161,7 @@ run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
               shap_score = shap_score,
               y_pred_dt = y_pred_dt,
               BIAS = BIAS0,
-              xgb_param_list1 = xgb_param_list1,
-              xgb_param_list2 = xgb_param_list2))
+              hyperparams = hyperparams))
 }
 
 #' bin the data into the specified number of folds by day or by station.
@@ -296,6 +291,7 @@ dart_full <- function(
        y_preds = preds,
        shap_pred = shap_pred,
        shap_bias = shap_bias,
+       hyperparams = xdc_out$hyperparams,
        model = xgb.save.raw(raw_format = "ubj", xdc_out$model))}
 
 new.preds = function(dt.start, dt.end, cells = NULL, targets = NULL)
