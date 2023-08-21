@@ -316,13 +316,22 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 ## Agreement Plots
 
 ```{r agreement_plot, dev='png', dpi=300}
-agreement.plot = \(vname.pred)
-   {d = dt[, .(y.ground, y.pred = get(vname.pred))]
+(\()
+   {d = melt(dt[, .(y.ground, y.ground.pred, y.sat)],
+        id = "y.ground", variable.name = "comparison", value.name = "y.pred")
     i = d[, between(y.ground, 0, 1) & between(y.pred, 0, 1)]
-    sample.obs = data.table(y.ground = seq(0, 1, len = 1000))
-    ps = empirical.error.envelope(obs = d$y.ground, d$y.pred)$par
-    sample.obs[, envelope.hi := y.ground + ps[1] + ps[2]*y.ground]
-    sample.obs[, envelope.lo := y.ground - ps[1] - ps[2]*y.ground]
+    sample.obs = `[`(
+        CJ(
+            comparison = unique(d$comparison),
+            y.ground = seq(0, 1, len = 1000)),
+        by = comparison,
+        j =
+           {ps = with(d[comparison == .BY$comparison],
+                empirical.error.envelope(obs = y.ground, y.pred)$par)
+            punl(
+                y.ground,
+                envelope.hi = y.ground + ps[1] + ps[2]*y.ground,
+                envelope.lo = y.ground - ps[1] - ps[2]*y.ground)})
     ggplot() +
         geom_pointdensity(data = d, aes(y.ground, y.pred),
             alpha = 0.1, size = 0.6) +
@@ -332,11 +341,14 @@ agreement.plot = \(vname.pred)
         xlab("AERONET AOD 470nm") +
         ylab("MAIAC AOD 470nm") +
         guides(color = "none") +
+        facet_wrap(vars(comparison)) +
         theme_bw() +
         coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = F) +
-        labs(caption = paste0("Not shown: ", d[!i, .N], " AOD values outside [0, 1]"))}
-
-agreement.plot("y.sat") + agreement.plot("y.ground.pred")
+        labs(caption = sprintf("Not shown: %s %s and %s %s",
+           d[!i][comparison == "y.ground.pred", .N],
+           "points outside left panel",
+           d[!i][comparison == "y.sat", .N],
+           "points outside right panel"))})()
 ```
 
 ## SHAP interpretation
