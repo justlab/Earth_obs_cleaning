@@ -366,7 +366,10 @@ shap.plot.summary(shap_long)
 ```
 
 ```{r shap_features, dev='png', dpi=300}
-g1 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'Column_WV', color_feature = 'Column_WV') + ggtitle("(A) SHAP values of Column WV vs. Time trend")
+g1 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'Column_WV', color_feature = 'Column_WV') +
+    aes(x = lubridate::as_datetime(x_feature)) +
+    xlab("time.sat") +
+    ggtitle("(A) SHAP values of Column WV vs. Time trend")
 # g2 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'y.sat', color_feature = 'y.sat') +  ggtitle("(B) SHAP values of MAIAC AOD vs. Time trend")
 #
 # gridExtra::grid.arrange(g1, g2, ncol = 2)
