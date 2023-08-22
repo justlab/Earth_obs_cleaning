@@ -319,7 +319,8 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 (\()
    {d = melt(dt[, .(y.ground, y.ground.pred, y.sat)],
         id = "y.ground", variable.name = "comparison", value.name = "y.pred")
-    i = d[, between(y.ground, 0, 1) & between(y.pred, 0, 1)]
+    d[, comparison := factor(comparison, levels = rev(levels(comparison)))]
+    d[, in.region := between(y.ground, 0, 1) & between(y.pred, 0, 1)]
     sample.obs = `[`(
         CJ(
             comparison = unique(d$comparison),
@@ -333,21 +334,24 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
                 envelope.hi = y.ground + ps[1] + ps[2]*y.ground,
                 envelope.lo = y.ground - ps[1] - ps[2]*y.ground)})
     ggplot() +
-        geom_pointdensity(data = d, aes(y.ground, y.pred),
-            alpha = 0.1, size = 0.6) +
-        geom_abline(linetype = "dashed") +
-        geom_line(data = sample.obs, aes(y.ground, envelope.hi)) +
-        geom_line(data = sample.obs, aes(y.ground, envelope.lo)) +
+        geom_pointdensity(data = d[(in.region)], aes(y.ground, y.pred),
+            size = 1/4, adjust = 1/2) +
+        scale_color_gradient(low = "#dddddd", high = "black") +
+        geom_abline(linetype = "dashed", color = "#6666aa") +
+        geom_line(data = sample.obs, aes(y.ground, envelope.hi),
+            color = "#6666aa") +
+        geom_line(data = sample.obs, aes(y.ground, envelope.lo),
+            color = "#6666aa") +
         xlab("AERONET AOD 470nm") +
         ylab("MAIAC AOD 470nm") +
         guides(color = "none") +
         facet_wrap(vars(comparison)) +
-        theme_bw() +
+        theme_classic() +
         coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = F) +
         labs(caption = sprintf("Not shown: %s %s and %s %s",
-           d[!i][comparison == "y.ground.pred", .N],
+           d[!in.region & comparison == "y.sat", .N],
            "points outside left panel",
-           d[!i][comparison == "y.sat", .N],
+           d[!in.region & comparison == "y.ground.pred", .N],
            "points outside right panel"))})()
 ```
 
