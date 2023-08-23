@@ -173,6 +173,29 @@ list(
     tar_file(agreement.plot.path, ggsave(
         ipath("agreement_plot"), dpi = 300, width = 7, height = 4,
         agreement.plot(cv$mDT_wPred))),
+    tar_target(shap_long, shap.prep(
+        shap_contrib = cv$shap_score,
+        X_train = cv$mDT_wPred[, mget(names(cv$shap_score))])),
+    tar_file(shap.summary.plot.path, ggsave(
+        ipath("shap_summary"), dpi = 300, width = 7, height = 7,
+        shap.plot.summary(shap_long))),
+    tar_file(shap.features.plot.path, ggsave(
+        ipath("shap_features"), dpi = 300, width = 7, height = 7,
+        shap.plot.dependence(data_long = tar_read(shap_long), x = 'time.sat', y = 'Column_WV', color_feature = 'Column_WV') +
+            aes(x = lubridate::as_datetime(x_feature)) +
+            xlab("time.sat") +
+            ggtitle("(A) SHAP values of Column WV vs. Time trend"))),
+    tar_file(pred.map.median.mse.path, ggsave(
+        ipath("pred_map_median_mse"), width = 7, height = 7,
+        pred.map(
+            median.mse.map.data$pred, pred.grid,
+            bg.sf = get_conus(), color.scale.name = "AOD",
+            quantile.cap = .99))),
+    tar_file(pred.map.baltimore.path, ggsave(
+        ipath("pred_map_baltimore"), width = 7, height = 7,
+        pred.map(
+            baltimore.map.data, pred.grid,
+            bg.sf = get_conus(), color.scale.name = "AOD"))),
 
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2")

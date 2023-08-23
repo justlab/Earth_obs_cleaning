@@ -22,6 +22,7 @@ suppressPackageStartupMessages(
     library(kableExtra)
   })
 the.sat = tools::toTitleCase(Wf$satellite)
+IG = knitr::include_graphics
 ```
 
 ```{r git_check}
@@ -315,7 +316,7 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 ## Agreement Plots
 
 ```{r agreement_plot}
-knitr::include_graphics(targets::tar_read(agreement.plot.path))
+IG(tar_read(agreement.plot.path))
 ```
 
 ## SHAP interpretation
@@ -337,22 +338,12 @@ kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
 
 Summary visualization of SHAP contributions
 
-```{r shap_summary, dev='png', dpi=300}
-shap_long <- shap.prep(shap_contrib = cv$shap_score,
-                       X_train = cv$mDT_wPred[, names(cv$shap_score), with = F])
-# **SHAP summary plot**
-shap.plot.summary(shap_long)
+```{r shap_summary}
+IG(tar_read(shap.summary.plot.path))
 ```
 
-```{r shap_features, dev='png', dpi=300}
-g1 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'Column_WV', color_feature = 'Column_WV') +
-    aes(x = lubridate::as_datetime(x_feature)) +
-    xlab("time.sat") +
-    ggtitle("(A) SHAP values of Column WV vs. Time trend")
-# g2 <- shap.plot.dependence(data_long = shap_long, x = 'time.sat', y = 'y.sat', color_feature = 'y.sat') +  ggtitle("(B) SHAP values of MAIAC AOD vs. Time trend")
-#
-# gridExtra::grid.arrange(g1, g2, ncol = 2)
-g1
+```{r shap_features}
+IG(tar_read(shap.features.plot.path))
 ```
 
 ## New predictions
@@ -364,10 +355,7 @@ For the model trained on all the data, the selected hyperparameters were `r v = 
 This map shows a tile on `r tar_read(median.mse.map.data)$date`.
 
 ```{r pred.map.median.mse}
-pred.map(
-    tar_read(median.mse.map.data)$pred, tar_read(pred.grid),
-    bg.sf = get_conus(), color.scale.name = "AOD",
-    quantile.cap = .99)
+IG(tar_read(pred.map.median.mse.path))
 ```
 
 ### Baltimore
@@ -375,9 +363,7 @@ pred.map(
 A day with long-range transported smoke from Canadian wildfires.
 
 ```{r pred.map.baltimore}
-pred.map(
-    tar_read(baltimore.map.data), tar_read(pred.grid),
-    bg.sf = get_conus(), color.scale.name = "AOD")
+IG(tar_read(pred.map.baltimore.path))
 ```
 
 ## Comparison with AQS
