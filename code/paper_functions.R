@@ -1,5 +1,44 @@
 # contains functions used in generating the CONUS_AOD paper
 
+agreement.plot = \(d)
+   {d = melt(d[, .(y.ground, y.ground.pred, y.sat)],
+        id = "y.ground", variable.name = "comparison", value.name = "y.pred")
+    d[, comparison := factor(comparison, levels = rev(levels(comparison)))]
+    d[, in.region := between(y.ground, 0, 1) & between(y.pred, 0, 1)]
+    sample.obs = `[`(
+        CJ(
+            comparison = unique(d$comparison),
+            y.ground = seq(0, 1, len = 1000)),
+        by = comparison,
+        j =
+           {ps = with(d[comparison == .BY$comparison],
+                empirical.error.envelope(obs = y.ground, y.pred)$par)
+            punl(
+                y.ground,
+                envelope.hi = y.ground + ps[1] + ps[2]*y.ground,
+                envelope.lo = y.ground - ps[1] - ps[2]*y.ground)})
+    ggplot() +
+        ggpointdensity::geom_pointdensity(
+            data = d[(in.region)], aes(y.ground, y.pred),
+            size = 1/4, adjust = 1/2) +
+        scale_color_gradient(low = "#dddddd", high = "black") +
+        geom_abline(linetype = "dashed", color = "#6666aa") +
+        geom_line(data = sample.obs, aes(y.ground, envelope.hi),
+            color = "#6666aa") +
+        geom_line(data = sample.obs, aes(y.ground, envelope.lo),
+            color = "#6666aa") +
+        xlab("AERONET AOD 470nm") +
+        ylab("MAIAC AOD 470nm") +
+        guides(color = "none") +
+        facet_wrap(vars(comparison)) +
+        theme_classic() +
+        coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = F) +
+        labs(caption = sprintf("Not shown: %s %s and %s %s",
+           d[!in.region & comparison == "y.sat", .N],
+           "points outside left panel",
+           d[!in.region & comparison == "y.ground.pred", .N],
+           "points outside right panel"))}
+
 #' Find an "error envelope" with an additive and multiplicative
 #' term in the fashion of Dark Target validation
 #' https://darktarget.gsfc.nasa.gov/validation

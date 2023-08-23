@@ -44,6 +44,8 @@ terra.rast.fmt = tar_format(
                     as.data.frame(r[[lyr]], na.rm = F)[[1]]),
                 names(r))))})
 
+tar_file = tarchetypes::tar_file
+
 pbapply::pboptions(type = "timer")
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -162,6 +164,15 @@ list(
         cv$mDT_wPred, pred.grid, region.shape, satellite.files, model.full)),
     tar_target(baltimore.map.data, get.baltimore.map.data(
         pred.grid, region.shape, satellite.files, model.full)),
+
+    # Manuscript graphics
+    tar_target(ipath,
+       {idir = file.path(workflow.dir, "img")
+        dir.create(idir, showWarnings = F)
+        \(name) file.path(idir, paste0(name, ".png"))}),
+    tar_file(agreement.plot.path, ggsave(
+        ipath("agreement_plot"), dpi = 300, width = 7, height = 4,
+        agreement.plot(cv$mDT_wPred))),
 
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2")
