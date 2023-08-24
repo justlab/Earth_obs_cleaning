@@ -199,5 +199,5 @@ list(
 
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2")
-        tarchetypes::tar_quarto(paper_conus_html,
+        tarchetypes::tar_quarto(paper_conus,
             'writing/CONUS_AOD.qmd', quiet = F))

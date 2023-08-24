@@ -4,12 +4,12 @@ title: "Reducing retrieval error in MAIAC AOD with the `Earth_obs_cleaning` mach
 bibliography: references.json
 csl: https://www.zotero.org/styles/atmospheric-measurement-techniques
 
-format: 
+format:
   html:
     embed-resources: true
+  docx: {}
 
 echo: FALSE
-df-print: kable
 ---
 
 ```{r basics}
@@ -19,7 +19,7 @@ for (filename in strsplit(source.files, " ")[[1]])
 suppressPackageStartupMessages(
    {library(patchwork)
     library(ggridges)
-    library(kableExtra)
+    library(flextable)
   })
 the.sat = tools::toTitleCase(Wf$satellite)
 IG = knitr::include_graphics
@@ -136,7 +136,7 @@ After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals 
 
 
 ```{r describe_dv}
-kable(summary(dt[, list(y.diff)]))
+summary(dt[, list(y.diff)])
 ```
 
 ```{r plot_dv}
@@ -151,11 +151,8 @@ ggplot(dt, aes(x = y.diff)) +
 
 Table \## includes the performance metrics for the full cross-validated training data set. Here **raw** is MCD19A2.V006 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost-modeled correction term.
 
-```{r table_cv_results}
-kbl(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]), align = "l", caption = "Table ##. Cross validation results for the entire training set") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(1:12, width = "1.1cm")
+```{r}
+flextable(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]))
 ```
 
 ## Stratified results for cross validation dataset
@@ -235,16 +232,12 @@ dt[, state.noaa.region := factor(
    levels = names(noaa.regions))]
 ```
 
-```{r strata_noaa_regions, fig.pos="H"}
+```{r}
 # performance by NOAA climate regions
 by.region = (dt
     [, eval(performance.j), by = state.noaa.region]
     [order(`Proportion of raw MSE`)])
-kbl(pretty.table.numbers(by.region),
-    align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
+flextable(pretty.table.numbers(by.region))
 ```
 
 ```{r noaa_region_plot, dev='png', dpi=300}
@@ -272,37 +265,26 @@ map_region_rmse
 
 ### Performance by month of year
 
-```{r strata_month}
+```{r}
 result <- dt[,
     keyby = .(Month = month(lubridate::as_datetime(time.sat))),
     eval(performance.j)]
 result[, Month := month.abb[Month]]
-kbl(pretty.table.numbers(result), align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
+flextable(pretty.table.numbers(result))
 ```
 
 ### Performance for higher versus lower AOD (AERONET \> 0.6)
 
-```{r strata_high_aod, fig.pos="H"}
+```{r}
 by.highaod = dt[, eval(performance.j), by = .(aod_high = y.ground > 0.6)]
-kbl(pretty.table.numbers(by.highaod),
-    align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
+flextable(pretty.table.numbers(by.highaod))
 ```
 
 ### Performance by `qa_best`
 
-```{r strata_qa}
+```{r}
 by.qabest = dt[, eval(performance.j), by = qa_best]
-kbl(pretty.table.numbers(by.qabest),
-    align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
+flextable(pretty.table.numbers(by.qabest))
 ```
 
 The takeaway here is that even though the RMSE of MAIAC is substantially better for `qa_best` versus non-best pixels, the improvements in the predicted AOD make even the non-best pixels have lower RMSE than the raw MAIAC `qa_best` and in that sense, we are expanding the set of high quality data by correcting for biases related to QA flagging criteria.
@@ -323,13 +305,13 @@ IG(tar_read(agreement.plot.path))
 
 In decreasing order of variable importance (from `r the.sat` collocated cross-validation predictions)
 
-```{r shap_rank}
+```{r}
 # what do the SHAPs tell us?
 tar_load(cv)
 shaps <- cv$"shap_score"
 # sort by importance
 df_shap <- data.frame(meanabsshap = round(sort(sapply(abs(shaps), mean), decreasing = TRUE), 4))
-kbl(df_shap, col.names = "Mean |SHAP|") %>% row_spec(0, bold=TRUE)
+flextable(df_shap)
 # df_shap$variable <- row.names(df_shap)
 # ft_shap <- flextable(df_shap[, c(2, 1)])
 # ft_shap <- set_header_labels(ft_shap, list(variable = "Variable", meanabsshap = "Mean Absolute SHAP"))
@@ -390,24 +372,16 @@ Our workflow is not a gap-filling method and thus corrected results have the sam
 
 ## Performance by year
 
-```{r strata_year}
-kbl(pretty.table.numbers(tar_read(cv.summary)[-1]),
-    align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(1:13, width = "1.1cm")
+```{r}
+flextable(pretty.table.numbers(tar_read(cv.summary)[-1]))
 ```
 
 ## Performance by number of overpasses in collocation that site-day
 
-```{r strata_overpasses, fig.pos="H"}
+```{r}
 dt[, overpasses := .N, by = .(site, lubridate::as_date(time.ground))]
 by.overpasses = dt[, eval(performance.j), keyby = overpasses]
-kbl(pretty.table.numbers(by.overpasses),
-    align = "l") %>%
-  kable_styling(position = "left",
-                latex_options=c("HOLD_position","scale_down")) %>%
-  row_spec(0,bold=TRUE) %>% column_spec(2:13, width = "1.1cm")
+flextable(pretty.table.numbers(by.overpasses))
 ```
 
 # Author contributions
