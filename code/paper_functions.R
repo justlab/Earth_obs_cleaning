@@ -1,6 +1,6 @@
 # contains functions used in generating the CONUS_AOD paper
 
-agreement.plot = \(d)
+agreement.plot = \(d, base_size = 11)
    {d = melt(d[, .(y.ground, y.ground.pred, y.sat)],
         id = "y.ground", variable.name = "comparison", value.name = "y.pred")
     d[, comparison := factor(comparison, levels = rev(levels(comparison)))]
@@ -17,6 +17,7 @@ agreement.plot = \(d)
                 y.ground,
                 envelope.hi = y.ground + ps[1] + ps[2]*y.ground,
                 envelope.lo = y.ground - ps[1] - ps[2]*y.ground)})
+    half_line = base_size/2
     ggplot() +
         ggpointdensity::geom_pointdensity(
             data = d[(in.region)], aes(y.ground, y.pred),
@@ -27,11 +28,15 @@ agreement.plot = \(d)
             color = "#6666aa") +
         geom_line(data = sample.obs, aes(y.ground, envelope.lo),
             color = "#6666aa") +
-        xlab("AERONET AOD 470nm") +
-        ylab("MAIAC AOD 470nm") +
+        xlab("AERONET AOD") +
+        ylab("Satellite-based AOD") +
         guides(color = "none") +
-        facet_wrap(vars(comparison)) +
+        facet_wrap(vars(comparison), labeller = as_labeller(
+          c(`y.sat` = "MAIAC AOD", `y.ground.pred` = "Corrected AOD"))) +
         theme_classic() +
+        theme(panel.spacing = unit(1.5, "lines"),
+          plot.margin = margin(half_line,
+            base_size, half_line, half_line)) +
         coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = F) +
         labs(caption = sprintf("Not shown: %s %s and %s %s",
            d[!in.region & comparison == "y.sat", .N],
