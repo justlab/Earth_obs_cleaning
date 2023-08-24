@@ -230,7 +230,6 @@ get.cv.summary = function(d)
 
 performance.j = quote(
    {mse = function(x, y) mean((x - y)^2)
-    sdn = function(x) sqrt(mse(x, mean(x)))
     list(
         "Cases" = .N,
         "Sites" = length(unique(site)),
@@ -238,13 +237,8 @@ performance.j = quote(
         "RMSE, corrected" = sqrt(mse(y.ground, y.ground.pred)),
         "Proportion of raw MSE" = mse(y.ground, y.ground.pred) / mse(y.ground, y.sat),
         "Median, ground" = median(y.ground),
-        "SD, ground" = sdn(y.ground),
-        "SD, raw" = sdn(y.sat),
-        "SD, corrected" = sdn(y.ground.pred),
         "Bias, raw" = mean(y.sat - y.ground),
-        "Bias, corrected" = mean(y.ground.pred - y.ground),
-        "Correlation, raw" = cor(y.sat, y.ground),
-        "Correlation, corrected" = cor(y.ground.pred, y.ground))})
+        "Bias, corrected" = mean(y.ground.pred - y.ground))})
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## * New predictions
