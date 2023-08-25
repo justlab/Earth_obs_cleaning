@@ -298,6 +298,13 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 ## Agreement Plots
 
 ```{r agreement_plot}
+#| fig-cap: !expr caption
+caption = with(list(d = agreement.plot.data(dt)), sprintf(
+    "Not shown: %s %s and %s %s",
+    d[!in.region & comparison == "y.sat", .N],
+    "points outside left panel",
+    d[!in.region & comparison == "y.ground.pred", .N],
+    "points outside right panel"))
 IG(tar_read(agreement.plot.path))
 ```
 

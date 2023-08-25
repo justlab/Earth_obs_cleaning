@@ -1,10 +1,14 @@
 # contains functions used in generating the CONUS_AOD paper
 
-agreement.plot = \(d, base_size = 11)
+agreement.plot.data = \(d)
    {d = melt(d[, .(y.ground, y.ground.pred, y.sat)],
         id = "y.ground", variable.name = "comparison", value.name = "y.pred")
     d[, comparison := factor(comparison, levels = rev(levels(comparison)))]
     d[, in.region := between(y.ground, 0, 1) & between(y.pred, 0, 1)]
+    d}
+
+agreement.plot = \(d, base_size = 11)
+   {d = agreement.plot.data(d)
     sample.obs = `[`(
         CJ(
             comparison = unique(d$comparison),
@@ -37,12 +41,7 @@ agreement.plot = \(d, base_size = 11)
         theme(panel.spacing = unit(1.5, "lines"),
           plot.margin = margin(half_line,
             base_size, half_line, half_line)) +
-        coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = F) +
-        labs(caption = sprintf("Not shown: %s %s and %s %s",
-           d[!in.region & comparison == "y.sat", .N],
-           "points outside left panel",
-           d[!in.region & comparison == "y.ground.pred", .N],
-           "points outside right panel"))}
+        coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = F)}
 
 #' Find an "error envelope" with an additive and multiplicative
 #' term in the fashion of Dark Target validation
