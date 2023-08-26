@@ -151,7 +151,7 @@ t1 <- tableGrob(t1, theme=ttheme_minimal(), rows=NULL)  # transform into a table
 p1 + inset_element(t1, left = 0.02, bottom = 0.6, right = 0.25, top = .98)
 ```
 
-@tbl-cv-overall includes the performance metrics for the full cross-validated training data set. Here **raw** is MCD19A2.V061 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost-modeled correction term.
+@tbl-cv-overall includes the performance metrics for the full cross-validated training data set. Here **raw** is Collection 6.1 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost-modeled correction term.
 
 ```{r}
 #| label: tbl-cv-overall
@@ -162,8 +162,6 @@ flextable(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]))
 ## Stratified results for cross validation dataset
 
 Here we show our performance metrics in different subsets of the cross-validation results. These are all from the same model training, just slicing up how the performance looks in different contexts.
-
-### Performance by NOAA climate regions
 
 ```{r noaa_setup}
 noaa.regions = list(
@@ -237,7 +235,8 @@ dt[, state.noaa.region := factor(
 ```
 
 ```{r}
-# performance by NOAA climate regions
+#| label: tbl-cv-noaa-regions
+#| tbl-cap: Performance by NOAA climate regions. Sorted by decreasing relative improvement in MSE after correction.
 by.region = (dt
     [, eval(performance.j), by = state.noaa.region]
     [order(`Proportion of raw MSE`)])
@@ -245,7 +244,8 @@ flextable(pretty.table.numbers(by.region))
 ```
 
 ```{r noaa_region_plot, dev='png', dpi=300}
-## map of performance by NOAA regions
+#| label: fig-cv-noaa-regions
+#| fig-cap: Map of performance (RMSE) by NOAA regions.
 conus$state.noaa.region <- factor(
    sapply(conus$STUSPS, USE.NAMES = F,
        function(sa) if (sa %in% c("AK", "HI")) NA else
@@ -255,21 +255,23 @@ conus$state.noaa.region <- factor(
 conus <- merge(conus, by.region, by = "state.noaa.region")
 conus_melt <- melt(as.data.table(conus[, c("geometry", "state.noaa.region", "RMSE, raw", "RMSE, corrected")]),
                    id.vars = c("geometry", "state.noaa.region"))
-levels(conus_melt$variable) <- c("MAIAC AOD", "corrected AOD")
+levels(conus_melt$variable) <- c("MAIAC AOD", "Corrected AOD")
 map_region_rmse <- ggplot(conus_melt, aes(geometry = geometry)) +
   geom_sf(aes(fill = value)) +
   facet_wrap(~variable, ncol = 1) +
   coord_sf(default_crs = st_crs(conus)) +
-  scale_fill_continuous("Regional\nRMSE") +
+  scale_fill_continuous("Regional\nRMSE", trans = 'reverse') +
   theme_minimal() +
   theme(axis.text = element_blank(),
-        panel.grid.major = element_blank())
+        panel.grid.major = element_blank(),
+        strip.text = element_text(size = 13))
 map_region_rmse
 ```
-
-### Performance by month of year
+@fig-cv-noaa-regions shows that performance improves in all regions and leads to greater consistency in the RMSE across CONUS with slightly higher RMSE remaining in the Northwest and West regions.
 
 ```{r}
+#| label: tbl-cv-month
+#| tbl-cap: Performance by month of year.
 result <- dt[,
     keyby = .(Month = month(lubridate::as_datetime(time.sat))),
     eval(performance.j)]
@@ -302,6 +304,7 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 ## Agreement Plots
 
 ```{r agreement_plot}
+#| label: fig-agreement-plot
 #| fig-cap: !expr caption
 caption = with(list(d = agreement.plot.data(dt)), sprintf(
     "Not shown: %s %s and %s %s",
