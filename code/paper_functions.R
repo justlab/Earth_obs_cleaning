@@ -218,7 +218,8 @@ pred.map = function(
             palette = "Spectral", na.value = "transparent") +
         geom_sf(data = bg.sf, fill = NA, size = .1) +
         facet_grid(rows = "variable", labeller = labeller(variable =
-            c(y.sat.old = "Original", y.sat.new = "Corrected"))) +
+            c(y.sat.old = "MAIAC AOD", y.sat.new = "Corrected AOD"))) +
         coord_sf(expand = F,
             xlim = range(d$lon), ylim = range(d$lat)) +
-        theme_void()}
+        theme_void() +
+        theme(strip.text = element_text(size = 13))}
