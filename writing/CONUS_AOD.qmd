@@ -2,7 +2,7 @@
 title: "Reducing retrieval error in MAIAC AOD with the `Earth_obs_cleaning` machine-learning workflow: Results from CONUS"
 
 bibliography: references.json
-csl: https://www.zotero.org/styles/atmospheric-measurement-techniques
+csl: https://raw.githubusercontent.com/citation-style-language/styles/795ad0c77258cb7e01f3413123b5b556b4cb6a98/dependent/journal-of-geophysical-research-atmospheres.csl
 
 format:
   html:
