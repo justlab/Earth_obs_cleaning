@@ -406,7 +406,7 @@ The authors declare that they have no conflict of interest.
 
 # Acknowledgments
 
-We thank the AERONET federation principal investigators and their staff for establishing and maintaining the 328 sun photometer sites used in this investigation.
+We thank the AERONET federation principal investigators and their staff for establishing and maintaining the `r uniqueN(dt$site)` sun photometer sites used in this investigation.
 
 # Financial support
 
