@@ -6,6 +6,7 @@
 *.drake
 *.swp
 meta/
+*.docx
 *.html
 *.pdf
 /renv
