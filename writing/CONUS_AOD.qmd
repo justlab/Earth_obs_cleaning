@@ -48,7 +48,7 @@ We present a modular and reproducible Open Source software tool that ingests rem
 
 # Short summary
 
-We demonstrate a reproducible workflow to reduce retrieval error from satellite-based datasets with an application to MODIS Aerosol Optical Depth over the conterminous United States 2000-2021. It facilitates the often laborious task of obtaining and comparing ground-based and remotely sensed quantities for product validation and evaluating retrieval biases. The ML data-driven approach demonstrates impressive improvements in reducing retrieval error with real-world impacts for air quality modeling.
+We demonstrate a reproducible workflow to reduce retrieval error from satellite-based datasets with an application to MODIS Aerosol Optical Depth over the conterminous United States 2000-2022. It facilitates the often laborious task of obtaining and comparing ground-based and remotely sensed quantities for product validation and evaluating retrieval biases. The ML data-driven approach demonstrates impressive improvements in reducing retrieval error with real-world impacts for air quality modeling.
 
 # Introduction
 
@@ -66,7 +66,7 @@ ORNL's Fixed Sites Subsets Tool[21](https://paperpile.com/c/ze3giJ/ScfT) generat
 
 ### Study Domain
 
-The study region was the conterminous United States (CONUS) and all match-ups of MODIS data were based on the 1-km grid cells in the Global sinusoidal Coordinate Reference System. The study period included all retrievals from `r min(Wf$dates)` through `r max(Wf$dates)`. The `Earth_obs_cleaning` workflow automatically downloaded all intersecting tiles of MCD19A2 Collection 6[@lyapustinalexei2018] based on a NASA-supplied MODIS tile boundary file. While the MCD19A2 product includes data from both Aqua and Terra MODIS instruments, we focus our analyses on the longer running Terra and report results for Aqua in Supplementary Data.
+The study region was the conterminous United States (CONUS) and all match-ups of MODIS data were based on the 1-km grid cells in the Global sinusoidal Coordinate Reference System. The study period included all retrievals from `r min(Wf$dates)` through `r max(Wf$dates)`. The `Earth_obs_cleaning` workflow automatically downloaded all intersecting tiles of MCD19A2 Collection 6.1[@lyapustinalexei2018] based on a NASA-supplied MODIS tile boundary file. While the MCD19A2 product includes data from both Aqua and Terra MODIS instruments, we focus our analyses on the longer running Terra.
 
 ### AERONET Data
 
@@ -108,9 +108,9 @@ Thus, the `Earth_obs_cleaning` workflow uses only SDS layers and predictors deri
 
 Modeling used XGBoost for regression with a squared error objective function and the Dropouts meet Multiple Additive Regression Trees (DART) booster. Briefly, 50 candidate sets of hyperparameters, which govern the flexibility of the gradient boosting model, were generated using an efficient latin hypercube sampling and evaluated within nested cross-validation (internal to the training data) and with several limits on overall model complexity for parsimony, speed, and to avoid overfitting. Because data splitting used a 5-fold site-level block cross validation, we thus only evaluated the corrected AOD at sites that were never used in model training.
 
-Our primary metric to evaluate the difference between MAIAC and AERONET before and after applying our correction was the root mean square error (RMSE), which is at the original scale of the AOD and can be compared in magnitude with the overall variability based on the standard deviation (SD) of the AERONET AOD. We also report the SD for raw and corrected MAIAC AOD to examine how our empirical adjustments impact variability. We calculate bias (the mean difference of satellite AOD versus AERONET observations) for the raw and corrected products. We also report the Pearson correlation of the raw and corrected products versus the collocated AERONET measures. Finally, we report on the distribution of differences between the acquisition time for each overpass-tile and the nearest AERONET observation in time. We plotted the agreement of raw and corrected AOD versus AERONET AOD in scatterplots for the interval [0, 1] given that almost all AERONET observations in the cross-validation set fell within that range. To generate empirical error envelopes with performance for both low and high AOD conditions, we checked the combination of additive and multiplicative terms closest to containing \~2/3 of observations for AERONET AOD below and above 0.6.
+Our primary metric to evaluate the difference between MAIAC and AERONET before and after applying our correction was the root mean square error (RMSE), which is at the original scale of the AOD and can be compared in magnitude with the overall variability based on the standard deviation (SD) of the AERONET AOD. We also report the SD for raw and corrected MAIAC AOD to examine how our empirical adjustments impact variability. We calculate bias (the mean difference of satellite AOD versus AERONET observations) for the raw and corrected products. We also report the Pearson correlation of the raw and corrected products versus the collocated AERONET measures. We plotted the agreement of raw and corrected AOD versus AERONET AOD in scatterplots for the interval [0, 1] given that almost all AERONET observations in the cross-validation set fell within that range. To generate empirical error envelopes with performance for both low and high AOD conditions, we optimized the combination of additive and multiplicative terms closest to containing \~2/3 of observations for AERONET AOD below and above 0.6, a threshold previously used when evaluating MAIAC AOD.
 
-While the model was trained using all of the collocated observations generated from within the study domain defined above, we present a number of stratified tables with the same metrics listed above to examine performance of the correction procedure in various data subsets. Stratification variables included time/space (by year, months of the year, and NOAA climate regions), atmospheric conditions (low versus high AOD), closeness of the temporal matchup (above versus below median time difference), and two additional factors related to MAIAC retrieval (number of overpasses per day and MAIAC quality flag).
+While the model was trained using all of the collocated observations generated from within the study domain defined above, we present a number of stratified tables with the same metrics listed above to examine performance of the correction procedure in various data subsets. Stratification variables included time/space (NOAA climate regions, months of the year, and by year), atmospheric conditions (low versus high AOD), and two additional factors related to MAIAC retrieval (MAIAC quality flag and number of overpasses per day).
 
 ### Model interpretation with SHAP
 
@@ -279,16 +279,16 @@ result[, Month := month.abb[Month]]
 flextable(pretty.table.numbers(result))
 ```
 
-### Performance for higher versus lower AOD (AERONET \> 0.6)
-
 ```{r}
+#| label: tbl-cv-high-aod
+#| tbl-cap: Performance for higher versus lower AOD (AERONET \> 0.6).
 by.highaod = dt[, eval(performance.j), by = .(aod_high = y.ground > 0.6)]
 flextable(pretty.table.numbers(by.highaod))
 ```
 
-### Performance by `qa_best`
-
 ```{r}
+#| label: tbl-cv-qa-best
+#| tbl-cap: Performance by quality flag `qa_best`.
 by.qabest = dt[, eval(performance.j), by = qa_best]
 flextable(pretty.table.numbers(by.qabest))
 ```
@@ -307,7 +307,7 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 #| label: fig-agreement-plot
 #| fig-cap: !expr caption
 caption = with(list(d = agreement.plot.data(dt)), sprintf(
-    "Not shown: %s %s and %s %s",
+    "Agreement plots for satellite-based and AERONET AOD. Straight lines show empirical error envelopes containing 2/3 of retrievals. Not shown: %s %s and %s %s",
     d[!in.region & comparison == "y.sat", .N],
     "points outside left panel",
     d[!in.region & comparison == "y.ground.pred", .N],
@@ -362,9 +362,9 @@ A day with long-range transported smoke from Canadian wildfires.
 IG(tar_read(pred.map.baltimore.path))
 ```
 
-## Comparison with AQS
+## Comparison with AQS PM~2.5~
 
-We examined `r l = tar_read(satellite.vs.aqs); scales::comma(l$nobs)` observations of AQS on `r scales::comma(l$celldays)` cell-days. The correlation of the observations with the original satellite values was `r sprintf("%.03f", l$old)`, compared to `r sprintf("%.03f", l$new)` with our corrected values.
+We examined `r l = tar_read(satellite.vs.aqs); scales::comma(l$nobs)` observations of AQS PM~2.5~ on `r scales::comma(l$celldays)` cell-days. The correlation of the observations with the original satellite values was `r sprintf("%.03f", l$old)`, compared to `r sprintf("%.03f", l$new)` with our corrected values.
 
 # Discussion
 
@@ -376,7 +376,7 @@ An interesting consequence of empirical tuning with our workflow is that address
 
 The premise that satellite retrievals representing an area are comparable to point-based observations is common in product validation and among the most frequent uses of the often cited AERONET products. We use an unusually stringent space-time matchup criteria (single pixel with most observations within a few minutes) in order to better match up the air mass being observed. The reliance on the equivalence with ground-based observations might be a greater limitation for Earth observations with larger pixel sizes.
 
-Our workflow treats all cloud-screened and quality-assured (Level 2.0) observations from AERONET instruments as reference data and does not require a minimum number of days of observation from a given site for inclusion (as might be desired in an analysis of long-term MODIS sensor drift). The restriction to this highest quality subset of AERONET means that the training set may have few or no examples of tricky retrieval conditions (e.g., cloud edges). Similarly, nearly all AERONET stations are over land and thus may not adequately represent retrieval errors over water and mixed pixels, however the MAIAC algorithm itself is applicable over land and inland water (and not the global ocean). We leave for a future analysis the applicability of a trained `Earth_obs_cleaning` model to other space-time regions (with similar or different aerosol properties). Although here we present the `Earth_obs_cleaning` trained on almost 100,000 collocated observations, we use machine-learning methods likely to perform well with substantially smaller training datasets such as would be available for more recently launched sensors or over regions with more sparse ground network coverage.
+Our workflow treats all cloud-screened and quality-assured (Level 2.0) observations from AERONET instruments as reference data and does not require a minimum number of days of observation from a given site for inclusion (as might be desired in an analysis of long-term MODIS sensor drift). The restriction to this highest quality subset of AERONET means that the training set may have few or no examples of tricky retrieval conditions (e.g., cloud edges). Similarly, nearly all AERONET stations are over land and thus may not adequately represent retrieval errors over water and mixed pixels, however the MAIAC algorithm itself is applicable over land and inland water (and not the global ocean). We leave for a future analysis the applicability of a trained `Earth_obs_cleaning` model to other space-time regions (with similar or different aerosol properties). Although here we present the `Earth_obs_cleaning` trained on over 100,000 collocated observations, we use machine-learning methods likely to perform well with substantially smaller training datasets such as would be available for more recently launched sensors or over regions with more sparse ground network coverage.
 
 Our workflow is not a gap-filling method and thus corrected results have the same coverage as the original EO product (although we rescue retrievals flagged as low quality), however such approaches which include assimilation and spatial interpolation could be applied after our correction method (which involves minimal borrowing of spatial information no more than 5 km from each grid cell).
 
