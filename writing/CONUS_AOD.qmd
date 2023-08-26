@@ -66,13 +66,13 @@ ORNL's Fixed Sites Subsets Tool[21](https://paperpile.com/c/ze3giJ/ScfT) generat
 
 ### Study Domain
 
-The study region was the conterminous United States (CONUS) and all match-ups of MODIS data were based on the 1-km grid cells in the Global sinusoidal Coordinate Reference System. The study period included all retrievals from `r min(Wf$dates)` through `r max(Wf$dates)`. The `Earth_obs_cleaning` workflow automatically downloaded all intersecting tiles of MCD19A2 Collection 6.1[@lyapustinalexei2018] based on a NASA-supplied MODIS tile boundary file. While the MCD19A2 product includes data from both Aqua and Terra MODIS instruments, we focus our analyses on the longer running Terra.
+The study region was the conterminous United States (CONUS) and all match-ups of MODIS data were based on the 1 km grid cells in the Global sinusoidal Coordinate Reference System. The study period included all retrievals from `r min(Wf$dates)` through `r max(Wf$dates)`. The `Earth_obs_cleaning` workflow automatically downloaded all intersecting tiles of MCD19A2 Collection 6.1[@lyapustinalexei2018] based on a NASA-supplied MODIS tile boundary file. While the MCD19A2 product includes data from both Aqua and Terra MODIS instruments, we focus our analyses on the longer running Terra.
 
 ### AERONET Data
 
 The workflow retrieved the global AERONET archive (Version 3 Direct Sun algorithm) that was last modified `r lubridate::as_date(tz = "UTC", file.mtime(tar_read(aer_orig_obs_path)))`. Only Level 2.0 (cloud screened and quality-assured) data were used. AERONET data were interpolated to 470 nm, matching the MAIAC blue-band AOD retrieval, using a prediction from a linear regression for each AERONET site-time with a quadratic term on log-transformed observations using AERONET's reported 'exact wavelengths', restricted to a subset of relevant wavelengths (≤1000 nm) where there was at least one observation less than and greater than 470 nm.
 
-MAIAC AOD retrievals from all overpasses in the overlying 1-km grid cell were matched to the closest AERONET observation in time (no more than 8 minutes). Because the purpose of the `Earth_obs_cleaning` workflow is to reduce retrieval error, there was no restriction based on quality codes of input MAIAC data. The targeted estimand in all analyses was the difference of the two AODs (*diff~AOD~*): MAIAC AOD minus AERONET observation, our empirical estimate of retrieval error.
+MAIAC AOD retrievals from all overpasses in the overlying 1 km grid cell were matched to the closest AERONET observation in time (no more than 8 minutes). Because the purpose of the `Earth_obs_cleaning` workflow is to reduce retrieval error, there was no restriction based on quality codes of input MAIAC data. The targeted estimand in all analyses was the difference of the two AODs (*diff~AOD~*): MAIAC AOD minus AERONET observation, our empirical estimate of retrieval error.
 
 ### Predictors
 
@@ -98,9 +98,9 @@ The model to predict *diff~AOD~* included the following 12 predictors which were
 
 -   a dichotomous indicator for QA_best
 
--   the mean AOD calculated from a square window with an 11-km side-length
+-   the mean AOD calculated from a square window with an 11 km side-length
 
--   the proportion missing AOD from a square window with an-11 km side-length
+-   the proportion missing AOD from a square window with an 11 km side-length
 
 Thus, the `Earth_obs_cleaning` workflow uses only SDS layers and predictors derived from the original EO product and includes no external meteorology or data assimilation.
 
@@ -130,7 +130,7 @@ Beyond cross-validation performance, we also sought to evaluate the utility of a
 dt <- copy(tar_read(cv)$mDT_wPred)
 ```
 
-After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals from `r uniqueN(dt$site)` AERONET sites in CONUS. The quartiles of the absolute difference from the labeled overpass time (one per 1200-km wide tile) and the time of the matched AERONET observation were `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["25%"]` s, `r tqs["50%"]` s, and `r tqs["75%"]` s. While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian (see @fig-dv-density). 
+After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals from `r uniqueN(dt$site)` AERONET sites in CONUS. The quartiles of the absolute difference from the labeled overpass time (one per 1200 km wide tile) and the time of the matched AERONET observation were `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["25%"]` s, `r tqs["50%"]` s, and `r tqs["75%"]` s. While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian (see @fig-dv-density). 
 
 ```{r plot_dv}
 #| label: fig-dv-density
@@ -317,28 +317,15 @@ IG(tar_read(agreement.plot.path))
 
 ## SHAP interpretation
 
-In decreasing order of variable importance (from `r the.sat` collocated cross-validation predictions)
-
-```{r}
-# what do the SHAPs tell us?
-tar_load(cv)
-shaps <- cv$"shap_score"
-# sort by importance
-df_shap <- data.frame(meanabsshap = round(sort(sapply(abs(shaps), mean), decreasing = TRUE), 4))
-flextable(df_shap)
-# df_shap$variable <- row.names(df_shap)
-# ft_shap <- flextable(df_shap[, c(2, 1)])
-# ft_shap <- set_header_labels(ft_shap, list(variable = "Variable", meanabsshap = "Mean Absolute SHAP"))
-# ft_shap
-```
-
-Summary visualization of SHAP contributions
-
 ```{r shap_summary}
+#| label: fig-shap-summary
+#| fig-cap: Summary of SHAP contributions. Predictors ordered by decending mean absolute SHAP (printed along left).
 IG(tar_read(shap.summary.plot.path))
 ```
 
 ```{r shap_features}
+#| label: fig-shap-timeseries
+#| fig-cap: Time series of SHAPs for Column Water Vapor (CWV). SHAPs for observations with missing values for CWV are shown in grey.
 IG(tar_read(shap.features.plot.path))
 ```
 
@@ -346,19 +333,21 @@ IG(tar_read(shap.features.plot.path))
 
 For the model trained on all the data, the selected hyperparameters were `r v = tar_read(model.full)$hyperparams; paste0(collapse = ", ", sprintf("%s = %s", names(v), v))`.
 
-### Median MSE day
+### Mapping a typical day
 
-This map shows a tile on `r tar_read(median.mse.map.data)$date`.
+@fig-map-median-mse shows a tile on `r tar_read(median.mse.map.data)$date`.
 
 ```{r pred.map.median.mse}
+#| label: fig-map-median-mse
+#| fig-cap: Maps of typical MAIAC and Corrected AOD. Day selected as having the median improvement in MSE at AERONET sites.
 IG(tar_read(pred.map.median.mse.path))
 ```
 
-### Baltimore
-
-A day with long-range transported smoke from Canadian wildfires.
+### Mapping a documented high AOD event
 
 ```{r pred.map.baltimore}
+#| label: fig-map-baltimore-smoke
+#| fig-cap: Maps of MAIAC and Corrected AOD over the Mid-Atlantic US during a documented exceedence event with downmixing of long-range transported smoke from Canadian wildfires.
 IG(tar_read(pred.map.baltimore.path))
 ```
 
@@ -384,15 +373,16 @@ Our workflow is not a gap-filling method and thus corrected results have the sam
 
 # Supplement
 
-## Performance by year
 
 ```{r}
+#| label: tbl-cv-by-year
+#| tbl-cap: Cross-validation performance by year.
 flextable(pretty.table.numbers(tar_read(cv.summary)[-1]))
 ```
 
-## Performance by number of overpasses in collocation that site-day
-
 ```{r}
+#| label: tbl-cv-overpasses
+#| tbl-cap: Cross-validation performance by the number of overpasses in collocation for that site-day.
 dt[, overpasses := .N, by = .(site, lubridate::as_date(time.ground))]
 by.overpasses = dt[, eval(performance.j), keyby = overpasses]
 flextable(pretty.table.numbers(by.overpasses))
