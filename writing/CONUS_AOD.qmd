@@ -18,7 +18,7 @@ for (filename in strsplit(source.files, " ")[[1]])
      source(sprintf("code/%s.R", filename))
 suppressPackageStartupMessages(
    {library(patchwork)
-    library(ggridges)
+    library(gridExtra)
     library(flextable)
   })
 the.sat = tools::toTitleCase(Wf$satellite)
@@ -130,28 +130,32 @@ Beyond cross-validation performance, we also sought to evaluate the utility of a
 dt <- copy(tar_read(cv)$mDT_wPred)
 ```
 
-<!--# any missingness in predictors to report?-->
-
-After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals from `r uniqueN(dt$site)` AERONET sites in CONUS. The quartiles of the absolute difference from the labeled overpass time (one per 1200-km wide tile) and the time of the matched AERONET observation were `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["25%"]` s, `r tqs["50%"]` s, and `r tqs["75%"]` s. While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian. 
-
-
-```{r describe_dv}
-summary(dt[, list(y.diff)])
-```
+After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals from `r uniqueN(dt$site)` AERONET sites in CONUS. The quartiles of the absolute difference from the labeled overpass time (one per 1200-km wide tile) and the time of the matched AERONET observation were `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["25%"]` s, `r tqs["50%"]` s, and `r tqs["75%"]` s. While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian (see @fig-dv-density). 
 
 ```{r plot_dv}
-ggplot(dt, aes(x = y.diff)) +
+#| label: fig-dv-density
+#| fig-cap: !expr caption
+caption = with(list(d = dt), sprintf(
+    "Histogram of the difference in collocated AOD (n=%s). Not shown: %s %s",
+    scales::comma(d[, .N]),
+    d[y.diff < -1 | y.diff > 1, .N],
+    "AOD differences outside [-1, 1]"))
+p1 <- ggplot(dt, aes(x = y.diff)) +
   geom_histogram(binwidth = 0.005) +
-  scale_x_continuous("MAIAC AOD minus AERONET AOD") +
-  coord_cartesian(xlim = c(-1, 1)) +
-  labs(title = paste0("Histogram of difference in collocated AOD (n=", scales::comma(dt[, .N]), ")"),
-      caption = paste0("Not shown: ", dt[y.diff < -1 | y.diff > 1, .N], " AOD differences outside [-1, 1]")) +
-  theme_bw()
+  coord_cartesian(xlim = c(-1, 1), expand = FALSE) +
+  xlab("MAIAC AOD minus AERONET AOD") +
+  theme_classic()
+t1 <- summary(dt[, list(y.diff)], digits = 2)
+colnames(t1) <- ""
+t1 <- tableGrob(t1, theme=ttheme_minimal(), rows=NULL)  # transform into a tableGrob
+p1 + inset_element(t1, left = 0.02, bottom = 0.6, right = 0.25, top = .98)
 ```
 
-Table \## includes the performance metrics for the full cross-validated training data set. Here **raw** is MCD19A2.V006 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost-modeled correction term.
+@tbl-cv-overall includes the performance metrics for the full cross-validated training data set. Here **raw** is MCD19A2.V061 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost-modeled correction term.
 
 ```{r}
+#| label: tbl-cv-overall
+#| tbl-cap: Overall performance from cross-validation.
 flextable(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]))
 ```
 
