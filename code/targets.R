@@ -183,8 +183,9 @@ list(
         ipath("shap_features"), dpi = 300, width = 7, height = 7,
         shap.plot.dependence(data_long = tar_read(shap_long), x = 'time.sat', y = 'Column_WV', color_feature = 'Column_WV') +
             aes(x = lubridate::as_datetime(x_feature)) +
-            xlab("time.sat") +
-            ggtitle("(A) SHAP values of Column WV vs. Time trend"))),
+            ylab("SHAP value for MAIAC CWV") +
+            theme(axis.title.x = element_blank(),
+                  panel.grid.minor.x = element_blank()))),
     tar_file(pred.map.median.mse.path, ggsave(
         ipath("pred_map_median_mse"), width = 7, height = 7,
         pred.map(
