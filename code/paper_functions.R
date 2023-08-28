@@ -212,14 +212,22 @@ pred.map = function(
     if (!is.null(quantile.cap))
         d[, value := pmin(quantile(value, quantile.cap, na.rm = T), value)]
 
-    ggplot() +
-        geom_raster(aes(lon, lat, fill = value), data = d) +
-        scale_fill_distiller(name = color.scale.name,
-            palette = "Spectral", na.value = "transparent") +
-        geom_sf(data = bg.sf, fill = NA, size = .1) +
-        facet_grid(rows = "variable", labeller = labeller(variable =
-            c(y.sat.old = "MAIAC AOD", y.sat.new = "Corrected AOD"))) +
-        coord_sf(expand = F,
-            xlim = range(d$lon), ylim = range(d$lat)) +
-        theme_void() +
-        theme(strip.text = element_text(size = 13))}
+    list(
+        center.name = bg.sf[as.integer(st_intersects(
+            st_as_sf(
+                d[, .(
+                    mean(c(max(lon), min(lon))),
+                    mean(c(max(lat), min(lat))))],
+                coords = c(1, 2), crs = crs.lonlat),
+            st_transform(bg.sf, crs = crs.lonlat))),]$NAME,
+        plot = ggplot() +
+            geom_raster(aes(lon, lat, fill = value), data = d) +
+            scale_fill_distiller(name = color.scale.name,
+                palette = "Spectral", na.value = "transparent") +
+            geom_sf(data = bg.sf, fill = NA, size = .1) +
+            facet_grid(rows = "variable", labeller = labeller(variable =
+                c(y.sat.old = "MAIAC AOD", y.sat.new = "Corrected AOD"))) +
+            coord_sf(expand = F,
+                xlim = range(d$lon), ylim = range(d$lat)) +
+            theme_void() +
+            theme(strip.text = element_text(size = 13)))}

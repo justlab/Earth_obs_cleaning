@@ -164,6 +164,13 @@ list(
         cv$mDT_wPred, pred.grid, region.shape, satellite.files, model.full)),
     tar_target(baltimore.map.data, get.baltimore.map.data(
         pred.grid, region.shape, satellite.files, model.full)),
+    tar_target(median.mse.map, pred.map(
+        median.mse.map.data$pred, pred.grid,
+        bg.sf = get_conus(), color.scale.name = "AOD",
+        quantile.cap = .99)),
+    tar_target(baltimore.map, pred.map(
+        baltimore.map.data, pred.grid,
+        bg.sf = get_conus(), color.scale.name = "AOD")),
 
     # Manuscript graphics
     tar_target(ipath,
@@ -188,15 +195,10 @@ list(
                   panel.grid.minor.x = element_blank()))),
     tar_file(pred.map.median.mse.path, ggsave(
         ipath("pred_map_median_mse"), width = 7, height = 7,
-        pred.map(
-            median.mse.map.data$pred, pred.grid,
-            bg.sf = get_conus(), color.scale.name = "AOD",
-            quantile.cap = .99))),
+        median.mse.map$plot)),
     tar_file(pred.map.baltimore.path, ggsave(
         ipath("pred_map_baltimore"), width = 7, height = 7,
-        pred.map(
-            baltimore.map.data, pred.grid,
-            bg.sf = get_conus(), color.scale.name = "AOD"))),
+        baltimore.map$plot)),
 
     # Render the CONUS AOD manuscript
     if (Wf$satellite.product == "mcd19a2")
