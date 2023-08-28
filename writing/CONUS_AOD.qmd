@@ -151,6 +151,25 @@ t1 <- tableGrob(t1, theme=ttheme_minimal(), rows=NULL)  # transform into a table
 p1 + inset_element(t1, left = 0.02, bottom = 0.6, right = 0.25, top = .98)
 ```
 
+@tbl-ivs shows the distribution of each predictor in the CV.
+
+```{r tbl-ivs}
+#| tbl-cap: !expr 'sprintf("`time.sat` is represented in days since %s.", as.character(min(dt$time.sat), usetz = T))'
+flextable(rbindlist(lapply(Wf$features, \(iv)
+   {nv = dt[[iv]]
+    v = na.omit(nv[!is.na(nv)])
+    r = \(x) round(x, 3)
+    if (iv == "time.sat")
+        v = as.numeric(difftime(v, min(v), units = "days"))
+    data.table(
+        Variable = iv,
+        missing = r(mean(is.na(nv))),
+        min = r(min(v)),
+        max = r(max(v)),
+        mean = r(mean(v)),
+        sd = r(sd(v)))})))
+```
+
 @tbl-cv-overall includes the performance metrics for the full cross-validated training data set. Here **raw** is Collection 6.1 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost-modeled correction term.
 
 ```{r}
