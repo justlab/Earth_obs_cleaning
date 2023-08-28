@@ -225,6 +225,8 @@ pred.map = function(
             scale_fill_distiller(name = color.scale.name,
                 palette = "Spectral", na.value = "transparent") +
             geom_sf(data = bg.sf, fill = NA, size = .1) +
+            ggspatial::annotation_scale(
+                data = data.frame(variable = "y.sat.old")) +
             facet_grid(rows = "variable", labeller = labeller(variable =
                 c(y.sat.old = "MAIAC AOD", y.sat.new = "Corrected AOD"))) +
             coord_sf(expand = F,
