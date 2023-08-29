@@ -151,7 +151,7 @@ t1 <- tableGrob(t1, theme=ttheme_minimal(), rows=NULL)  # transform into a table
 p1 + inset_element(t1, left = 0.02, bottom = 0.6, right = 0.25, top = .98)
 ```
 
-@tbl-cv-overall includes the performance metrics for the full cross-validated training data set. Here **raw** is Collection 6.1 MAIAC AOD 470nm; **ground** is AERONET AOD interpolated to 470nm; and **corrected** is MAIAC after applying an XGBoost-modeled correction term.
+@tbl-cv-overall includes the performance metrics for the full cross-validated training data set. `r sdn = \(x) sqrt(mean((x - mean(x))^2)); f = \(x) sprintf("(SD %.03f)", sdn(dt[[x]])); "";` Here **raw** is Collection 6.1 MAIAC AOD 470nm `r f("y.sat")`; **ground** is AERONET AOD interpolated to 470nm `r f("y.ground")`; and **corrected** is MAIAC after applying an XGBoost-modeled correction term `r f("y.ground.pred")`. The ground values are correlated `r dt[, sprintf("%+.03f", cor(y.ground, y.sat))]` with the raw values and `r dt[, sprintf("%+.03f", cor(y.ground, y.ground.pred))]` with the corrected values.
 
 ```{r}
 #| label: tbl-cv-overall
