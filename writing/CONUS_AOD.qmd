@@ -25,21 +25,6 @@ the.sat = tools::toTitleCase(Wf$satellite)
 IG = knitr::include_graphics
 ```
 
-```{r git_check}
-{
-s = function(cmd) suppressWarnings(system(cmd,
-    intern = TRUE, ignore.stderr = TRUE))
-commit = substr(s('git rev-parse HEAD'), 1, 8)
-uncommitted = ''
-if (!length(commit))
-   commit = 'unknown'
-else if(length(s('git diff-index HEAD --'))>0)
-   uncommitted = 'with uncommitted changes'
-}
-```
-
-Git commit: `r commit` `r uncommitted`
-
 Rendered: `r Sys.time()`
 
 # Abstract
