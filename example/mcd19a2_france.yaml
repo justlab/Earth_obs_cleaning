@@ -1,4 +1,3 @@
-data.dir: /tmp/Earth_obs_cleaning_data
 n.workers: 8
 
 workflow:

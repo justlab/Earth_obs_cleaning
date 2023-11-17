@@ -5,11 +5,10 @@ suppressPackageStartupMessages(
    {library(data.table)
     library(targets)})
 
-config = yaml::read_yaml("config.yaml")
-
-data.dir = config$data.dir
+data.dir = "/data"
 stopifnot(dir.exists(data.dir))
 geonexl2.dir = file.path(data.dir, "geonexl2")
+writing.out.dir = file.path(data.dir, "writing")
 intermediate.path = function(...)
    file.path(data.dir, 'intermediate', ...)
 dir.create(intermediate.path(), showWarnings = F)
@@ -17,6 +16,8 @@ download = function(from, to, ...)
     download.update.meta(from, file.path(data.dir, "downloads"), to, ...)
 satellite_hdf_root = file.path(data.dir, 'earthdata')
 dir.create(satellite_hdf_root, showWarnings = F)
+
+config = yaml::read_yaml(file.path(data.dir, "config.yaml"))
 
 n.workers = config$n.workers
 if (is.null(n.workers))

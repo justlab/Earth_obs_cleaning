@@ -144,8 +144,10 @@ list(
     # Summarize and report on the CV
     tar_target(cv.summary, get.cv.summary(
         cv$mDT_wPred)),
-    tarchetypes::tar_render(cv_report,
+    tarchetypes::tar_render(cv.report.render,
         'writing/cv_report.Rmd'),
+    tar_target(cv.report,
+        file.copy(cv.report.render[1], writing.out.dir)),
 
     # Compare AQS to our predictions
     tar_target(aqs.obs, format = "fst_dt", get.aqs.obs(
@@ -201,6 +203,8 @@ list(
         baltimore.map$plot)),
 
     # Render the CONUS AOD manuscript
-    if (Wf$satellite.product == "mcd19a2")
-        tarchetypes::tar_quarto(paper_conus,
-            'writing/CONUS_AOD.qmd', quiet = F))
+    if (Wf$satellite.product == "mcd19a2") list(
+        tarchetypes::tar_quarto(paper.conus.render,
+            'writing/CONUS_AOD.qmd', quiet = F),
+        tar_target(paper.conus,
+            file.copy(paper.conus.render[1], writing.out.dir))))
