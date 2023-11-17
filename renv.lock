@@ -185,14 +185,14 @@
     },
     "Rcpp": {
       "Package": "Rcpp",
-      "Version": "1.0.9",
+      "Version": "1.0.11",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "methods",
         "utils"
       ],
-      "Hash": "e9c08b94391e9f3f97355841229124f2"
+      "Hash": "ae6cbbe1492f4de79c45fce06f967ce8"
     },
     "RcppEigen": {
       "Package": "RcppEigen",
@@ -2467,20 +2467,15 @@
     },
     "terra": {
       "Package": "terra",
-      "Version": "1.6-49",
-      "Source": "GitHub",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "terra",
-      "RemoteUsername": "rspatial",
-      "RemoteRef": "dfe4edd765b90894d4a230e7a7a937d26a8aaa92",
-      "RemoteSha": "dfe4edd765b90894d4a230e7a7a937d26a8aaa92",
+      "Version": "1.7-55",
+      "Source": "Repository",
+      "Repository": "RSPM",
       "Requirements": [
         "R",
         "Rcpp",
         "methods"
       ],
-      "Hash": "c33e9d207e884d67259ba7cc6d7a53ef"
+      "Hash": "c011cc748506148c793428eb8ec101f9"
     },
     "testthat": {
       "Package": "testthat",

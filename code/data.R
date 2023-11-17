@@ -207,7 +207,7 @@ read_satellite_raster = function(
         c("cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle"),
         function(vname)
            {r = terra::rast(paste0(
-                str_replace(r1@ptr$filenames()[1], ":grid1km:[A-Za-z0-9_]+\\Z",
+                str_replace(terra::sources(r1)[1], ":grid1km:[A-Za-z0-9_]+\\Z",
                     ":grid5km:"),
                 vname))
             if (!is.na(overpass))
