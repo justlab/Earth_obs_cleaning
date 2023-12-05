@@ -18,8 +18,7 @@ RUN cat ex >>$R_HOME/etc/Rprofile.site && rm ex
 RUN R -q -e 'install.packages("remotes")'
 RUN R -q -e 'remotes::install_github("rstudio/renv@v1.0.2")'
 
-RUN R -q -e 'renv::init()'
-RUN rm .Rprofile
+RUN R -q -e 'renv::init()' && rm .Rprofile
 COPY renv.lock renv.lock
 COPY writing writing
 COPY code code
