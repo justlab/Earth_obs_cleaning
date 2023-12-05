@@ -4,7 +4,7 @@ Earth_obs_cleaning is an R-based tool to predict the difference between AERONET 
 
 1. Put your configuration file in the data directory (the one you're using for the bind mount)
 
-2. `mkdir /tmp` and `/writing` in the data directory.
+2. `mkdir tmp` in the data directory.
 
 3. `sudo docker build --tag=earth_obs_cleaning . && sudo docker run --rm -it --mount type=bind,src=/data-coco/Earth_obs_cleaning/docker-data,target=/data -e EARTHDATA_USERNAME -e EARTHDATA_PASSWORD earth_obs_cleaning`
 

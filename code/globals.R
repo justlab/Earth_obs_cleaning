@@ -9,6 +9,7 @@ data.dir = "/data"
 stopifnot(dir.exists(data.dir))
 geonexl2.dir = file.path(data.dir, "geonexl2")
 writing.out.dir = file.path(data.dir, "writing")
+dir.create(writing.out.dir, showWarnings = F)
 intermediate.path = function(...)
    file.path(data.dir, 'intermediate', ...)
 dir.create(intermediate.path(), showWarnings = F)
