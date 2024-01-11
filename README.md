@@ -10,10 +10,13 @@ A high-end machine may be required for running large workflows, but shouldn't be
     - Replace `DPATH` with the path to your data directory.
     - Notice that the environment variables `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD` should be set in your real environment; these are [NASA Earthdata login credentials](https://urs.earthdata.nasa.gov/users/new) for downloading satellite data.
     - The `docker run` part uses `--rm` to automatically delete the container after the R process exits. This is convenient but not necessary.
-4. In R, say `renv::load()` and `renv::restore()`.
+4. In R, say:
+   - `renv::load()`
+   - `renv::restore()`
+   - `cat("TRUE\n", file = "/data/R-packages-installed")`
 
 # Usage
 
-Build and run the Docker image as described above, then start each session with `invisible(capture.output({renv::load(); renv::restore(prompt = F)})); source("code/globals.R")`. You can now use `tar_make` to build targets.
+Build and run the Docker image as described above. (If you installed `renv` packages in this R session, quit and restart the image.) You can now use `tar_make` to build targets.
 
 To run the test workflow, ensure `test.small.daterange` in the configuration file is `TRUE`. Then say `tar_make(cv)` to try cross-validation with a few days of data. This is pretty fast, taking only a few minutes, aside from downloading the data. Use `tar_read` (as in `tar_read(cv)`) to see the results.
