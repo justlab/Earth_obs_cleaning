@@ -84,7 +84,7 @@ get.pred.grid = function(satellite.product, region.shape, earthdata.rows)
 
 expand.to.overpasses = function(d, satellite.files, the.satellite, satellite.product, n.workers)
    {if (!multipass.sat(satellite.product))
-        return(cbind(d, overpass := NA_integer_))
+        return(cbind(d, overpass = NA_integer_))
     # Each file contains multiple overpasses and multiple
     # satellites, stored in different layers. Expand `d` into
     # one row per layer, keeping only the satellite of interest.
