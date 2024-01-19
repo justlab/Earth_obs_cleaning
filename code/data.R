@@ -72,12 +72,15 @@ get.pred.grid = function(satellite.product, region.shape, earthdata.rows)
         r$IGNORE = 1L}
     else
       # Combine the grids of all satellite tiles.
-       {r = do.call(terra::merge, lapply(1 : nrow(earthdata.rows),
+       {r = lapply(1 : nrow(earthdata.rows),
             function(i) with(earthdata.rows[i],
                {r = read_satellite_raster(satellite.product, tile, path)[[1]]
                 r$tile = as.integer(tile)
                 r$cell.local = seq_len(terra::ncell(r))
-                r[[c("tile", "cell.local")]]})))
+                r[[c("tile", "cell.local")]]}))
+        r = (if (length(r) == 1)
+            r[[1]] else
+            do.call(terra::merge, r))
         r$tile = factor(as.integer(drop(r$tile[])),
            labels = levels(earthdata.rows$tile))}
     r}
@@ -127,14 +130,15 @@ get.predictors = function(
             lapply(...)
 
     message("Reading predictors from satellite data")
-    d = rbindlist(xlapply(parallel.outside, chunks, \(chunk) chunk
-        [, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
+    d = rbindlist(xlapply(parallel.outside, chunks, \(chunk)
+      tryCatch(
+        chunk[, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
            {r = read_satellite_raster(
                 satellite.product,
                 satellite.files[chunk$sat.files.ix[1], tile],
                 satellite.files[chunk$sat.files.ix[1], path],
                 overpass[1])
-            y.sat.values = drop(r[[y.sat.name]][])
+            y.sat.values = drop(suppressWarnings(r[[y.sat.name]][]))
             cbind(
                 y.sat.values[cell.local],
                 r[[vnames]][cell.local],
@@ -146,9 +150,13 @@ get.predictors = function(
                     data.frame(
                         y.sat.mean = mean(v, na.rm = T),
                         y.sat.present = mean(!is.na(v)))})))}]
-        [!is.na(y.sat)]))
+        [!is.na(y.sat)],
           # Keep only cases where we have the satellite
           # outcome of interest.
+      error = \(e)
+        # Some files may be corrupt, such as (for AODC on GOES-16) `OR_ABI-L2-AODC-M6_G16_s20212301741172_e20212301743545_c20212301745254.nc`.
+         {if (!identical(e$message, "[readValues] cannot read values"))
+              stop(e)})))
 
     if ("time.diff" %in% colnames(d))
         d[, time.diff := NULL]
@@ -182,6 +190,8 @@ get.predictors = function(
 read_satellite_raster = function(
         satellite.product, tile, path, overpass = NA_integer_)
    {r1 = terra::rast(path)
+    if (satellite.product != "mcd19a2")
+        return(r1)
 
     if (multipass.sat(satellite.product))
        {if (is.na(overpass))
@@ -198,10 +208,6 @@ read_satellite_raster = function(
         r1 = r1[[str_subset(names(r1), regex)]]
         names(r1) = str_remove(names(r1), regex)}
 
-    if (satellite.product == "geonexl2")
-      # Rename a layer for consistency with MCD19A2.
-        names(r1) = str_replace(names(r1), "AOT_Uncertainty", "AOD_Uncertainty")
-
     # Get the other (lower-resolution) layers.
     r2 = terra::rast(lapply(
         c("cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle"),
@@ -215,27 +221,9 @@ read_satellite_raster = function(
             `names<-`(r, vname)}))
 
     # Combine all the layers.
-    fix.coordinates = function(r)
-       {if (satellite.product != "geonexl2")
-            return(r)
-        # The coordinates are all wrong. Fix them.
-        # See "Example for 0.01x0.01 (1km) grid" at
-        # https://web.archive.org/web/20220119040921/https://www.nasa.gov/geonex/dataproducts
-        terra::crs(r) = paste0("epsg:", crs.lonlat)
-        h0 = -180
-        v0 = 60
-        size = 6
-        m = stringr::str_match(tile, "h(\\d+)v(\\d+)")
-        assert(!anyNA(m))
-        h = as.integer(m[,2])
-        v = as.integer(m[,3])
-        terra::ext(r) = c(
-            h0 + (h + c(0, 1))*size,
-            v0 - (v + c(1, 0))*size)
-        r}
     c(
-       fix.coordinates(r1),
-       terra::disagg(fix.coordinates(r2), nrow(r1) / nrow(r2)))}
+       r1,
+       terra::disagg(r2, nrow(r1) / nrow(r2)))}
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## * AERONET
@@ -313,12 +301,15 @@ get_stn_data <- function(aod_dir, stations, date_start = NULL, date_end = NULL){
 }
 
 # Interpolate AERONET AOD to the desired wavelength.
-interpolate_aod <- function(aer_data)
+interpolate_aod <- function(satellite.product, aer_data)
    {# N.B. All computations with wavelengths here are in micrometers,
     # even though the column names of the observations data use
     # nanometers, as in "AOD_531nm". We do this because the input
     # exact wavelengths are in micrometers.
-    target.wl = 0.47
+    target.wl = switch(satellite.product,
+        mcd19a2 = 0.47,
+        aodc = 0.55,
+        stop())
     max.input.wl = 1.0
       # This value was chosen because AOD at wavelengths above 1 μm
       # seemed to lie off the trendline for interpolation of 0.47 μm.
@@ -354,7 +345,7 @@ interpolate_aod <- function(aer_data)
 get.traindata = function(
         satellite.product, the.satellite,
         y.sat.name, features, window.radius,
-        aer_filtered, aer_stn, satellite.files, date.example,
+        aer_filtered, aer_stn, satellite.files, time.example,
         n.workers)
    {temporal.matchup.seconds = (if (daily.sat(satellite.product))
         8 * 60 else
@@ -385,7 +376,7 @@ get.traindata = function(
         r.example = read_satellite_raster(satellite.product, the.tile,
             satellite.files[j = path[1],
                 tile == the.tile &
-                lubridate::as_date(time) == date.example])
+                time == time.example])
         d = cbind(ground, cell.local = terra::cellFromXY(
             r.example,
             ground[, .(x_satcrs, y_satcrs)]))[!is.na(cell.local)]
@@ -429,10 +420,18 @@ get.traindata = function(
 
     message("Interpolating AOD")
     d[, y.ground := `[`(
-        interpolate_aod(aer_filtered[.(d$site, d$time.ground)]),
+        interpolate_aod(satellite.product, aer_filtered[.(d$site, d$time.ground)]),
         .(d$site, d$time.ground),
         aod)]
     d = d[!is.na(y.ground)]
+
+    if ("seconds.since.midnight" %in% features)
+        d[, seconds.since.midnight := as.integer(difftime(
+            time.sat,
+            lubridate::floor_date(
+                lubridate::with_tz(time.sat, "Etc/GMT+6"),
+                "day"),
+            units = "secs"))]
 
     # Calculate the difference.
     d[, y.diff := y.sat - y.ground]

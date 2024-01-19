@@ -7,7 +7,7 @@ suppressPackageStartupMessages(
 
 data.dir = "/data"
 stopifnot(dir.exists(data.dir))
-geonexl2.dir = file.path(data.dir, "geonexl2")
+aodc.dir = file.path(data.dir, "aodc")
 writing.out.dir = file.path(data.dir, "writing")
 dir.create(writing.out.dir, showWarnings = F)
 intermediate.path = function(...)
@@ -32,7 +32,7 @@ stopifnot(
         Wf$satellite %in% c("terra", "aqua") &&
         Wf$ground.product == "aeronet" ||
     Wf$outcome == "aod" &&
-        Wf$satellite.product == "geonexl2" &&
+        Wf$satellite.product == "aodc" &&
         Wf$satellite == "goes16" &&
         Wf$ground.product == "aeronet" ||
     Wf$outcome == "no2" &&
@@ -46,30 +46,39 @@ stopifnot(is.character(Wf$region))
 
 Wf$dates = switch(Wf$satellite.product,
     mcd19a2 = c("2000-01-01", "2022-12-31"),
-    geonexl2 = c("2018-01-01", "2019-12-31"),
+    aodc = c("2020-10-25", "2023-12-31"),
+      # "The land spectral surface relationship was updated on October 24, 2020."
+      # We start a day later in case of off-by-one issues.
+      # http://web.archive.org/web/20240112172248/https://www.star.nesdis.noaa.gov/atmospheric-composition-training/documents/GOES-16_ABI_L2_AOD_Provisional_ReadMe_v3.pdf
     tropomi = c("2021-07-01", "2022-12-31"))
       # The former is the first day of the latest version of the
       # TROPOMI nitrogen-dioxide product.
 Wf$dates = seq(as.Date(Wf$dates[1]), as.Date(Wf$dates[2]), by = 1)
-Wf$date.example = switch(Wf$satellite.product,
-  # This should be a date for which the satellite data of interest
-  # exists on all tiles.
+Wf$time.example = switch(Wf$satellite.product,
+  # This should be a date (or datetime, for more temporally resolved
+  # products) for which the satellite data of interest exists on all
+  # tiles.
     mcd19a2 = as.Date("2010-07-03"),
-    geonexl2 = as.Date("2018-07-03"),
+    aodc = lubridate::as_datetime("2020-11-21 20:27:30 UTC"),
     tropomi = as.Date("2021-08-01"))
 if (!is.null(Wf$test.small.daterange) && Wf$test.small.daterange)
-    Wf$dates = Wf$date.example + (-1:1)
+    Wf$dates = lubridate::as.date(Wf$time.example) + (-1:1)
 Wf$years = sort(unique(year(Wf$dates)))
 
-Wf$y.sat = "Optical_Depth_047"
+Wf$y.sat = switch(Wf$satellite.product,
+    mcd19a2 = "Optical_Depth_047",
+    aodc = "AOD")
 Wf$features = c(
   # Predictors for modeling.
     "y.sat", "time.sat",
     "y.sat.mean", "y.sat.present",
-    "AOD_Uncertainty",
-    "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
-    (if (Wf$satellite.product == "mcd19a2")
-        c("Column_WV", "qa_best")))
+    switch(Wf$satellite.product,
+        mcd19a2 = c(
+            "qa_best", "AOD_Uncertainty",
+            "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
+            "Column_WV"),
+        aodc = c(
+            "DQF", "seconds.since.midnight")))
 Wf$window.radius = 5L
   # The windows will be `1 + 2*window.radius` cells on each side.
 Wf$pred.round.digits = 5L
@@ -91,7 +100,7 @@ Sys.setenv(TAR_CONFIG = file.path(workflow.dir, "targets.yaml"))
 daily.sat = function(satellite.product = Wf$satellite.product)
   # Whether the satellite product is daily, as opposed to being
   # resolved at a finer unit, such as the second.
-    satellite.product != "geonexl2"
+    satellite.product != "aodc"
 
 multipass.sat = function(satellite.product = Wf$satellite.product)
   # Whether the satellite product has more than one overpass in
@@ -108,7 +117,10 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
            "Site_Elevation(m)", "Ozone(Dobson)", "NO2(Dobson)",
            "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 
-feature.raster.layers = c(
-    "AOD_Uncertainty",
-    "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
-    "Column_WV", "AOD_QA")
+feature.raster.layers = switch(Wf$satellite.product,
+    mcd19a2 = c(
+        "AOD_Uncertainty",
+        "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
+        "Column_WV", "AOD_QA"),
+    aodc = c(
+        "DQF"))
