@@ -217,4 +217,14 @@ list(
         tarchetypes::tar_quarto(paper.conus.render,
             'writing/CONUS_AOD.qmd', quiet = F),
         tar_target(paper.conus,
-            file.copy(paper.conus.render[1], writing.out.dir))))
+            file.copy(paper.conus.render[1], writing.out.dir))),
+
+    # Do a supplementary analysis for AODC.
+    if (Wf$satellite.product == "aodc") list(
+        tar_target(zhang.comparison.data, get.zhang.comparison.data(
+            Wf$y.sat,
+            aer_filtered, aer, satellite.files, pred.grid,
+            keep.qualities = c(0L, 1L),
+            n.workers = pmin(8L, n.workers))),
+        tar_target(zhang.comparison, do.zhang.comparison(
+            zhang.comparison.data))))

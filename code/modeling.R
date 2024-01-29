@@ -374,3 +374,94 @@ new.preds.compact = function(...)
         cell,
         y.sat.old = r(y.sat.old),
         y.sat.new = r(y.sat.new))]}
+
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## * Zhang comparison
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Here we try a comparison between the ground and satellite data
+# without a complex model but with lots of averaging, in the fashion of
+# Zhang, H., Kondragunta, S., Laszlo, I., & Zhou, M. (2020). Improving GOES Advanced Baseline Imager (ABI) aerosol optical depth (AOD) retrievals using an empirical bias correction algorithm. Atmospheric Measurement Techniques, 13(11), 5955–5975. doi:10.5194/amt-13-5955-2020
+# See particularly "5.1 Application to NOAA ABI AOD data".
+
+get.zhang.comparison.data = \(
+        y.sat.name,
+        aer_filtered, aer_stn, satellite.files, pred.grid,
+        keep.qualities, n.workers)
+   {radius.m = 27.5e3
+    min.aeronet.obs = 2L
+    min.valid.satellite.pixels = 120L
+    time.interval = "15 minutes"
+
+    # Use the months and days of Zhang et al., although we have
+    # different years available.
+    date.min = as.Date("2022-08-06")
+    date.max = as.Date("2022-12-31")
+
+    # This section was copied from `get.traindata`.
+    message("Assembling ground data")
+    aer_filtered = aer_filtered[, c(
+        list(
+            site = AERONET_Site_Name,
+            time.ground = stn_time),
+        mget(str_subset(colnames(aer_filtered), "AOD")))]
+    setkey(aer_filtered, site, time.ground)
+    ground = aer_filtered[, .(site, time.ground)]
+    ground[, c("x_satcrs", "y_satcrs") := aer_stn[
+        .(ground$site), on = "Site_Name", .(x, y)]]
+    setkey(ground, time.ground)
+    ground
+
+    ok.times = \(times) between(lubridate::as_date(times),
+        date.min, date.max)
+    ground = ground[ok.times(time.ground)]
+    message("Interpolating ground values")
+    aer_filtered = interpolate_aod("aodc",
+        aer_filtered[.(ground$site, ground$time.ground)])
+    message("Summarizing into intervals")
+    aer_filtered = aer_filtered[,
+        by = .(site, interval =
+            lubridate::floor_date(time.ground, time.interval)),
+        if (.N >= min.aeronet.obs)
+            .(y.ground = mean(aod))]
+
+    message("Finding cells for sites")
+    sites = unique(ground[, .(site, x_satcrs, y_satcrs)])[order(site)]
+    cells.per.site = as.data.table(terra::cells(pred.grid,
+        terra::buffer(
+            terra::vect(sites, geom = c("x_satcrs", "y_satcrs")),
+            radius.m)))
+    cells.per.site[, site := sites[cells.per.site$ID, site]]
+
+    message("Getting satellite data")
+    sat = satellite.files[ok.times(time)]
+    sat[, interval := lubridate::floor_date(time, time.interval)]
+    sat = rbindlist(pblapply(cl = n.workers, split(sat, by = "interval"), \(d)
+       {out = rbindlist(lapply(d$path, \(p)
+           {r = read_satellite_raster("aodc", "whole", p)
+            out = cells.per.site[, by = site,
+                tryCatch(
+                    {
+                        d = terra::extract(r[[c(y.sat.name, "DQF")]], cell)
+                        i = which(!is.na(d[[y.sat.name]]) & d$DQF %in% keep.qualities)
+                        if (length(i) >= min.valid.satellite.pixels)
+                            list(cell = cell[i], y.sat = d[i, y.sat.name])},
+                    error = \(e)
+                      # Some files may be corrupt, such as `OR_ABI-L2-AODC-M6_G16_s20212301741172_e20212301743545_c20212301745254.nc`.
+                       {if (!identical(e$message, "[readValues] cannot read values"))
+                            stop(e)})]
+            if (ncol(out) > 1)
+                out}))
+        if (nrow(out))
+            cbind(d[1, .(interval)], out
+                [, by = .(site, cell), .(y.sat = mean(y.sat))]
+                [, by = .(site), .(y.sat = mean(y.sat))])}))
+
+    message("Merging")
+    merge(sat, aer_filtered, by = c("site", "interval"))}
+
+do.zhang.comparison = \(d) d[, .(
+    .N,
+    cor = cor(y.sat, y.ground),
+    bias = mean(y.sat - y.ground),
+    rmse = sqrt(mean((y.sat - y.ground)^2)))]
