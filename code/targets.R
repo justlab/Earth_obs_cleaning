@@ -212,12 +212,11 @@ list(
         ipath("pred_map_baltimore"), width = 7, height = 7,
         baltimore.map$plot)),
 
-    # Render the CONUS AOD manuscript
-    if (Wf$satellite.product == "mcd19a2") list(
-        tarchetypes::tar_quarto(paper.conus.render,
-            'writing/CONUS_AOD.qmd', quiet = F),
-        tar_target(paper.conus,
-            file.copy(paper.conus.render[1], writing.out.dir))),
+    # Render the manuscript.
+    tarchetypes::tar_quarto(paper.render,
+        sprintf('writing/paper_%s.qmd', Wf$satellite.product), quiet = F),
+    tar_target(paper,
+        file.copy(paper.render[1], writing.out.dir)),
 
     # Do a supplementary analysis for AODC.
     if (Wf$satellite.product == "aodc") list(
