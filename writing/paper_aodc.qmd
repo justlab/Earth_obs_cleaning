@@ -1,0 +1,72 @@
+---
+title: aodc
+
+bibliography: references.json
+csl: https://raw.githubusercontent.com/citation-style-language/styles/795ad0c77258cb7e01f3413123b5b556b4cb6a98/dependent/journal-of-geophysical-research-atmospheres.csl
+
+format:
+  html: {embed-resources: true}
+
+echo: FALSE
+---
+
+```{r}
+source.files = "globals libraries util data modeling paper_functions"
+for (filename in strsplit(source.files, " ")[[1]])
+    source(sprintf("code/%s.R", filename))
+suppressPackageStartupMessages(
+    library(flextable))
+```
+
+# Results
+
+```{r}
+d = copy(tar_read(cv)$mDT_wPred)
+```
+
+After collocation there were `r scales::comma(nrow(d))` matched AOD retrievals from `r uniqueN(d$site)` AERONET sites in CONUS. The quartiles of the absolute difference between the satellite time and the time of the matched AERONET observation were `r tqs = round(quantile(d[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["25%"]` s, `r tqs["50%"]` s, and `r tqs["75%"]` s.
+
+@tbl-cv-overall includes the performance metrics for the full cross-validated training data set. `r sdn = \(x) sqrt(mean((x - mean(x))^2)); f = \(x) sprintf("(SD %.03f)", sdn(d[[x]])); "";` Here **raw** is … `r f("y.sat")`; **ground** is … `r f("y.ground")`; and **corrected** is … `r f("y.ground.pred")`. The ground values are correlated `r d[, sprintf("%+.03f", cor(y.ground, y.sat))]` with the raw values and `r d[, sprintf("%+.03f", cor(y.ground, y.ground.pred))]` with the corrected values.
+
+```{r}
+#| label: tbl-cv-overall
+#| tbl-cap: Overall performance from cross-validation.
+flextable(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]))
+```
+
+```{r}
+#| label: tbl-cv-month
+#| tbl-cap: Performance by month of year.
+out = d[,
+    keyby = .(Month = month(time.sat)),
+    eval(performance.j)]
+out[, Month := month.abb[Month]]
+flextable(pretty.table.numbers(out))
+```
+
+```{r}
+#| label: tbl-cv-hour
+#| tbl-cap: Performance by hour of the day.
+flextable(pretty.table.numbers(d[,
+    keyby = .(Hour = hour(lubridate::with_tz(time.sat, "Etc/GMT+6"))),
+    eval(performance.j)]))
+```
+
+```{r}
+#| label: tbl-cv-high-aod
+#| tbl-cap: Performance for higher versus lower AOD.
+threshold = .6
+flextable(pretty.table.numbers(d[,
+    by = .("Ground value" = ifelse(y.ground > threshold,
+        sprintf("> %.1f", threshold),
+        sprintf("≤ %.1f", threshold))),
+    eval(performance.j)]))
+```
+
+```{r}
+#| label: tbl-cv-quality
+#| tbl-cap: Performance by value of the quality variable `DQF`.
+flextable(pretty.table.numbers(d[,
+    keyby = .(DQF = ifelse(is.na(DQF), "missing", DQF)),
+    eval(performance.j)]))
+```
