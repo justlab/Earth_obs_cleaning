@@ -426,12 +426,17 @@ get.traindata = function(
     d = d[!is.na(y.ground)]
 
     if ("seconds.since.midnight" %in% features)
-        d[, seconds.since.midnight := as.integer(difftime(
+        # Calculate seconds since midnight in an approximation of
+        # local solar time.
+       {s.utc = d[, as.integer(difftime(
             time.sat,
-            lubridate::floor_date(
-                lubridate::with_tz(time.sat, "Etc/GMT+6"),
-                "day"),
+            lubridate::floor_date(time.sat, "day"),
             units = "secs"))]
+        one.day = 24L * 60L * 60L
+        lon = aer_stn[.(d$site), lon]
+        d[, seconds.since.midnight :=
+            (s.utc + as.integer(round((lon / 360) * one.day))) %%
+                one.day]}
 
     # Calculate the difference.
     d[, y.diff := y.sat - y.ground]

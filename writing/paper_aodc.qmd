@@ -48,7 +48,7 @@ flextable(pretty.table.numbers(out))
 #| label: tbl-cv-hour
 #| tbl-cap: Performance by hour of the day.
 flextable(pretty.table.numbers(d[,
-    keyby = .(Hour = hour(lubridate::with_tz(time.sat, "Etc/GMT+6"))),
+    keyby = .(Hour = seconds.since.midnight %/% (60L * 60L)),
     eval(performance.j)]))
 ```
 
