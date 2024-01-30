@@ -216,7 +216,7 @@ list(
     tarchetypes::tar_quarto(paper.render,
         sprintf('writing/paper_%s.qmd', Wf$satellite.product), quiet = F),
     tar_target(paper,
-        file.copy(paper.render[1], writing.out.dir)),
+        file.copy(paper.render[1], writing.out.dir, overwrite = T)),
 
     # Do a supplementary analysis for AODC.
     if (Wf$satellite.product == "aodc") list(
