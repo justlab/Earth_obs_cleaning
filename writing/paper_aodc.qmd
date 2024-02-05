@@ -16,6 +16,7 @@ for (filename in strsplit(source.files, " ")[[1]])
     source(sprintf("code/%s.R", filename))
 suppressPackageStartupMessages(
     library(flextable))
+IG = knitr::include_graphics
 ```
 
 # Results
@@ -69,4 +70,20 @@ flextable(pretty.table.numbers(d[,
 flextable(pretty.table.numbers(d[,
     keyby = .(DQF = ifelse(is.na(DQF), "missing", DQF)),
     eval(performance.j)]))
+```
+
+## Error envelopes
+
+We use … The results are an envelope with `r eee = \(pred) {o = empirical.error.envelope(obs = d$y.ground, pred); stopifnot(o$convergence == 0); o$par}; show.eee = \(pred) {ps = eee(pred); sprintf("additive part %.03f and multiplicative part %.03f", ps[1], ps[2])}; show.eee(d$y.sat)` for the raw satellite values, and an envelope with `r show.eee(d$y.ground.pred)` for our predictions. The mean widths of the envelopes across all observations are `r me = \(pred) {ps = eee(pred); sprintf("%.03f", 2*ps[1] + 2*ps[2]*mean(d$y.ground))}; me(d$y.sat)` for the raw values and `r me(d$y.ground.pred)` for our predictions.
+
+```{r agreement_plot}
+#| label: fig-agreement-plot
+#| fig-cap: !expr caption
+caption = with(list(d = agreement.plot.data(d)), sprintf(
+    "Agreement plots for satellite-based and AERONET AOD. Straight lines show empirical error envelopes containing 2/3 of retrievals. Not shown: %s %s and %s %s",
+    d[!in.region & comparison == "y.sat", .N],
+    "points outside left panel",
+    d[!in.region & comparison == "y.ground.pred", .N],
+    "points outside right panel"))
+IG(tar_read(agreement.plot.path))
 ```
