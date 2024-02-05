@@ -228,7 +228,7 @@ pred.map = function(
             ggspatial::annotation_scale(
                 data = data.frame(variable = "y.sat.old")) +
             facet_grid(rows = "variable", labeller = labeller(variable =
-                c(y.sat.old = "MAIAC AOD", y.sat.new = "Corrected AOD"))) +
+                c(y.sat.old = "Raw", y.sat.new = "Corrected"))) +
             coord_sf(expand = F,
                 xlim = range(d$lon), ylim = range(d$lat)) +
             theme_void() +
