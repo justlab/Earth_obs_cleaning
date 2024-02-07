@@ -203,9 +203,6 @@ pred.map = function(
         g1,
         paste0("epsg:", crs.lonlat),
         res = reproject.res))
-    #print(data.table(
-    #    Grid = c("Original", "Reprojected"),
-    #    "Non-NA cells" = scales::comma(c(sum(!is.na(g1[])), sum(!is.na(g[]))))))
 
     d = melt(
         as.data.table(as.data.frame(g, xy = T, na.rm = F)),
