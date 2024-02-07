@@ -114,7 +114,8 @@ expand.to.overpasses = function(d, satellite.files, the.satellite, satellite.pro
 
 get.predictors = function(
         d, satellite.files,
-        satellite.product, y.sat.name, features, window.radius, n.workers)
+        satellite.product, y.sat.name, features, window.radius,
+        crs.sat, n.workers)
    {vnames = intersect(
         str_replace(features, "qa_best", "AOD_QA"),
         feature.raster.layers)
@@ -132,7 +133,7 @@ get.predictors = function(
     message("Reading predictors from satellite data")
     d = rbindlist(xlapply(parallel.outside, chunks, \(chunk)
       tryCatch(
-        chunk[, c("y.sat", vnames, "y.sat.mean", "y.sat.present") :=
+        chunk[, c("sat.coords.x", "sat.coords.y", "y.sat", vnames, "y.sat.mean", "y.sat.present") :=
            {r = read_satellite_raster(
                 satellite.product,
                 satellite.files[chunk$sat.files.ix[1], tile],
@@ -140,6 +141,7 @@ get.predictors = function(
                 overpass[1])
             y.sat.values = drop(suppressWarnings(r[[y.sat.name]][]))
             cbind(
+                terra::xyFromCell(r, cell.local),
                 y.sat.values[cell.local],
                 r[[vnames]][cell.local],
                 rbindlist(xlapply(!parallel.outside, cell.local, \(cell)
@@ -184,6 +186,21 @@ get.predictors = function(
             levels = c("Background", "Smoke", "Dust"))]
         assert(d[, all(as.integer(qa_model) <= 3L)])
         d[, AOD_QA := NULL]}
+
+    if ("seconds.since.midnight" %in% features)
+      # Calculate seconds since midnight in an approximation of local
+      # solar time.
+       {s.utc = d[, as.integer(difftime(
+            time.sat,
+            lubridate::floor_date(time.sat, "day"),
+            units = "secs"))]
+        one.day = 24L * 60L * 60L
+        lon = convert.crs(
+            d[, .(sat.coords.x, sat.coords.y)],
+            crs.sat, crs.lonlat)$x
+        d[, seconds.since.midnight :=
+            (s.utc + as.integer(round((lon / 360) * one.day))) %%
+                one.day]}
 
     d}
 
@@ -416,7 +433,8 @@ get.traindata = function(
         # Read in the values of the appropriate satellite files.
         get.predictors(
             d, satellite.files,
-            satellite.product, y.sat.name, features, window.radius, n.workers)}))
+            satellite.product, y.sat.name, features, window.radius,
+            terra::crs(r.example), n.workers)}))
 
     message("Interpolating AOD")
     d[, y.ground := `[`(
@@ -424,19 +442,6 @@ get.traindata = function(
         .(d$site, d$time.ground),
         aod)]
     d = d[!is.na(y.ground)]
-
-    if ("seconds.since.midnight" %in% features)
-        # Calculate seconds since midnight in an approximation of
-        # local solar time.
-       {s.utc = d[, as.integer(difftime(
-            time.sat,
-            lubridate::floor_date(time.sat, "day"),
-            units = "secs"))]
-        one.day = 24L * 60L * 60L
-        lon = aer_stn[.(d$site), lon]
-        d[, seconds.since.midnight :=
-            (s.utc + as.integer(round((lon / 360) * one.day))) %%
-                one.day]}
 
     # Calculate the difference.
     d[, y.diff := y.sat - y.ground]

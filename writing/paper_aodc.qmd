@@ -87,3 +87,13 @@ caption = with(list(d = agreement.plot.data(d)), sprintf(
     "points outside right panel"))
 IG(tar_read(agreement.plot.path))
 ```
+
+## Mapping a typical day
+
+@fig-map-median-improve shows a tile on `r tar_read(median.improve.map.data)$date`.
+
+```{r pred.map.median.improve}
+#| label: fig-map-median-improve
+#| fig-cap: foofy
+IG(tar_read(pred.map.median.improve.path))
+```

@@ -123,7 +123,9 @@ get.satellite.vs.aqs = function(satellite, aqs)
 get.median.improve.map.data = function(
       y.sat.name, the.satellite, satellite.product, n.workers,
       d, pred.grid, region.shape, satellite.files, model.full)
-   {# Get the date with the median improvement in MSE.
+   {tz = "Etc/GMT+6" # I.e., UTC-6, or Central Standard Time
+
+    # Get the date with the median improvement in MSE.
     date = (d
         [, by = .(date = lubridate::as_date(time.sat, tz = tz)),
             .(improve =
@@ -131,18 +133,20 @@ get.median.improve.map.data = function(
                 mean((y.ground - y.sat)^2))]
         [which.min(improve - median(improve)), date])
 
-    # Get overpasses for this data.
-    sat = satellite.files[time == date]
+    # Get overpasses for this date.
+    sat = satellite.files[lubridate::as_date(time, tz = tz) == date]
     sat[, sat.files.ix := .I]
-    overpasses = merge(by = "sat.files.ix", sat,
-        expand.to.overpasses(sat, sat,
-            the.satellite, satellite.product, n.workers))
+    overpasses = (if (multipass.sat(satellite.product))
+        merge(by = "sat.files.ix", sat,
+            expand.to.overpasses(sat, sat,
+                the.satellite, satellite.product, n.workers)) else
+        setnames(cbind(sat, overpass = NA), "time", "time.sat"))
 
     # Find the local cell indices we'd want to map.
     message("Getting raster cells")
     overpass.local.cells = pblapply(1 : nrow(overpasses), cl = n.workers, \(i)
        {r = with(overpasses[i], read_satellite_raster(
-            Wf$satellite.product, tile, path, overpass))[[y.sat.name]]
+            satellite.product, tile, path, overpass))[[y.sat.name]]
         # Get only cells with non-missing values.
         d = as.data.table(as.data.frame(r,
             na.rm = T, cell = T, xy = T))

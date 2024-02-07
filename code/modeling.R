@@ -321,7 +321,7 @@ new.preds = function(dt.start, dt.end, cells = NULL, targets = NULL)
     message("Selecting satellite files")
     # Keep only enough `sat` files to cover the requested time range.
     sat = sat[
-        if (class(time) == "Date")
+        if ("Date" %in% class(time))
             lubridate::as_date(dt.start) - 1 <= time &
                 time <= lubridate::as_date(dt.end) + 1
         else
@@ -347,7 +347,8 @@ new.preds = function(dt.start, dt.end, cells = NULL, targets = NULL)
     d = get.predictors(d, sat,
         Wf$satellite.product, Wf$y.sat,
         Wf$features, Wf$window.radius,
-        config$n.workers)
+        terra::crs(grid), config$n.workers)
+
     message(sprintf("Result: %s rows", scales::comma(nrow(d))))
     if (!nrow(d))
         return(data.table())
