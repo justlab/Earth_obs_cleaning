@@ -120,14 +120,16 @@ get.satellite.vs.aqs = function(satellite, aqs)
     out
     }
 
-get.median.mse.map.data = function(
+get.median.improve.map.data = function(
       y.sat.name, the.satellite, satellite.product, n.workers,
       d, pred.grid, region.shape, satellite.files, model.full)
-   {# Get the date with the median MSE.
+   {# Get the date with the median improvement in MSE.
     date = (d
-        [, by = .(date = lubridate::as_date(time.sat, tz = "UTC")),
-            .(mse = mean((y.ground - y.ground.pred)^2))]
-        [which.min(mse - median(mse)), date])
+        [, by = .(date = lubridate::as_date(time.sat, tz = tz)),
+            .(improve =
+                mean((y.ground - y.ground.pred)^2) /
+                mean((y.ground - y.sat)^2))]
+        [which.min(improve - median(improve)), date])
 
     # Get overpasses for this data.
     sat = satellite.files[time == date]

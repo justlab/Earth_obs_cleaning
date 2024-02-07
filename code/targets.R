@@ -171,13 +171,13 @@ list(
         pred.at.aqs.sites, aqs.obs)),
 
     # Data for maps
-    tar_target(median.mse.map.data, get.median.mse.map.data(
+    tar_target(median.improve.map.data, get.median.improve.map.data(
         Wf$y.sat, Wf$satellite, Wf$satellite.product, config$n.workers,
         cv$mDT_wPred, pred.grid, region.shape, satellite.files, model.full)),
     tar_target(baltimore.map.data, get.baltimore.map.data(
         pred.grid, region.shape, satellite.files, model.full)),
-    tar_target(median.mse.map, pred.map(
-        median.mse.map.data$pred, pred.grid,
+    tar_target(median.improve.map, pred.map(
+        median.improve.map.data$pred, pred.grid,
         bg.sf = get_conus(), color.scale.name = "AOD",
         quantile.cap = .99)),
     tar_target(baltimore.map, pred.map(
@@ -205,9 +205,9 @@ list(
             ylab("SHAP value for MAIAC CWV") +
             theme(axis.title.x = element_blank(),
                   panel.grid.minor.x = element_blank()))),
-    tar_file(pred.map.median.mse.path, ggsave(
-        ipath("pred_map_median_mse"), width = 7, height = 7,
-        median.mse.map$plot)),
+    tar_file(pred.map.median.improve.path, ggsave(
+        ipath("pred_map_median_improve"), width = 7, height = 7,
+        median.improve.map$plot)),
     tar_file(pred.map.baltimore.path, ggsave(
         ipath("pred_map_baltimore"), width = 7, height = 7,
         baltimore.map$plot)),
