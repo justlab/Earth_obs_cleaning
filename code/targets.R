@@ -176,12 +176,36 @@ list(
         cv$mDT_wPred, pred.grid, region.shape, satellite.files, model.full)),
     tar_target(baltimore.map.data, get.baltimore.map.data(
         pred.grid, region.shape, satellite.files, model.full)),
+    tar_target(special.time.map.data,
+       {time.min = lubridate::as_datetime("2023-06-07T12:00:00-0400")
+        time.max = lubridate::as_datetime("2023-06-07T18:00:00-0400")
+          # A time of intense smoke from Canadian wildfires in the US.
+        corners = convert.crs(
+            cbind(
+                c(-81, -66),  # To the SW of Pennsylvania
+                c( 39,  48)), # To the NE of CONUS
+            crs.lonlat,
+            terra::crs(pred.grid))
+        cells = as.data.frame(terra::crop(tar_read(pred.grid), with(corners,
+            terra::ext(x[1], x[2], y[1], y[2]))))$cell.local
+        sat = satellite.files[time.min <= time & time <= time.max]
+        ns = pbapply::pbsapply(cl = n.workers, sat$path, \(p)
+            sum(!is.na(`[`(
+                as.data.frame(terra::rast(p)$AOD, na.rm = F),
+                cells, "AOD"))))
+        dt = sat[which.max(ns), time]
+        new.preds(
+            dt, dt, cells = cells,
+            targets = list(pred.grid, satellite.files, model.full))}),
     tar_target(median.improve.map, pred.map(
         median.improve.map.data$pred, pred.grid,
         bg.sf = get_conus(), color.scale.name = "AOD",
         quantile.cap = .99)),
     tar_target(baltimore.map, pred.map(
         baltimore.map.data, pred.grid,
+        bg.sf = get_conus(), color.scale.name = "AOD")),
+    tar_target(special.time.map, pred.map(
+        special.time.map.data, pred.grid,
         bg.sf = get_conus(), color.scale.name = "AOD")),
 
     # Manuscript graphics
@@ -211,6 +235,9 @@ list(
     tar_file(pred.map.baltimore.path, ggsave(
         ipath("pred_map_baltimore"), width = 7, height = 7,
         baltimore.map$plot)),
+    tar_file(pred.map.special.time.path, ggsave(
+        ipath("pred_map_special_time"), width = 7, height = 7,
+        special.time.map$plot)),
 
     # Render the manuscript.
     tarchetypes::tar_quarto(paper.render,

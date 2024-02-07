@@ -97,3 +97,11 @@ IG(tar_read(agreement.plot.path))
 #| fig-cap: foofy
 IG(tar_read(pred.map.median.improve.path))
 ```
+
+### Mapping a documented high-AOD event
+
+```{r pred.map.special.time}
+#| label: fig-map-special-time
+#| fig-cap: foofy2
+IG(tar_read(pred.map.special.time.path))
+```
