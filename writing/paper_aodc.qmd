@@ -94,7 +94,9 @@ IG(tar_read(agreement.plot.path))
 
 ```{r pred.map.median.improve}
 #| label: fig-map-median-improve
-#| fig-cap: foofy
+#| fig-cap: !expr caption
+caption = sprintf("From %s.",
+    tar_read(median.improve.map.data)$date)
 IG(tar_read(pred.map.median.improve.path))
 ```
 
@@ -102,6 +104,10 @@ IG(tar_read(pred.map.median.improve.path))
 
 ```{r pred.map.special.time}
 #| label: fig-map-special-time
-#| fig-cap: foofy2
+#| fig-cap: !expr caption
+caption = sprintf("From %s.", format(
+    lubridate::with_tz(tar_read(special.time.map.data)[1, time.sat],
+        "America/New_York"),
+    "%Y-%m-%dT%H:%M:%S%z"))
 IG(tar_read(pred.map.special.time.path))
 ```
