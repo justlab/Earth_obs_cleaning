@@ -193,12 +193,17 @@ pred.map = function(
         limits = NULL, quantile.cap = NULL)
    {reproject.res = .009
 
+    include.quality = "DQF" %in% colnames(d)
     g1 = pred.grid
-    g1$y.sat.old = NA_real_
-    g1$y.sat.new = NA_real_
-    g1$y.sat.old[d$cell] = d$y.sat.old
-    g1$y.sat.new[d$cell] = d$y.sat.new
-    g1 = terra::trim(g1[[c("y.sat.old", "y.sat.new")]])
+    raster.vars = c("y.sat.old", "y.sat.new",
+        (if (include.quality) "DQF"))
+    for (vname in raster.vars)
+       {g1[[vname]] = NA_real_
+        g1[[vname]][d$cell] = ifelse(
+            vname == "DQF" & is.na(d$y.sat.old) & is.na(d$y.sat.new),
+            NA_real_,
+            d[[vname]])}
+    g1 = terra::trim(g1[[raster.vars]])
     g = terra::trim(terra::project(
         g1,
         paste0("epsg:", crs.lonlat),
@@ -206,7 +211,7 @@ pred.map = function(
 
     d = melt(
         as.data.table(as.data.frame(g, xy = T, na.rm = F)),
-        id.vars = c("x", "y"))
+        id.vars = c("x", "y", (if (include.quality) "DQF")))
     setnames(d, c("x", "y"), c("lon", "lat"))
     if (!is.null(limits))
         d = d[
@@ -214,6 +219,12 @@ pred.map = function(
             limits$lat[1] <= lat & lat <= limits$lat[2]]
     if (!is.null(quantile.cap))
         d[, value := pmin(quantile(value, quantile.cap, na.rm = T), value)]
+    if (include.quality)
+       d = rbind(
+           cbind(d, qualities = "all qualities"),
+           cbind(d[DQF != 2], qualities = "excluding worst"))
+             # For DQF interpretation, see PDF p. 334 of
+             # http://web.archive.org/web/20230915201900if_/https://www.goes-r.gov/products/docs/PUG-L2+-vol5.pdf
 
     list(
         center.name = bg.sf[as.integer(st_intersects(
@@ -228,10 +239,14 @@ pred.map = function(
             scale_fill_distiller(name = color.scale.name,
                 palette = "Spectral", na.value = "transparent") +
             geom_sf(data = bg.sf, fill = NA, size = .1) +
-            ggspatial::annotation_scale(
-                data = data.frame(variable = "y.sat.old")) +
-            facet_grid(rows = "variable", labeller = labeller(variable =
-                c(y.sat.old = "Raw", y.sat.new = "Corrected"))) +
+            ggspatial::annotation_scale(data = cbind(
+                data.frame(variable = "y.sat.old"),
+                (if (include.quality) list(qualities = "all qualities")))) +
+            facet_grid(
+                rows = vars(variable),
+                cols = (if (include.quality) vars(qualities)),
+                labeller = labeller(variable =
+                    c(y.sat.old = "Raw", y.sat.new = "Corrected"))) +
             coord_sf(expand = F,
                 xlim = range(d$lon), ylim = range(d$lat)) +
             theme_void() +
