@@ -88,6 +88,14 @@ caption = with(list(d = agreement.plot.data(d)), sprintf(
 IG(tar_read(agreement.plot.path))
 ```
 
+## SHAP interpretation
+
+```{r shap_summary}
+#| label: fig-shap-summary
+#| fig-cap: Summary of SHAP contributions. Predictors ordered by decending mean absolute SHAP (printed along left).
+IG(tar_read(shap.summary.plot.path))
+```
+
 ## Mapping a typical day
 
 @fig-map-median-improve shows a tile on `r tar_read(median.improve.map.data)$date`.
