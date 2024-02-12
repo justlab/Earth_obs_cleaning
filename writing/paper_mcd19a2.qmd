@@ -320,7 +320,7 @@ For the model trained on all the data, the selected hyperparameters were `r v = 
 
 ### Mapping a typical day
 
-@fig-map-improve-mse shows a tile on `r tar_read(improve.mse.map.data)$date`.
+@fig-map-median-improve shows a tile on `r tar_read(median.improve.map.data)$date`.
 
 ```{r pred.map.median.improve}
 #| label: fig-map-median-improve

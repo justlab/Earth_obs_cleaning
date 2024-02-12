@@ -240,7 +240,7 @@ pred.map = function(
                 palette = "Spectral", na.value = "transparent") +
             geom_sf(data = bg.sf, fill = NA, size = .1) +
             ggspatial::annotation_scale(data = cbind(
-                data.frame(variable = "y.sat.old"),
+                data.table(variable = "y.sat.old"),
                 (if (include.quality) list(qualities = "all qualities")))) +
             facet_grid(
                 rows = vars(variable),
