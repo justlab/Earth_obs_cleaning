@@ -40,6 +40,60 @@ get_conus <- function(){
 ## * Satellite data
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+get.aodc = function(satellite, dates)
+   {# Download all the files first.
+    parent.dir = file.path(aodc.dir, satellite)
+    dir.create(parent.dir, recursive = T, showWarnings = F)
+    for (i in seq_along(dates))
+       {the.date = dates[i]
+        dest = file.path(parent.dir, sprintf("%04d%02d%02d",
+            year(the.date), month(the.date), mday(the.date)))
+        if (dir.exists(dest))
+            next
+        message("Downloading AODC: ", the.date)
+
+        aws.bucket = paste0("noaa-", satellite)
+        aws.prefix = sprintf(
+            "ABI-L2-AODC/%04d/%03d/",
+            year(the.date), yday(the.date))
+        tryCatch(
+            assert(0 == system2("aws", shQuote(c(
+                "s3", "cp", "--recursive", "--no-sign-request",
+                paste0("s3://", aws.bucket, "/", aws.prefix),
+                dest)))),
+            error = \(e)
+               {# Delete any created directory, so as not to suggest
+                # this day was downloaded successfully.
+                unlink(dest, recursive = T)
+                # Then rethrow.
+                stop(e)})}
+
+    # Now make a data table describing them.
+    message("Summarizing AODC files")
+    paths = dir(file.path(aodc.dir, satellite),
+        recursive = T, full.names = T)
+    parse.scan.time = \(kind)
+      # The format is described at
+      # https://github.com/awslabs/open-data-docs/tree/main/docs/noaa/noaa-goes16
+        lubridate::parse_date_time(
+            str_replace(
+                str_match(basename(paths),
+                    sprintf("_%s(\\d+)", kind))[,2],
+                "(\\d)(\\d)$", "\\1.\\2"),
+            orders = "%Y%j%H%M%OS", exact = T)
+    `[`(
+        data.table(
+            satellite = factor(satellite),
+            time = lubridate::as_datetime(round(.5 * (
+             # Take the midpoint of the starting and ending scan times.
+               (as.numeric(parse.scan.time("s")) +
+                as.numeric(parse.scan.time("e")))))),
+            tile = factor("whole"),
+              # The grid is the same for every file, so we can
+              # treat it as one big tile.
+            path = paths),
+        lubridate::as_date(time) %in% dates)}
+
 satellite.tiles = function(region.shape)
 # Get the names of the MODIS tiles needed to cover the buffer.
    {tiles = st_zm(drop = T, read_sf(layer = "Features", download(

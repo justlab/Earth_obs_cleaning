@@ -7,7 +7,6 @@ suppressPackageStartupMessages(
 
 data.dir = "/data"
 stopifnot(dir.exists(data.dir))
-aodc.dir = file.path(data.dir, "aodc")
 writing.out.dir = file.path(data.dir, "writing")
 dir.create(writing.out.dir, showWarnings = F)
 intermediate.path = function(...)
@@ -17,6 +16,9 @@ download = function(from, to, ...)
     download.update.meta(from, file.path(data.dir, "downloads"), to, ...)
 satellite_hdf_root = file.path(data.dir, 'earthdata')
 dir.create(satellite_hdf_root, showWarnings = F)
+aodc.dir = file.path(data.dir, "aodc")
+  # AODC doesn't come from Earthdata, so it needs its own download
+  # code etc.
 
 config = yaml::read_yaml(file.path(data.dir, "config.yaml"))
 

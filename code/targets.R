@@ -86,31 +86,7 @@ list(
                 dates = Wf$dates)
             setnames(d, "date", "time")
             d},
-        aodc =
-          # Proper automatic download is not yet implemented.
-           {paths = dir(file.path(aodc.dir, Wf$satellite),
-                recursive = T, full.names = T)
-            parse.scan.time = \(kind)
-              # The format is described at
-              # https://github.com/awslabs/open-data-docs/tree/main/docs/noaa/noaa-goes16
-                lubridate::parse_date_time(
-                    str_replace(
-                        str_match(basename(paths),
-                            sprintf("_%s(\\d+)", kind))[,2],
-                        "(\\d)(\\d)$", "\\1.\\2"),
-                    orders = "%Y%j%H%M%OS", exact = T)
-            `[`(
-                data.table(
-                    satellite = factor(Wf$satellite),
-                    time = lubridate::as_datetime(round(.5 * (
-                     # Take the midpoint of the starting and ending scan times.
-                       (as.numeric(parse.scan.time("s")) +
-                        as.numeric(parse.scan.time("e")))))),
-                    tile = factor("whole"),
-                      # The grid is the same for every file, so we can
-                      # treat it as one big tile.
-                    path = paths),
-                lubridate::as_date(time) %in% Wf$dates)})),
+        aodc = get.aodc(Wf$satellite, Wf$dates))),
     tar_target(pred.grid, format = terra.rast.fmt, get.pred.grid(
         Wf$satellite.product,
         region.shape,
