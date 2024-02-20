@@ -81,8 +81,8 @@ get.aqs.obs = function(years, grid)
                 paste0(aqs.url.root, "/", fname),
                 file.path("aqs", fname)))),
             select = c(
-               "Date Local", "Longitude", "Latitude",
-               "Event Type", "Sample Duration", "Arithmetic Mean"))
+                "Date Local", "Longitude", "Latitude",
+                "Event Type", "Sample Duration", "Arithmetic Mean"))
         setnames(d, str_replace_all(names(d), " ", "."))
         d[
             Sample.Duration %in% c("24 HOUR", "24-HR BLK AVG") &
