@@ -157,7 +157,7 @@ list(
     tarchetypes::tar_render(cv.report.render,
         'writing/cv_report.Rmd'),
     tar_target(cv.report,
-        file.copy(cv.report.render[1], writing.out.dir)),
+        file.copy(cv.report.render[1], writing.out.dir, overwrite = T)),
 
     # Compare AQS to our predictions
     tar_target(aqs.obs, format = "fst_dt", get.aqs.obs(
