@@ -6,7 +6,7 @@ A high-end machine may be required for running large workflows, but shouldn't be
 
 1. Create a data directory, and a subdirectory `/tmp` within it. The data directory will store downloaded data, cached results, and temporary files. For large workflows, expect terabytes of stuff to go into it.
 2. Create a configuration file named `config.yaml` in the data directory. See the directory `example` in the Earth_obs_cleaning repository for examples.
-3. To build the Docker image and use it to create a container and start R interactively, use the command `sudo docker build --tag=earth_obs_cleaning . && sudo docker run --rm -it --mount type=bind,src=DPATH,target=/data -e EARTHDATA_USERNAME -e EARTHDATA_PASSWORD earth_obs_cleaning`
+3. To build the Docker image and use it to create a container and start R interactively, use the command `docker build --tag=earth_obs_cleaning . && docker run --rm -it --mount type=bind,src=DPATH,target=/data -e EARTHDATA_USERNAME -e EARTHDATA_PASSWORD earth_obs_cleaning`
     - Replace `DPATH` with the path to your data directory.
     - Notice that the environment variables `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD` should be set in your real environment; these are [NASA Earthdata login credentials](https://urs.earthdata.nasa.gov/users/new) for downloading satellite data.
     - The `docker run` part uses `--rm` to automatically delete the container after the R process exits. This is convenient but not necessary.
