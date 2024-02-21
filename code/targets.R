@@ -137,14 +137,18 @@ list(
 
     # Compare AQS to our predictions
     tar_target(aqs.obs, format = "fst_dt", get.aqs.obs(
-        Wf$years, pred.grid)),
+        daily.sat(), Wf$years, pred.grid)),
     tar_target(pred.at.aqs.sites, format = "fst_dt", new.preds.compact(
-        dt.start = lubridate::as_datetime(min(aqs.obs$date) - 1),
-        dt.end = lubridate::as_datetime(max(aqs.obs$date) + 1),
+        dt.start = (if (daily.sat())
+            lubridate::as_datetime(min(aqs.obs$time) - 1) else
+            min(aqs.obs$time)),
+        dt.end = (if (daily.sat())
+            lubridate::as_datetime(max(aqs.obs$time) + 1) else
+            max(aqs.obs$time) + lubridate::hours(1)),
         cells = sort(unique(aqs.obs$cell)),
         targets = list(pred.grid, satellite.files, model.full))),
     tar_target(satellite.vs.aqs, get.satellite.vs.aqs(
-        pred.at.aqs.sites, aqs.obs)),
+        daily.sat(), pred.at.aqs.sites, aqs.obs)),
 
     # Data for maps
     tar_target(median.improve.map.data, get.median.improve.map.data(
