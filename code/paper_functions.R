@@ -132,15 +132,24 @@ get.satellite.vs.aqs = function(daily, satellite, aqs)
     # satellite value, more than one AQS value, or both. We consider
     # all combinations and weight them to sum to 1 per cell-time.
     message("Computing statistics")
-    d[, by = .(time, cell), weight := 1 / .N]
-    c(
-        list(
-            n.aqs.obs = d[, uniqueN(aqs.i)],
-            n.cell.times = uniqueN(d[, .(time, cell)])),
-        sapply(c("old", "new"), simplify = F, function(sv.type)
-            cov.wt(
-                d[, .(get(paste0("y.sat.", sv.type)), y.aqs)],
-                wt = d$weight, cor = T, method = "ML")$cor[1, 2]))}
+    f = \(d)
+       {d = copy(d)
+        d[, by = .(time, cell), weight := 1 / .N]
+        cbind(
+            data.table(
+                n.aqs.obs = d[, uniqueN(aqs.i)],
+                n.cell.times = uniqueN(d[, .(time, cell)])),
+            as.data.table(sapply(c("old", "new"), simplify = F, function(sv.type)
+                cov.wt(
+                    d[, .(get(paste0("y.sat.", sv.type)), y.aqs)],
+                    wt = d$weight, cor = T, method = "ML")$cor[1, 2])))}
+    if (daily)
+        f(d)
+    else
+        rbind(
+            cbind(hour = "all", f(d)),
+            d[, keyby = hour(lubridate::with_tz(time, "Etc/GMT+5")),
+                f(.SD), .SDcols = colnames(d)])}
 
 get.median.improve.map.data = function(
       y.sat.name, the.satellite, satellite.product, n.workers,
