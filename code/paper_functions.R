@@ -64,49 +64,61 @@ envelope.tester = \(obs, pred, threshold = 0.6)
 
 #' Get observations of PM_{2.5} from the Environmental Protection
 #' Agency's (EPA) Air Quality System. The unit is μg/m^3.
-#' `daily` is T for daily data or F for hourly data.
 #' File source: https://aqs.epa.gov/aqsweb/airdata/download_files.html#Daily
 #' Documentation: https://aqs.epa.gov/aqsweb/documents/about_aqs_data.html
-get.aqs.obs = function(daily, years, grid)
-   {aqs.url.root = "https://aqs.epa.gov/aqsweb/airdata"
+get.aqs.obs = function(time.unit, years, grid)
+   {assert(time.unit %in% c("hour", "day", "year"))
+    aqs.url.root = "https://aqs.epa.gov/aqsweb/airdata"
     parameter.code = 88101L
       # PM_{2.5} from a federally approved reference or equivalent
       # method (FRM/FEM).
+    min.days.for.annual = 100L
 
     assert(file.exists("code/openssl_workaround.conf"))
     Sys.setenv(OPENSSL_CONF = "code/openssl_workaround.conf")
     d = rbindlist(lapply(years, function(the.year)
        {message("AQS ", the.year)
-        fname = sprintf("%s_%d_%d.zip",
-            (if (daily) "daily" else "hourly"),
-            parameter.code,
-            the.year)
-        d = fread(
-            cmd = paste("unzip -p ", shQuote(download(
-                paste0(aqs.url.root, "/", fname),
-                file.path("aqs", fname)))),
-            select = c("Longitude", "Latitude", (
-                if (daily)
-                   c("Date Local", "Event Type", "Sample Duration", "Arithmetic Mean")
-                else
-                   c("Date GMT", "Time GMT", "Sample Measurement"))))
+        fname = switch(time.unit,
+            hour = sprintf("hourly_%d_%d.zip",
+                parameter.code,
+                the.year),
+            day = sprintf("daily_%d_%d.zip",
+                parameter.code,
+                the.year),
+            year = sprintf("annual_conc_by_monitor_%d.zip",
+                the.year))
+        d = fread(cmd = paste("unzip -p ", shQuote(download(
+            paste0(aqs.url.root, "/", fname),
+            file.path("aqs", fname)))))
         setnames(d, str_replace_all(names(d), " ", "."))
-        if (daily) d[
-            Sample.Duration %in% c("24 HOUR", "24-HR BLK AVG") &
-                Event.Type != "Excluded",
-            .(time = Date.Local,
-                lon = Longitude, lat = Latitude,
-                value = Arithmetic.Mean)]
-        else d[, .(
-            time = `-`(
-                lubridate::fast_strptime(
-                    paste(Date.GMT, Time.GMT),
-                    "%Y-%m-%d %H:%M", lt = F),
-                # Subtract 1 hour, since AQS labels the end rather
-                # than the beginning of each hour spanned.
-                lubridate::hours(1)),
-            lon = Longitude, lat = Latitude,
-            value = Sample.Measurement)]}))
+        switch(time.unit,
+            hour = d[,
+                .(
+                    time = `-`(
+                        lubridate::fast_strptime(
+                            paste(Date.GMT, Time.GMT),
+                            "%Y-%m-%d %H:%M", lt = F),
+                        # Subtract 1 hour, since AQS labels the end rather
+                        # than the beginning of each hour spanned.
+                        lubridate::hours(1)),
+                    lon = Longitude, lat = Latitude,
+                    value = Sample.Measurement)],
+            day = d[
+                Sample.Duration %in% c("24 HOUR", "24-HR BLK AVG") &
+                    Event.Type != "Excluded",
+                .(
+                    time = Date.Local,
+                    lon = Longitude, lat = Latitude,
+                    value = Arithmetic.Mean)],
+            year = d[
+                Parameter.Code == parameter.code &
+                    Pollutant.Standard == "PM25 Annual 2012" &
+                    Required.Day.Count >= min.days.for.annual &
+                    Completeness.Indicator == "Y",
+                .(
+                    time = the.year,
+                    lon = Longitude, lat = Latitude,
+                    value = as.numeric(Arithmetic.Mean))])}))
 
     d[, cell := as.integer(terra::cellFromXY(grid,
         convert.crs(cbind(lon, lat), crs.lonlat, terra::crs(grid))))]
@@ -115,18 +127,20 @@ get.aqs.obs = function(daily, years, grid)
     setcolorder(d)
     d}
 
-get.satellite.vs.aqs = function(daily, satellite, aqs)
-   {message("Merging with AQS")
+get.satellite.vs.aqs = function(time.unit, satellite, aqs)
+   {assert(time.unit %in% c("hour", "day", "year"))
+    if (time.unit == "year")
+        return(get.satellite.vs.aqs.yearly(satellite, aqs))
+    message("Merging with AQS")
     d = merge(by = c("time", "cell"),
-        satellite[, .(cell, y.sat.old, y.sat.new, time =
-            if (daily)
-                lubridate::as_date(time.sat, tz = "Etc/GMT+6")
-            else
-                lubridate::floor_date(time.sat, "hour"))],
+        satellite[, .(cell, y.sat.old, y.sat.new, time = switch(time.unit,
+            day = lubridate::as_date(time.sat, tz = "Etc/GMT+6"),
+            hour = lubridate::floor_date(time.sat, "hour")))],
         cbind(aqs, aqs.i = seq_len(nrow(aqs)))[, .(
             aqs.i, cell, y.aqs = value,
-            time = if (daily) time else
-                lubridate::floor_date(time, "hour"))])
+            time = switch(time.unit,
+                day = time,
+                hour = lubridate::floor_date(time, "hour")))])
     # Find the weighted correlation of old and new satellite values
     # with AQS values. A single cell-time can have more than one
     # satellite value, more than one AQS value, or both. We consider
@@ -143,13 +157,35 @@ get.satellite.vs.aqs = function(daily, satellite, aqs)
                 cov.wt(
                     d[, .(get(paste0("y.sat.", sv.type)), y.aqs)],
                     wt = d$weight, cor = T, method = "ML")$cor[1, 2])))}
-    if (daily)
-        f(d)
-    else
+    if (time.unit == "hour")
         rbind(
             cbind(hour = "all", f(d)),
             d[, keyby = hour(lubridate::with_tz(time, "Etc/GMT+5")),
-                f(.SD), .SDcols = colnames(d)])}
+                f(.SD), .SDcols = colnames(d)])
+    else
+        f(d)}
+
+get.satellite.vs.aqs.yearly = function(sat, aqs)
+   {min.days.in.month = 10L
+    min.months = 12L
+
+    # Summarize the satellite predictions into year-cells.
+    sat = sat[cell %in% unique(aqs$cell)]
+    sat[, date := lubridate::as_date(time.sat, tz = "Etc/GMT+6")]
+    sat = sat[, by = .(year(date), month(date), cell), if (uniqueN(date) >= min.days.in.month) .(
+        y.sat.old = mean(y.sat.old / 10^Wf$pred.round.digits),
+        y.sat.new = mean(y.sat.new / 10^Wf$pred.round.digits))]
+    sat = sat[, by = .(time = year, cell), if (uniqueN(month) >= min.months) .(
+        y.sat.old = mean(y.sat.old),
+        y.sat.new = mean(y.sat.new))]
+
+    aqs = copy(aqs)
+    setnames(aqs, "value", "y.aqs")
+
+    merge(by = c("time", "cell"), aqs, sat)[, .(
+        n.cell.times = uniqueN(data.table(time, cell)),
+        old = cor(y.aqs, y.sat.old),
+        new = cor(y.aqs, y.sat.new))]}
 
 get.median.improve.map.data = function(
       y.sat.name, the.satellite, satellite.product, n.workers,
