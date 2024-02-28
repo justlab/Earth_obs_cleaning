@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
 FROM rocker/r-ver@sha256:fab164fc3015cfeb810a5977c1bef8f8385f75a1f7623eca045b9f4be6f8872a
+SHELL ["/bin/bash", "-c"]
+
 RUN apt-get -qq update
 RUN apt-get -qq install \
     libgdal-dev libudunits2-dev libssl-dev libglpk-dev libxt-dev \
@@ -16,14 +18,10 @@ WORKDIR /src
 COPY code/docker_Rprofile_extra.R ex
 RUN cat ex >>$R_HOME/etc/Rprofile.site && rm ex
 RUN R -q -e 'install.packages("remotes")'
-RUN R -q -e 'remotes::install_github("rstudio/renv@v1.0.2")'
+RUN R -q -e 'remotes::install_github("rstudio/renv@v1.0.4")'
 
-RUN R -q -e 'renv::init()' && rm .Rprofile
-COPY renv.lock renv.lock
-COPY writing writing
-COPY code code
-
-ENV RENV_PATHS_ROOT=/data/renv TMPDIR=/data/tmp
+ENV RENV_PATHS_ROOT=/data/renv
 ENV OMP_NUM_THREADS=1
   # Work around https://github.com/dmlc/xgboost/issues/2094
+RUN ln -s /data/src/{code,writing,renv.lock} .
 ENTRYPOINT ["R", "-q"]

@@ -23,6 +23,7 @@ suppressPackageStartupMessages(
   })
 the.sat = tools::toTitleCase(Wf$satellite)
 IG = knitr::include_graphics
+knitr::opts_knit$set(root.dir = "/data/src/writing")
 ```
 
 Rendered: `r Sys.time()`

@@ -130,10 +130,8 @@ list(
     # Summarize and report on the CV
     tar_target(cv.summary, get.cv.summary(
         cv$mDT_wPred)),
-    tarchetypes::tar_render(cv.report.render,
+    tarchetypes::tar_render(cv.report,
         'writing/cv_report.Rmd'),
-    tar_target(cv.report,
-        file.copy(cv.report.render[1], writing.out.dir, overwrite = T)),
 
     # Compare AQS to our predictions
     tar_target(aqs.obs, format = "fst_dt", get.aqs.obs(
@@ -199,7 +197,7 @@ list(
 
     # Manuscript graphics
     tar_target(ipath,
-       {idir = file.path(workflow.dir, "img")
+       {idir = file.path(getwd(), "writing/img")
         dir.create(idir, showWarnings = F)
         \(name) file.path(idir, paste0(name, ".png"))}),
     tar_file(agreement.plot.path, ggsave(
@@ -229,10 +227,8 @@ list(
         special.time.map$plot)),
 
     # Render the manuscript.
-    tarchetypes::tar_quarto(paper.render,
+    tarchetypes::tar_quarto(paper,
         sprintf('writing/paper_%s.qmd', Wf$satellite.product), quiet = F),
-    tar_target(paper,
-        file.copy(paper.render[1], writing.out.dir, overwrite = T)),
 
     # Do a supplementary analysis for AODC.
     if (Wf$satellite.product == "aodc") list(
