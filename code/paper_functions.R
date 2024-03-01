@@ -66,13 +66,13 @@ envelope.tester = \(obs, pred, threshold = 0.6)
 #' Agency's (EPA) Air Quality System. The unit is μg/m^3.
 #' File source: https://aqs.epa.gov/aqsweb/airdata/download_files.html#Daily
 #' Documentation: https://aqs.epa.gov/aqsweb/documents/about_aqs_data.html
+min.days.for.annual.aqs = 100L
 get.aqs.obs = function(time.unit, years, grid)
    {assert(time.unit %in% c("hour", "day", "year"))
     aqs.url.root = "https://aqs.epa.gov/aqsweb/airdata"
     parameter.code = 88101L
       # PM_{2.5} from a federally approved reference or equivalent
       # method (FRM/FEM).
-    min.days.for.annual = 100L
 
     assert(file.exists("code/openssl_workaround.conf"))
     Sys.setenv(OPENSSL_CONF = "code/openssl_workaround.conf")
@@ -113,7 +113,7 @@ get.aqs.obs = function(time.unit, years, grid)
             year = d[
                 Parameter.Code == parameter.code &
                     Pollutant.Standard == "PM25 Annual 2012" &
-                    Required.Day.Count >= min.days.for.annual &
+                    Required.Day.Count >= min.days.for.annual.aqs &
                     Completeness.Indicator == "Y",
                 .(
                     time = the.year,
@@ -166,23 +166,49 @@ get.satellite.vs.aqs = function(time.unit, satellite, aqs)
         f(d)}
 
 get.satellite.vs.aqs.yearly = function(sat, aqs)
-   {min.days.in.month = 10L
+   {tz = "Etc/GMT+6"
+    min.days.in.month = 10L
     min.months = 12L
 
     # Summarize the satellite predictions into year-cells.
     sat = sat[cell %in% unique(aqs$cell)]
-    sat[, date := lubridate::as_date(time.sat, tz = "Etc/GMT+6")]
-    sat = sat[, by = .(year(date), month(date), cell), if (uniqueN(date) >= min.days.in.month) .(
-        y.sat.old = mean(y.sat.old / 10^Wf$pred.round.digits),
-        y.sat.new = mean(y.sat.new / 10^Wf$pred.round.digits))]
-    sat = sat[, by = .(time = year, cell), if (uniqueN(month) >= min.months) .(
-        y.sat.old = mean(y.sat.old),
-        y.sat.new = mean(y.sat.new))]
+    sat[, date := lubridate::as_date(time.sat, tz = tz)]
+    sat[, year := year(date)]
+    sat = merge(by = c("year", "cell"), sat, sat
+      # Find year-cells with enough data.
+        [, by = .(year, month(date), cell),
+            if (uniqueN(date) >= min.days.in.month) 1]
+        [, by = .(year, cell),
+            if (uniqueN(month) >= min.months) 1]
+        [,
+            .(year, cell)])
+    setkey(sat, cell, date)
+    sat = (sat
+        [, by = .(date, cell), .(
+            y.sat.old = mean(y.sat.old / 10^Wf$pred.round.digits),
+            y.sat.new = mean(y.sat.new / 10^Wf$pred.round.digits))]
+        [, by = .(time = year(date), cell),
+           {# For the weight of each day within its year, use 1 (for
+            # the day itself) plus the number of other days in the
+            # year to which it's closest.
+            begin = as.numeric(lubridate::make_date(time))
+            end = as.numeric(lubridate::make_date(time, 12, 31))
+            dn = as.numeric(date)
+            w =
+                1 +
+                c(dn[1] - begin, (diff(dn) - 1)/2) +
+                c((diff(dn) - 1)/2, end - dn[length(dn)])
+            list(
+                y.sat.old = weighted.mean(y.sat.old, w),
+                y.sat.new = weighted.mean(y.sat.new, w))}])
 
     aqs = copy(aqs)
     setnames(aqs, "value", "y.aqs")
 
     merge(by = c("time", "cell"), aqs, sat)[, .(
+        tz,
+        min.days.in.month,
+        min.months,
         n.cell.times = uniqueN(data.table(time, cell)),
         old = cor(y.aqs, y.sat.old),
         new = cor(y.aqs, y.sat.new))]}
