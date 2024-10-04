@@ -23,3 +23,11 @@ A high-end machine may be required for running large workflows, but shouldn't be
 Run a Docker container as described above in step 5 above. (If you installed `renv` packages in this R session, quit and restart.) You can now use `tar_make` to build targets.
 
 To run the test workflow, ensure `test.small.daterange` in the configuration file is `TRUE`. Then say `tar_make(cv)` to try cross-validation with a few days of data. This is pretty fast, taking only a few minutes, aside from downloading the data. Use `tar_read` (as in `tar_read(cv)`) to see the results.
+
+# License
+
+This program is copyright 2019–2024 Kodi B. Arfer, Allan C. Just, Yang Liu, and Johnathan Rush.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU General Public License](http://www.gnu.org/licenses) for more details.
