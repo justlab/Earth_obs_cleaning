@@ -67,7 +67,8 @@ list(
         assert(dir.create(intermediate.path("aeronet")))
         assert(0 == system2("tar", shQuote(c(
             "--extract", "--file", aer_orig_obs_path,
-            "--directory", intermediate.path("aeronet")))))
+            "--directory", intermediate.path("aeronet"),
+            "--no-same-owner"))))
         intermediate.path("aeronet/AOD/AOD20/ALL_POINTS/")}),
     tar_target(aer_stations, format = 'fst_dt', fread(
         aer_stn_path, col.names = c('Site_Name', 'lon', 'lat', 'elevm'))),
