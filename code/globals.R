@@ -62,7 +62,7 @@ Wf$time.example = switch(Wf$satellite.product,
     aodc = lubridate::as_datetime("2020-11-21 20:27:30 UTC"),
     tropomi = as.Date("2021-08-01"))
 if (!is.null(Wf$test.small.daterange) && Wf$test.small.daterange)
-    Wf$dates = lubridate::as.date(Wf$time.example) + (-1:1)
+    Wf$dates = lubridate::as_date(Wf$time.example) + (-1:1)
 Wf$years = sort(unique(year(Wf$dates)))
 
 Wf$y.sat = switch(Wf$satellite.product,
