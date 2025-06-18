@@ -1,12 +1,13 @@
 # syntax=docker/dockerfile:1
 
-FROM rocker/r-ver@sha256:fab164fc3015cfeb810a5977c1bef8f8385f75a1f7623eca045b9f4be6f8872a
+FROM rocker/r-ver:4.2.1
 SHELL ["/bin/bash", "-c"]
 
 RUN apt-get -qq update
 RUN apt-get -qq install \
     libgdal-dev libudunits2-dev libssl-dev libglpk-dev libxt-dev \
-    curl awscli pandoc
+    curl awscli pandoc libfontconfig1-dev cmake libharfbuzz-dev libfribidi-dev \
+    libcairo2-dev
       # libxt doesn't seem to be strictly necessary, but having it
       # prevents a warning from R's `grSoftVersion()`.
 RUN curl >quarto.deb -L https://github.com/quarto-dev/quarto-cli/releases/download/v1.3.450/quarto-1.3.450-linux-amd64.deb && \
