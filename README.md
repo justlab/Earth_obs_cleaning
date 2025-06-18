@@ -26,7 +26,7 @@ To run the test workflow, ensure `test.small.daterange` in the configuration fil
 
 # License
 
-This program is copyright 2019–2024 Kodi B. Arfer, Allan C. Just, Yang Liu, and Johnathan Rush.
+This program is copyright 2019–2025 Kodi B. Arfer, Allan C. Just, Yang Liu, and Johnathan Rush.
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
