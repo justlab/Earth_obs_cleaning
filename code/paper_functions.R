@@ -287,18 +287,17 @@ pred.map = function(
    {reproject.res = .009
 
     include.quality = "DQF" %in% colnames(d)
-    g1 = pred.grid
     raster.vars = c("y.sat.old", "y.sat.new",
         (if (include.quality) "DQF"))
+    g = pred.grid
     for (vname in raster.vars)
-       {g1[[vname]] = NA_real_
-        g1[[vname]][d$cell] = ifelse(
+       {g[[vname]] = NA_real_
+        g[[vname]][d$cell] = ifelse(
             vname == "DQF" & is.na(d$y.sat.old) & is.na(d$y.sat.new),
             NA_real_,
             d[[vname]])}
-    g1 = terra::trim(g1[[raster.vars]])
     g = terra::trim(terra::project(
-        g1,
+        terra::trim(g[[raster.vars]]),
         paste0("epsg:", crs.lonlat),
         res = reproject.res))
 
