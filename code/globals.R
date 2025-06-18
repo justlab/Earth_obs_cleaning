@@ -46,7 +46,7 @@ stopifnot(is.character(Wf$region))
 # but might be added later.
 
 Wf$dates = switch(Wf$satellite.product,
-    mcd19a2 = c("2000-01-01", "2023-12-31"),
+    mcd19a2 = c("2000-01-01", "2024-12-31"),
     aodc = c("2020-10-25", "2023-12-31"),
       # "The land spectral surface relationship was updated on October 24, 2020."
       # We start a day later in case of off-by-one issues.
