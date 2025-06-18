@@ -10,7 +10,7 @@ RUN apt-get -qq install \
     libcairo2-dev
       # libxt doesn't seem to be strictly necessary, but having it
       # prevents a warning from R's `grSoftVersion()`.
-RUN curl >quarto.deb -L https://github.com/quarto-dev/quarto-cli/releases/download/v1.3.450/quarto-1.3.450-linux-amd64.deb && \
+RUN curl >quarto.deb -L https://github.com/quarto-dev/quarto-cli/releases/download/v1.7.32/quarto-1.7.32-linux-amd64.deb && \
     apt-get -qq install ./quarto.deb && \
     rm quarto.deb
 RUN apt-get clean
