@@ -327,7 +327,7 @@ For the model trained on all the data, the selected hyperparameters were `r v = 
 #| label: fig-map-median-improve
 #| fig-cap: !expr caption
 caption = sprintf("Maps of typical MAIAC and Corrected AOD. Day selected as having the median improvement in MSE at AERONET sites. The map is centered on %s.",
-    tar_read(median.improve.map)$center.name)
+    tar_read(median.improve.map.center)$NAME)
 IG(tar_read(pred.map.median.improve.path))
 ```
 

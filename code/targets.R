@@ -162,6 +162,16 @@ list(
     tar_target(median.improve.map.data, get.median.improve.map.data(
         Wf$y.sat, Wf$satellite, Wf$satellite.product, config$n.workers,
         cv$mDT_wPred, pred.grid, region.shape, satellite.files, model.full)),
+    tar_target(median.improve.map.center,
+        get_conus()[as.integer(st_intersects(
+            st_centroid(st_as_sfc(st_bbox(st_transform(crs = crs.lonlat,
+                st_as_sf(
+                     median.improve.map.data$pred[,
+                         .(sat.coords.x, sat.coords.y)],
+                     coords = c(1, 2),
+                     crs = st_crs(tar_read(pred.grid))))))),
+            st_transform(get_conus(), crs = crs.lonlat))),]),
+
     tar_target(baltimore.map.data, get.baltimore.map.data(
         pred.grid, region.shape, satellite.files, model.full)),
     tar_target(special.time.map.data,
@@ -185,16 +195,6 @@ list(
         new.preds(
             dt, dt, cells = cells,
             targets = list(pred.grid, satellite.files, model.full))}),
-    tar_target(median.improve.map, pred.map(
-        median.improve.map.data$pred, pred.grid,
-        bg.sf = get_conus(), color.scale.name = "AOD",
-        quantile.cap = .99)),
-    tar_target(baltimore.map, pred.map(
-        baltimore.map.data, pred.grid,
-        bg.sf = get_conus(), color.scale.name = "AOD")),
-    tar_target(special.time.map, pred.map(
-        special.time.map.data, pred.grid,
-        bg.sf = get_conus(), color.scale.name = "AOD")),
 
     # Manuscript graphics
     tar_target(ipath,
@@ -219,13 +219,20 @@ list(
                   panel.grid.minor.x = element_blank()))),
     tar_file(pred.map.median.improve.path, ggsave(
         ipath("pred_map_median_improve"), width = 7, height = 7,
-        median.improve.map$plot)),
+        pred.map(
+            median.improve.map.data$pred, pred.grid,
+            bg.sf = get_conus(), color.scale.name = "AOD",
+            quantile.cap = .99))),
     tar_file(pred.map.baltimore.path, ggsave(
         ipath("pred_map_baltimore"), width = 7, height = 7,
-        baltimore.map$plot)),
+        pred.map(
+            baltimore.map.data, pred.grid,
+            bg.sf = get_conus(), color.scale.name = "AOD"))),
     tar_file(pred.map.special.time.path, ggsave(
         ipath("pred_map_special_time"), width = 7, height = 7,
-        special.time.map$plot)),
+        pred.map(
+            special.time.map.data, pred.grid,
+            bg.sf = get_conus(), color.scale.name = "AOD"))),
 
     # Render the manuscript.
     tarchetypes::tar_quarto(paper,

@@ -319,28 +319,20 @@ pred.map = function(
              # For DQF interpretation, see PDF p. 334 of
              # http://web.archive.org/web/20230915201900if_/https://www.goes-r.gov/products/docs/PUG-L2+-vol5.pdf
 
-    list(
-        center.name = bg.sf[as.integer(st_intersects(
-            st_as_sf(
-                d[, .(
-                    mean(c(max(lon), min(lon))),
-                    mean(c(max(lat), min(lat))))],
-                coords = c(1, 2), crs = crs.lonlat),
-            st_transform(bg.sf, crs = crs.lonlat))),]$NAME,
-        plot = ggplot() +
-            geom_raster(aes(lon, lat, fill = value), data = d) +
-            scale_fill_distiller(name = color.scale.name,
-                palette = "Spectral", na.value = "transparent") +
-            geom_sf(data = bg.sf, fill = NA, size = .1) +
-            ggspatial::annotation_scale(data = cbind(
-                data.table(variable = "y.sat.old"),
-                (if (include.quality) list(qualities = "all qualities")))) +
-            facet_grid(
-                rows = vars(variable),
-                cols = (if (include.quality) vars(qualities)),
-                labeller = labeller(variable =
-                    c(y.sat.old = "Raw", y.sat.new = "Corrected"))) +
-            coord_sf(expand = F,
-                xlim = range(d$lon), ylim = range(d$lat)) +
-            theme_void() +
-            theme(strip.text = element_text(size = 13)))}
+    ggplot() +
+        geom_raster(aes(lon, lat, fill = value), data = d) +
+        scale_fill_distiller(name = color.scale.name,
+            palette = "Spectral", na.value = "transparent") +
+        geom_sf(data = bg.sf, fill = NA, size = .1) +
+        ggspatial::annotation_scale(data = cbind(
+            data.table(variable = "y.sat.old"),
+            (if (include.quality) list(qualities = "all qualities")))) +
+        facet_grid(
+            rows = vars(variable),
+            cols = (if (include.quality) vars(qualities)),
+            labeller = labeller(variable =
+                c(y.sat.old = "Raw", y.sat.new = "Corrected"))) +
+        coord_sf(expand = F,
+            xlim = range(d$lon), ylim = range(d$lat)) +
+        theme_void() +
+        theme(strip.text = element_text(size = 13))}
