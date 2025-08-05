@@ -191,5 +191,2243 @@
         "title": "Observations and impacts of transported Canadian wildfire smoke on ozone and aerosol air quality in the Maryland region on June 9–12, 2015",
         "type": "article-journal",
         "volume": "66"
+    },
+    {
+        "DOI": "10.1029/2018JD029598",
+        "ISSN": "2169-8996",
+        "URL": "https://onlinelibrary.wiley.com/doi/abs/10.1029/2018JD029598",
+        "_eprint": "https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2018JD029598",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Sayer",
+                "given": "Andrew M."
+            },
+            {
+                "family": "Hsu",
+                "given": "N. Christina"
+            },
+            {
+                "family": "Lee",
+                "given": "Jaehwa"
+            },
+            {
+                "family": "Kim",
+                "given": "Woogyung V."
+            },
+            {
+                "family": "Dutcher",
+                "given": "Steven T."
+            }
+        ],
+        "container-title": "Journal of Geophysical Research: Atmospheres",
+        "id": "sayer2019",
+        "issue": "8",
+        "issued": {
+            "date-parts": [
+                [
+                    2019
+                ]
+            ]
+        },
+        "key": "GPNWY86S",
+        "language": "en",
+        "libraryid": "2",
+        "note": "_eprint: https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2018JD029598",
+        "page": "4658-4688",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "rights": "©2019. American Geophysical Union. All Rights Reserved.",
+        "source": "Wiley Online Library",
+        "title": "Validation, Stability, and Consistency of MODIS Collection 6.1 and VIIRS Version 1 Deep Blue Aerosol Data Over Land",
+        "type": "article-journal",
+        "volume": "124"
+    },
+    {
+        "DOI": "10.5194/amt-13-5955-2020",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/13/5955/2020/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Zhang",
+                "given": "Hai"
+            },
+            {
+                "family": "Kondragunta",
+                "given": "Shobha"
+            },
+            {
+                "family": "Laszlo",
+                "given": "Istvan"
+            },
+            {
+                "family": "Zhou",
+                "given": "Mi"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "zhang2020",
+        "issue": "11",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    11,
+                    9
+                ]
+            ]
+        },
+        "key": "REFMZGRX",
+        "language": "English",
+        "libraryid": "2",
+        "page": "5955-5975",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Improving GOES Advanced Baseline Imager (ABI) aerosol optical depth (AOD) retrievals using an empirical bias correction algorithm",
+        "type": "article-journal",
+        "volume": "13"
+    },
+    {
+        "DOI": "10.1289/EHP5430",
+        "ISSN": "0091-6765, 1552-9924",
+        "URL": "https://ehp.niehs.nih.gov/doi/10.1289/EHP5430",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Armstrong",
+                "given": "Ben"
+            },
+            {
+                "family": "Sera",
+                "given": "Francesco"
+            },
+            {
+                "family": "Vicedo-Cabrera",
+                "given": "Ana Maria"
+            },
+            {
+                "family": "Abrutzky",
+                "given": "Rosana"
+            },
+            {
+                "family": "Åström",
+                "given": "Daniel Oudin"
+            },
+            {
+                "family": "Bell",
+                "given": "Michelle L."
+            },
+            {
+                "family": "Chen",
+                "given": "Bing-Yu"
+            },
+            {
+                "family": "De Sousa Zanotti Stagliorio Coelho",
+                "given": "Micheline"
+            },
+            {
+                "family": "Correa",
+                "given": "Patricia Matus"
+            },
+            {
+                "family": "Dang",
+                "given": "Tran Ngoc"
+            },
+            {
+                "family": "Diaz",
+                "given": "Magali Hurtado"
+            },
+            {
+                "family": "Dung",
+                "given": "Do Van"
+            },
+            {
+                "family": "Forsberg",
+                "given": "Bertil"
+            },
+            {
+                "family": "Goodman",
+                "given": "Patrick"
+            },
+            {
+                "family": "Guo",
+                "given": "Yue-Liang Leon"
+            },
+            {
+                "family": "Guo",
+                "given": "Yuming"
+            },
+            {
+                "family": "Hashizume",
+                "given": "Masahiro"
+            },
+            {
+                "family": "Honda",
+                "given": "Yasushi"
+            },
+            {
+                "family": "Indermitte",
+                "given": "Ene"
+            },
+            {
+                "family": "Íñiguez",
+                "given": "Carmen"
+            },
+            {
+                "family": "Kan",
+                "given": "Haidong"
+            },
+            {
+                "family": "Kim",
+                "given": "Ho"
+            },
+            {
+                "family": "Kyselý",
+                "given": "Jan"
+            },
+            {
+                "family": "Lavigne",
+                "given": "Eric"
+            },
+            {
+                "family": "Michelozzi",
+                "given": "Paola"
+            },
+            {
+                "family": "Orru",
+                "given": "Hans"
+            },
+            {
+                "family": "Ortega",
+                "given": "Nicolás Valdés"
+            },
+            {
+                "family": "Pascal",
+                "given": "Mathilde"
+            },
+            {
+                "family": "Ragettli",
+                "given": "Martina S."
+            },
+            {
+                "family": "Saldiva",
+                "given": "Paulo Hilario Nascimento"
+            },
+            {
+                "family": "Schwartz",
+                "given": "Joel"
+            },
+            {
+                "family": "Scortichini",
+                "given": "Matteo"
+            },
+            {
+                "family": "Seposo",
+                "given": "Xerxes"
+            },
+            {
+                "family": "Tobias",
+                "given": "Aurelio"
+            },
+            {
+                "family": "Tong",
+                "given": "Shilu"
+            },
+            {
+                "family": "Urban",
+                "given": "Aleš"
+            },
+            {
+                "family": "De La Cruz Valencia",
+                "given": "César"
+            },
+            {
+                "family": "Zanobetti",
+                "given": "Antonella"
+            },
+            {
+                "family": "Zeka",
+                "given": "Ariana"
+            },
+            {
+                "family": "Gasparrini",
+                "given": "Antonio"
+            }
+        ],
+        "container-title": "Environmental Health Perspectives",
+        "container-title-short": "Environ Health Perspect",
+        "id": "armstrong2019",
+        "issue": "9",
+        "issued": {
+            "date-parts": [
+                [
+                    2019,
+                    9
+                ]
+            ]
+        },
+        "key": "VUNT7MBB",
+        "language": "en",
+        "libraryid": "2",
+        "page": "097007",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "DOI.org (Crossref)",
+        "title": "The Role of Humidity in Associations of High Temperature with Mortality: A Multicountry, Multicity Study",
+        "title-short": "The Role of Humidity in Associations of High Temperature with Mortality",
+        "type": "article-journal",
+        "volume": "127"
+    },
+    {
+        "DOI": "10.1029/2018JD029598",
+        "ISSN": "2169-8996",
+        "URL": "https://onlinelibrary.wiley.com/doi/abs/10.1029/2018JD029598",
+        "_eprint": "https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2018JD029598",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Sayer",
+                "given": "Andrew M."
+            },
+            {
+                "family": "Hsu",
+                "given": "N. Christina"
+            },
+            {
+                "family": "Lee",
+                "given": "Jaehwa"
+            },
+            {
+                "family": "Kim",
+                "given": "Woogyung V."
+            },
+            {
+                "family": "Dutcher",
+                "given": "Steven T."
+            }
+        ],
+        "container-title": "Journal of Geophysical Research: Atmospheres",
+        "id": "sayer2019a",
+        "issue": "8",
+        "issued": {
+            "date-parts": [
+                [
+                    2019
+                ]
+            ]
+        },
+        "key": "GPNWY86S",
+        "language": "en",
+        "libraryid": "2",
+        "note": "_eprint: https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2018JD029598",
+        "page": "4658-4688",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "rights": "©2019. American Geophysical Union. All Rights Reserved.",
+        "source": "Wiley Online Library",
+        "title": "Validation, Stability, and Consistency of MODIS Collection 6.1 and VIIRS Version 1 Deep Blue Aerosol Data Over Land",
+        "type": "article-journal",
+        "volume": "124"
+    },
+    {
+        "DOI": "10.1080/15481603.2022.2060596",
+        "ISSN": "1548-1603, 1943-7226",
+        "URL": "https://www.tandfonline.com/doi/full/10.1080/15481603.2022.2060596",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Zhang",
+                "given": "Tao"
+            },
+            {
+                "family": "Zhou",
+                "given": "Yuyu"
+            },
+            {
+                "family": "Zhao",
+                "given": "Kaiguang"
+            },
+            {
+                "family": "Zhu",
+                "given": "Zhengyuan"
+            },
+            {
+                "family": "Asrar",
+                "given": "Ghassem R."
+            },
+            {
+                "family": "Zhao",
+                "given": "Xia"
+            }
+        ],
+        "container-title": "GIScience & Remote Sensing",
+        "container-title-short": "GIScience & Remote Sensing",
+        "id": "zhang2022",
+        "issue": "1",
+        "issued": {
+            "date-parts": [
+                [
+                    2022,
+                    12,
+                    31
+                ]
+            ]
+        },
+        "key": "MZN45WVG",
+        "language": "en",
+        "libraryid": "2",
+        "page": "762-781",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "DOI.org (Crossref)",
+        "title": "Gap-filling MODIS daily aerosol optical depth products by developing a spatiotemporal fitting algorithm",
+        "type": "article-journal",
+        "volume": "59"
+    },
+    {
+        "DOI": "10.5194/amt-12-4291-2019",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/12/4291/2019/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Jethva",
+                "given": "Hiren"
+            },
+            {
+                "family": "Torres",
+                "given": "Omar"
+            },
+            {
+                "family": "Yoshida",
+                "given": "Yasuko"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "jethva2019",
+        "issue": "8",
+        "issued": {
+            "date-parts": [
+                [
+                    2019,
+                    8,
+                    9
+                ]
+            ]
+        },
+        "key": "H74LD3WI",
+        "language": "English",
+        "libraryid": "2",
+        "page": "4291-4307",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Accuracy assessment of MODIS land aerosol optical thickness algorithms using AERONET measurements over North America",
+        "type": "article-journal",
+        "volume": "12"
+    },
+    {
+        "DOI": "10.5194/amt-14-481-2021",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/14/481/2021/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Verhoelst",
+                "given": "Tijl"
+            },
+            {
+                "family": "Compernolle",
+                "given": "Steven"
+            },
+            {
+                "family": "Pinardi",
+                "given": "Gaia"
+            },
+            {
+                "family": "Lambert",
+                "given": "Jean-Christopher"
+            },
+            {
+                "family": "Eskes",
+                "given": "Henk J."
+            },
+            {
+                "family": "Eichmann",
+                "given": "Kai-Uwe"
+            },
+            {
+                "family": "Fjæraa",
+                "given": "Ann Mari"
+            },
+            {
+                "family": "Granville",
+                "given": "José"
+            },
+            {
+                "family": "Niemeijer",
+                "given": "Sander"
+            },
+            {
+                "family": "Cede",
+                "given": "Alexander"
+            },
+            {
+                "family": "Tiefengraber",
+                "given": "Martin"
+            },
+            {
+                "family": "Hendrick",
+                "given": "François"
+            },
+            {
+                "family": "Pazmiño",
+                "given": "Andrea"
+            },
+            {
+                "family": "Bais",
+                "given": "Alkiviadis"
+            },
+            {
+                "family": "Bazureau",
+                "given": "Ariane"
+            },
+            {
+                "family": "Boersma",
+                "given": "K. Folkert"
+            },
+            {
+                "family": "Bognar",
+                "given": "Kristof"
+            },
+            {
+                "family": "Dehn",
+                "given": "Angelika"
+            },
+            {
+                "family": "Donner",
+                "given": "Sebastian"
+            },
+            {
+                "family": "Elokhov",
+                "given": "Aleksandr"
+            },
+            {
+                "family": "Gebetsberger",
+                "given": "Manuel"
+            },
+            {
+                "family": "Goutail",
+                "given": "Florence"
+            },
+            {
+                "family": "Grutter de la Mora",
+                "given": "Michel"
+            },
+            {
+                "family": "Gruzdev",
+                "given": "Aleksandr"
+            },
+            {
+                "family": "Gratsea",
+                "given": "Myrto"
+            },
+            {
+                "family": "Hansen",
+                "given": "Georg H."
+            },
+            {
+                "family": "Irie",
+                "given": "Hitoshi"
+            },
+            {
+                "family": "Jepsen",
+                "given": "Nis"
+            },
+            {
+                "family": "Kanaya",
+                "given": "Yugo"
+            },
+            {
+                "family": "Karagkiozidis",
+                "given": "Dimitris"
+            },
+            {
+                "family": "Kivi",
+                "given": "Rigel"
+            },
+            {
+                "family": "Kreher",
+                "given": "Karin"
+            },
+            {
+                "family": "Levelt",
+                "given": "Pieternel F."
+            },
+            {
+                "family": "Liu",
+                "given": "Cheng"
+            },
+            {
+                "family": "Müller",
+                "given": "Moritz"
+            },
+            {
+                "family": "Navarro Comas",
+                "given": "Monica"
+            },
+            {
+                "family": "Piters",
+                "given": "Ankie J. M."
+            },
+            {
+                "family": "Pommereau",
+                "given": "Jean-Pierre"
+            },
+            {
+                "family": "Portafaix",
+                "given": "Thierry"
+            },
+            {
+                "family": "Prados-Roman",
+                "given": "Cristina"
+            },
+            {
+                "family": "Puentedura",
+                "given": "Olga"
+            },
+            {
+                "family": "Querel",
+                "given": "Richard"
+            },
+            {
+                "family": "Remmers",
+                "given": "Julia"
+            },
+            {
+                "family": "Richter",
+                "given": "Andreas"
+            },
+            {
+                "family": "Rimmer",
+                "given": "John"
+            },
+            {
+                "family": "Rivera Cárdenas",
+                "given": "Claudia"
+            },
+            {
+                "family": "Saavedra de Miguel",
+                "given": "Lidia"
+            },
+            {
+                "family": "Sinyakov",
+                "given": "Valery P."
+            },
+            {
+                "family": "Stremme",
+                "given": "Wolfgang"
+            },
+            {
+                "family": "Strong",
+                "given": "Kimberly"
+            },
+            {
+                "family": "Van Roozendael",
+                "given": "Michel"
+            },
+            {
+                "family": "Veefkind",
+                "given": "J. Pepijn"
+            },
+            {
+                "family": "Wagner",
+                "given": "Thomas"
+            },
+            {
+                "family": "Wittrock",
+                "given": "Folkard"
+            },
+            {
+                "family": "Yela González",
+                "given": "Margarita"
+            },
+            {
+                "family": "Zehner",
+                "given": "Claus"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "verhoelst2021",
+        "issue": "1",
+        "issued": {
+            "date-parts": [
+                [
+                    2021,
+                    1,
+                    22
+                ]
+            ]
+        },
+        "key": "6F94YG5M",
+        "language": "English",
+        "libraryid": "2",
+        "page": "481-510",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Ground-based validation of the Copernicus Sentinel-5P TROPOMI NO<sub>2</sub> measurements with the NDACC ZSL-DOAS, MAX-DOAS and Pandonia global networks",
+        "type": "article-journal",
+        "volume": "14"
+    },
+    {
+        "DOI": "10.11613/BM.2015.015",
+        "ISSN": "1330-0962",
+        "PMCID": "PMC4470095",
+        "PMID": "26110027",
+        "author": [
+            {
+                "family": "Giavarina",
+                "given": "Davide"
+            }
+        ],
+        "container-title": "Biochemia Medica",
+        "container-title-short": "Biochem Med (Zagreb)",
+        "id": "giavarina2015",
+        "issue": "2",
+        "issued": {
+            "date-parts": [
+                [
+                    2015
+                ]
+            ]
+        },
+        "key": "VVGE7JUZ",
+        "language": "eng",
+        "libraryid": "2",
+        "page": "141-151",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "PubMed",
+        "title": "Understanding Bland Altman analysis",
+        "type": "article-journal",
+        "volume": "25"
+    },
+    {
+        "DOI": "10.1145/2939672.2939785",
+        "ISBN": "978-1-4503-4232-2",
+        "URL": "https://dl.acm.org/doi/10.1145/2939672.2939785",
+        "accessed": {
+            "date-parts": [
+                [
+                    2025,
+                    8,
+                    4
+                ]
+            ]
+        },
+        "author": [
+            {
+                "family": "Chen",
+                "given": "Tianqi"
+            },
+            {
+                "family": "Guestrin",
+                "given": "Carlos"
+            }
+        ],
+        "collection-title": "KDD ’16",
+        "container-title": "Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining",
+        "id": "chen2016",
+        "issued": {
+            "date-parts": [
+                [
+                    2016,
+                    8,
+                    13
+                ]
+            ]
+        },
+        "key": "U3WYL87C",
+        "libraryid": "2",
+        "page": "785–794",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Association for Computing Machinery",
+        "publisher-place": "New York, NY, USA",
+        "source": "ACM Digital Library",
+        "title": "XGBoost: A Scalable Tree Boosting System",
+        "title-short": "XGBoost",
+        "type": "paper-conference"
+    },
+    {
+        "DOI": "10.3390/rs10050803",
+        "ISSN": "2072-4292",
+        "URL": "http://www.mdpi.com/2072-4292/10/5/803",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan"
+            },
+            {
+                "family": "De Carli",
+                "given": "Margherita"
+            },
+            {
+                "family": "Shtein",
+                "given": "Alexandra"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Remote Sensing",
+        "container-title-short": "Remote Sensing",
+        "id": "just2018a",
+        "issue": "5",
+        "issued": {
+            "date-parts": [
+                [
+                    2018,
+                    5,
+                    22
+                ]
+            ]
+        },
+        "key": "HIPXPZAT",
+        "language": "en",
+        "libraryid": "2",
+        "page": "803",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "DOI.org (Crossref)",
+        "title": "Correcting Measurement Error in Satellite Aerosol Optical Depth with Machine Learning for Modeling PM2.5 in the Northeastern USA",
+        "type": "article-journal",
+        "volume": "10"
+    },
+    {
+        "DOI": "10.5194/amt-13-4669-2020",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/13/4669/2020/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "Liu",
+                "given": "Yang"
+            },
+            {
+                "family": "Sorek-Hamer",
+                "given": "Meytar"
+            },
+            {
+                "family": "Rush",
+                "given": "Johnathan"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Chatfield",
+                "given": "Robert"
+            },
+            {
+                "family": "Wang",
+                "given": "Yujie"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "just2020a",
+        "issue": "9",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    9,
+                    2
+                ]
+            ]
+        },
+        "key": "QAYQHQL2",
+        "language": "English",
+        "libraryid": "2",
+        "page": "4669-4681",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Gradient boosting machine learning to improve satellite-derived column water vapor measurement error",
+        "type": "article-journal",
+        "volume": "13"
+    },
+    {
+        "DOI": "10.3390/rs10050803",
+        "ISSN": "2072-4292",
+        "URL": "http://www.mdpi.com/2072-4292/10/5/803",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan"
+            },
+            {
+                "family": "De Carli",
+                "given": "Margherita"
+            },
+            {
+                "family": "Shtein",
+                "given": "Alexandra"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Remote Sensing",
+        "container-title-short": "Remote Sensing",
+        "id": "just2018b",
+        "issue": "5",
+        "issued": {
+            "date-parts": [
+                [
+                    2018,
+                    5,
+                    22
+                ]
+            ]
+        },
+        "key": "HIPXPZAT",
+        "language": "en",
+        "libraryid": "2",
+        "page": "803",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "DOI.org (Crossref)",
+        "title": "Correcting Measurement Error in Satellite Aerosol Optical Depth with Machine Learning for Modeling PM2.5 in the Northeastern USA",
+        "type": "article-journal",
+        "volume": "10"
+    },
+    {
+        "DOI": "10.1038/s42256-019-0138-9",
+        "ISSN": "2522-5839",
+        "URL": "http://www.nature.com/articles/s42256-019-0138-9",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Lundberg",
+                "given": "Scott M."
+            },
+            {
+                "family": "Erion",
+                "given": "Gabriel"
+            },
+            {
+                "family": "Chen",
+                "given": "Hugh"
+            },
+            {
+                "family": "DeGrave",
+                "given": "Alex"
+            },
+            {
+                "family": "Prutkin",
+                "given": "Jordan M."
+            },
+            {
+                "family": "Nair",
+                "given": "Bala"
+            },
+            {
+                "family": "Katz",
+                "given": "Ronit"
+            },
+            {
+                "family": "Himmelfarb",
+                "given": "Jonathan"
+            },
+            {
+                "family": "Bansal",
+                "given": "Nisha"
+            },
+            {
+                "family": "Lee",
+                "given": "Su-In"
+            }
+        ],
+        "container-title": "Nature Machine Intelligence",
+        "container-title-short": "Nat Mach Intell",
+        "id": "lundberg2020",
+        "issue": "1",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    1
+                ]
+            ]
+        },
+        "key": "UN85H49D",
+        "language": "en",
+        "libraryid": "2",
+        "page": "56-67",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "DOI.org (Crossref)",
+        "title": "From local explanations to global understanding with explainable AI for trees",
+        "type": "article-journal",
+        "volume": "2"
+    },
+    {
+        "DOI": "10.5194/amt-13-4669-2020",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/13/4669/2020/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "Liu",
+                "given": "Yang"
+            },
+            {
+                "family": "Sorek-Hamer",
+                "given": "Meytar"
+            },
+            {
+                "family": "Rush",
+                "given": "Johnathan"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Chatfield",
+                "given": "Robert"
+            },
+            {
+                "family": "Wang",
+                "given": "Yujie"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "just2020b",
+        "issue": "9",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    9,
+                    2
+                ]
+            ]
+        },
+        "key": "QAYQHQL2",
+        "language": "English",
+        "libraryid": "2",
+        "page": "4669-4681",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Gradient boosting machine learning to improve satellite-derived column water vapor measurement error",
+        "type": "article-journal",
+        "volume": "13"
+    },
+    {
+        "DOI": "10.3390/rs10050803",
+        "ISSN": "2072-4292",
+        "URL": "http://www.mdpi.com/2072-4292/10/5/803",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan"
+            },
+            {
+                "family": "De Carli",
+                "given": "Margherita"
+            },
+            {
+                "family": "Shtein",
+                "given": "Alexandra"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Remote Sensing",
+        "container-title-short": "Remote Sensing",
+        "id": "just2018c",
+        "issue": "5",
+        "issued": {
+            "date-parts": [
+                [
+                    2018,
+                    5,
+                    22
+                ]
+            ]
+        },
+        "key": "HIPXPZAT",
+        "language": "en",
+        "libraryid": "2",
+        "page": "803",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "DOI.org (Crossref)",
+        "title": "Correcting Measurement Error in Satellite Aerosol Optical Depth with Machine Learning for Modeling PM2.5 in the Northeastern USA",
+        "type": "article-journal",
+        "volume": "10"
+    },
+    {
+        "DOI": "10.1016/j.atmosenv.2020.117649",
+        "ISSN": "1352-2310",
+        "URL": "http://www.sciencedirect.com/science/article/pii/S1352231020303812",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "Arfer",
+                "given": "Kodi B."
+            },
+            {
+                "family": "Rush",
+                "given": "Johnathan"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Shtein",
+                "given": "Alexandra"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Atmospheric Environment",
+        "container-title-short": "Atmospheric Environment",
+        "id": "just2020.1c",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    10,
+                    15
+                ]
+            ]
+        },
+        "key": "PU2Z7VQI",
+        "language": "en",
+        "libraryid": "2",
+        "page": "117649",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "ScienceDirect",
+        "title": "Advancing methodologies for applying machine learning and evaluating spatiotemporal models of fine particulate matter (PM2.5) using satellite data over large regions",
+        "type": "article-journal",
+        "volume": "239"
+    },
+    {
+        "DOI": "10.5194/amt-13-4669-2020",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/13/4669/2020/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "Liu",
+                "given": "Yang"
+            },
+            {
+                "family": "Sorek-Hamer",
+                "given": "Meytar"
+            },
+            {
+                "family": "Rush",
+                "given": "Johnathan"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Chatfield",
+                "given": "Robert"
+            },
+            {
+                "family": "Wang",
+                "given": "Yujie"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "just2020c",
+        "issue": "9",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    9,
+                    2
+                ]
+            ]
+        },
+        "key": "QAYQHQL2",
+        "language": "English",
+        "libraryid": "2",
+        "page": "4669-4681",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Gradient boosting machine learning to improve satellite-derived column water vapor measurement error",
+        "type": "article-journal",
+        "volume": "13"
+    },
+    {
+        "DOI": "10.5194/amt-13-4669-2020",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/13/4669/2020/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "Liu",
+                "given": "Yang"
+            },
+            {
+                "family": "Sorek-Hamer",
+                "given": "Meytar"
+            },
+            {
+                "family": "Rush",
+                "given": "Johnathan"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Chatfield",
+                "given": "Robert"
+            },
+            {
+                "family": "Wang",
+                "given": "Yujie"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "just2020d",
+        "issue": "9",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    9,
+                    2
+                ]
+            ]
+        },
+        "key": "QAYQHQL2",
+        "language": "English",
+        "libraryid": "2",
+        "page": "4669-4681",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Gradient boosting machine learning to improve satellite-derived column water vapor measurement error",
+        "type": "article-journal",
+        "volume": "13"
+    },
+    {
+        "URL": "https://appeears.earthdatacloud.nasa.gov/",
+        "accessed": {
+            "date-parts": []
+        },
+        "id": "appeears",
+        "key": "EYKP9ZZN",
+        "libraryid": "2",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "title": "AppEEARS",
+        "type": "webpage"
+    },
+    {
+        "DOI": "10.3334/ORNLDAAC/1379",
+        "URL": "https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1379",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Daac",
+                "given": "Ornl"
+            }
+        ],
+        "container-title": "ORNL DAAC",
+        "id": "daac2017",
+        "issued": {
+            "date-parts": [
+                [
+                    2017,
+                    4,
+                    10
+                ]
+            ]
+        },
+        "key": "M8E2Z4QB",
+        "language": "en-US",
+        "libraryid": "2",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "daac.ornl.gov",
+        "title": "Terrestrial Ecology Subsetting & Visualization Services (TESViS) Global Subsets Tool",
+        "type": "article-journal"
+    },
+    {
+        "DOI": "10.2481/dsj.2.164",
+        "author": [
+            {
+                "family": "Cornillon",
+                "given": "P."
+            },
+            {
+                "family": "Gallagher",
+                "given": "J."
+            },
+            {
+                "family": "Sgouros",
+                "given": "T."
+            }
+        ],
+        "container-title": "Data Science Journal",
+        "id": "cornillon2003",
+        "issued": {
+            "date-parts": [
+                [
+                    2003
+                ]
+            ]
+        },
+        "key": "DNY25BT6",
+        "libraryid": "2",
+        "page": "164-174",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "J-Stage",
+        "title": "OPeNDAP: Accessing data in a distributed, heterogeneous environment",
+        "title-short": "OPeNDAP",
+        "type": "article-journal",
+        "volume": "2"
+    },
+    {
+        "DOI": "10.5194/amt-12-4291-2019",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/12/4291/2019/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Jethva",
+                "given": "Hiren"
+            },
+            {
+                "family": "Torres",
+                "given": "Omar"
+            },
+            {
+                "family": "Yoshida",
+                "given": "Yasuko"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "jethva2019a",
+        "issue": "8",
+        "issued": {
+            "date-parts": [
+                [
+                    2019,
+                    8,
+                    9
+                ]
+            ]
+        },
+        "key": "H74LD3WI",
+        "language": "English",
+        "libraryid": "2",
+        "page": "4291-4307",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Accuracy assessment of MODIS land aerosol optical thickness algorithms using AERONET measurements over North America",
+        "type": "article-journal",
+        "volume": "12"
+    },
+    {
+        "DOI": "10.1029/2001GL013206",
+        "ISSN": "1944-8007",
+        "URL": "https://onlinelibrary.wiley.com/doi/abs/10.1029/2001GL013206",
+        "_eprint": "https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2001GL013206",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Ichoku",
+                "given": "Charles"
+            },
+            {
+                "family": "Chu",
+                "given": "D. Allen"
+            },
+            {
+                "family": "Mattoo",
+                "given": "Shana"
+            },
+            {
+                "family": "Kaufman",
+                "given": "Yoram J."
+            },
+            {
+                "family": "Remer",
+                "given": "Lorraine A."
+            },
+            {
+                "family": "Tanré",
+                "given": "Didier"
+            },
+            {
+                "family": "Slutsker",
+                "given": "Ilya"
+            },
+            {
+                "family": "Holben",
+                "given": "Brent N."
+            }
+        ],
+        "container-title": "Geophysical Research Letters",
+        "id": "ichoku2002",
+        "issue": "12",
+        "issued": {
+            "date-parts": [
+                [
+                    2002
+                ]
+            ]
+        },
+        "key": "RWSXTKK6",
+        "language": "en",
+        "libraryid": "2",
+        "note": "_eprint: https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2001GL013206",
+        "page": "MOD1-1-MOD1-4",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "rights": "Copyright 2002 by the American Geophysical Union.",
+        "source": "Wiley Online Library",
+        "title": "A spatio-temporal approach for global validation and analysis of MODIS aerosol products",
+        "type": "article-journal",
+        "volume": "29"
+    },
+    {
+        "DOI": "10.1175/JCLI-D-16-0758.1",
+        "URL": "https://journals.ametsoc.org/view/journals/clim/30/14/jcli-d-16-0758.1.xml",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Gelaro",
+                "given": "Ronald"
+            },
+            {
+                "family": "McCarty",
+                "given": "Will"
+            },
+            {
+                "family": "Suárez",
+                "given": "Max J."
+            },
+            {
+                "family": "Todling",
+                "given": "Ricardo"
+            },
+            {
+                "family": "Molod",
+                "given": "Andrea"
+            },
+            {
+                "family": "Takacs",
+                "given": "Lawrence"
+            },
+            {
+                "family": "Randles",
+                "given": "Cynthia A."
+            },
+            {
+                "family": "Darmenov",
+                "given": "Anton"
+            },
+            {
+                "family": "Bosilovich",
+                "given": "Michael G."
+            },
+            {
+                "family": "Reichle",
+                "given": "Rolf"
+            },
+            {
+                "family": "Wargan",
+                "given": "Krzysztof"
+            },
+            {
+                "family": "Coy",
+                "given": "Lawrence"
+            },
+            {
+                "family": "Cullather",
+                "given": "Richard"
+            },
+            {
+                "family": "Draper",
+                "given": "Clara"
+            },
+            {
+                "family": "Akella",
+                "given": "Santha"
+            },
+            {
+                "family": "Buchard",
+                "given": "Virginie"
+            },
+            {
+                "family": "Conaty",
+                "given": "Austin"
+            },
+            {
+                "dropping-particle": "da",
+                "family": "Silva",
+                "given": "Arlindo M."
+            },
+            {
+                "family": "Gu",
+                "given": "Wei"
+            },
+            {
+                "family": "Kim",
+                "given": "Gi-Kong"
+            },
+            {
+                "family": "Koster",
+                "given": "Randal"
+            },
+            {
+                "family": "Lucchesi",
+                "given": "Robert"
+            },
+            {
+                "family": "Merkova",
+                "given": "Dagmar"
+            },
+            {
+                "family": "Nielsen",
+                "given": "Jon Eric"
+            },
+            {
+                "family": "Partyka",
+                "given": "Gary"
+            },
+            {
+                "family": "Pawson",
+                "given": "Steven"
+            },
+            {
+                "family": "Putman",
+                "given": "William"
+            },
+            {
+                "family": "Rienecker",
+                "given": "Michele"
+            },
+            {
+                "family": "Schubert",
+                "given": "Siegfried D."
+            },
+            {
+                "family": "Sienkiewicz",
+                "given": "Meta"
+            },
+            {
+                "family": "Zhao",
+                "given": "Bin"
+            }
+        ],
+        "id": "gelaro2017",
+        "issued": {
+            "date-parts": [
+                [
+                    2017,
+                    7,
+                    15
+                ]
+            ]
+        },
+        "key": "Z26HX2CG",
+        "language": "en",
+        "libraryid": "2",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "section": "Journal",
+        "source": "journals.ametsoc.org",
+        "title": "The Modern-Era Retrospective Analysis for Research and Applications, Version 2 (MERRA-2)",
+        "type": "article-journal"
+    },
+    {
+        "DOI": "10.1175/JCLI-D-16-0609.1",
+        "URL": "https://journals.ametsoc.org/view/journals/clim/30/17/jcli-d-16-0609.1.xml",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Randles",
+                "given": "C. A."
+            },
+            {
+                "dropping-particle": "da",
+                "family": "Silva",
+                "given": "A. M."
+            },
+            {
+                "family": "Buchard",
+                "given": "V."
+            },
+            {
+                "family": "Colarco",
+                "given": "P. R."
+            },
+            {
+                "family": "Darmenov",
+                "given": "A."
+            },
+            {
+                "family": "Govindaraju",
+                "given": "R."
+            },
+            {
+                "family": "Smirnov",
+                "given": "A."
+            },
+            {
+                "family": "Holben",
+                "given": "B."
+            },
+            {
+                "family": "Ferrare",
+                "given": "R."
+            },
+            {
+                "family": "Hair",
+                "given": "J."
+            },
+            {
+                "family": "Shinozuka",
+                "given": "Y."
+            },
+            {
+                "family": "Flynn",
+                "given": "C. J."
+            }
+        ],
+        "id": "randles2017",
+        "issued": {
+            "date-parts": [
+                [
+                    2017,
+                    9,
+                    1
+                ]
+            ]
+        },
+        "key": "D89EHQY4",
+        "language": "en",
+        "libraryid": "2",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "section": "Journal",
+        "source": "journals.ametsoc.org",
+        "title": "The MERRA-2 Aerosol Reanalysis, 1980 Onward. Part I: System Description and Data Assimilation Evaluation",
+        "title-short": "The MERRA-2 Aerosol Reanalysis, 1980 Onward. Part I",
+        "type": "article-journal"
+    },
+    {
+        "DOI": "10.1016/j.atmosenv.2018.12.004",
+        "ISSN": "1352-2310",
+        "URL": "https://www.sciencedirect.com/science/article/pii/S1352231018308513",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Wei",
+                "given": "Jing"
+            },
+            {
+                "family": "Li",
+                "given": "Zhanqing"
+            },
+            {
+                "family": "Peng",
+                "given": "Yiran"
+            },
+            {
+                "family": "Sun",
+                "given": "Lin"
+            }
+        ],
+        "container-title": "Atmospheric Environment",
+        "container-title-short": "Atmospheric Environment",
+        "id": "wei2019",
+        "issued": {
+            "date-parts": [
+                [
+                    2019,
+                    3,
+                    15
+                ]
+            ]
+        },
+        "key": "33JZ3KEN",
+        "libraryid": "2",
+        "page": "428-440",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "ScienceDirect",
+        "title": "MODIS Collection 6.1 aerosol optical depth products over land and ocean: validation and comparison",
+        "title-short": "MODIS Collection 6.1 aerosol optical depth products over land and ocean",
+        "type": "article-journal",
+        "volume": "201"
+    },
+    {
+        "URL": "https://daac.ornl.gov/cgi-bin/dsviewer.pl?ds_id=1567",
+        "accessed": {
+            "date-parts": []
+        },
+        "id": "terrestr",
+        "key": "2VYMJM3N",
+        "libraryid": "2",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "title": "Terrestrial Ecology Subsetting & Visualization Services (TESViS) Fixed Sites Subsets, https://doi.org/10.3334/ORNLDAAC/1567",
+        "type": "webpage"
+    },
+    {
+        "DOI": "10.3390/rs10050803",
+        "ISSN": "2072-4292",
+        "URL": "http://www.mdpi.com/2072-4292/10/5/803",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan"
+            },
+            {
+                "family": "De Carli",
+                "given": "Margherita"
+            },
+            {
+                "family": "Shtein",
+                "given": "Alexandra"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Remote Sensing",
+        "container-title-short": "Remote Sensing",
+        "id": "just2018d",
+        "issue": "5",
+        "issued": {
+            "date-parts": [
+                [
+                    2018,
+                    5,
+                    22
+                ]
+            ]
+        },
+        "key": "HIPXPZAT",
+        "language": "en",
+        "libraryid": "2",
+        "page": "803",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "DOI.org (Crossref)",
+        "title": "Correcting Measurement Error in Satellite Aerosol Optical Depth with Machine Learning for Modeling PM2.5 in the Northeastern USA",
+        "type": "article-journal",
+        "volume": "10"
+    },
+    {
+        "DOI": "10.5194/amt-14-2981-2021",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/14/2981/2021/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Lipponen",
+                "given": "Antti"
+            },
+            {
+                "family": "Kolehmainen",
+                "given": "Ville"
+            },
+            {
+                "family": "Kolmonen",
+                "given": "Pekka"
+            },
+            {
+                "family": "Kukkurainen",
+                "given": "Antti"
+            },
+            {
+                "family": "Mielonen",
+                "given": "Tero"
+            },
+            {
+                "family": "Sabater",
+                "given": "Neus"
+            },
+            {
+                "family": "Sogacheva",
+                "given": "Larisa"
+            },
+            {
+                "family": "Virtanen",
+                "given": "Timo H."
+            },
+            {
+                "family": "Arola",
+                "given": "Antti"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "lipponen2021",
+        "issue": "4",
+        "issued": {
+            "date-parts": [
+                [
+                    2021,
+                    4,
+                    22
+                ]
+            ]
+        },
+        "key": "WBFSGITN",
+        "language": "English",
+        "libraryid": "2",
+        "page": "2981-2992",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Model-enforced post-process correction of satellite aerosol retrievals",
+        "type": "article-journal",
+        "volume": "14"
+    },
+    {
+        "DOI": "10.1117/1.JRS.7.073514",
+        "ISSN": "1931-3195, 1931-3195",
+        "URL": "https://www.spiedigitallibrary.org/journals/journal-of-applied-remote-sensing/volume-7/issue-1/073514/Global-bias-adjustment-for-MODIS-aerosol-optical-thickness-using-neural/10.1117/1.JRS.7.073514.full",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Albayrak",
+                "given": "Arif"
+            },
+            {
+                "family": "Wei",
+                "given": "Jennifer"
+            },
+            {
+                "family": "Petrenko",
+                "given": "Maksym"
+            },
+            {
+                "family": "Lynnes",
+                "given": "Christopher S."
+            },
+            {
+                "family": "Levy",
+                "given": "Robert C."
+            }
+        ],
+        "container-title": "Journal of Applied Remote Sensing",
+        "container-title-short": "JARS",
+        "id": "albayrak2013",
+        "issue": "1",
+        "issued": {
+            "date-parts": [
+                [
+                    2013,
+                    8
+                ]
+            ]
+        },
+        "key": "JDLKBUW8",
+        "libraryid": "2",
+        "page": "073514",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "SPIE",
+        "source": "www.spiedigitallibrary.org",
+        "title": "Global bias adjustment for MODIS aerosol optical thickness using neural network",
+        "type": "article-journal",
+        "volume": "7"
+    },
+    {
+        "DOI": "10.5194/amt-13-5955-2020",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/13/5955/2020/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Zhang",
+                "given": "Hai"
+            },
+            {
+                "family": "Kondragunta",
+                "given": "Shobha"
+            },
+            {
+                "family": "Laszlo",
+                "given": "Istvan"
+            },
+            {
+                "family": "Zhou",
+                "given": "Mi"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "zhang2020a",
+        "issue": "11",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    11,
+                    9
+                ]
+            ]
+        },
+        "key": "REFMZGRX",
+        "language": "English",
+        "libraryid": "2",
+        "page": "5955-5975",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Improving GOES Advanced Baseline Imager (ABI) aerosol optical depth (AOD) retrievals using an empirical bias correction algorithm",
+        "type": "article-journal",
+        "volume": "13"
+    },
+    {
+        "DOI": "10.5194/amt-13-4669-2020",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/13/4669/2020/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "Liu",
+                "given": "Yang"
+            },
+            {
+                "family": "Sorek-Hamer",
+                "given": "Meytar"
+            },
+            {
+                "family": "Rush",
+                "given": "Johnathan"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Chatfield",
+                "given": "Robert"
+            },
+            {
+                "family": "Wang",
+                "given": "Yujie"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "just2020e",
+        "issue": "9",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    9,
+                    2
+                ]
+            ]
+        },
+        "key": "QAYQHQL2",
+        "language": "English",
+        "libraryid": "2",
+        "page": "4669-4681",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Gradient boosting machine learning to improve satellite-derived column water vapor measurement error",
+        "type": "article-journal",
+        "volume": "13"
+    },
+    {
+        "DOI": "10.5194/amt-13-4669-2020",
+        "ISSN": "1867-1381",
+        "URL": "https://amt.copernicus.org/articles/13/4669/2020/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Just",
+                "given": "Allan C."
+            },
+            {
+                "family": "Liu",
+                "given": "Yang"
+            },
+            {
+                "family": "Sorek-Hamer",
+                "given": "Meytar"
+            },
+            {
+                "family": "Rush",
+                "given": "Johnathan"
+            },
+            {
+                "family": "Dorman",
+                "given": "Michael"
+            },
+            {
+                "family": "Chatfield",
+                "given": "Robert"
+            },
+            {
+                "family": "Wang",
+                "given": "Yujie"
+            },
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Kloog",
+                "given": "Itai"
+            }
+        ],
+        "container-title": "Atmospheric Measurement Techniques",
+        "id": "just2020f",
+        "issue": "9",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    9,
+                    2
+                ]
+            ]
+        },
+        "key": "QAYQHQL2",
+        "language": "English",
+        "libraryid": "2",
+        "page": "4669-4681",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Copernicus",
+        "source": "Copernicus Online Journals",
+        "title": "Gradient boosting machine learning to improve satellite-derived column water vapor measurement error",
+        "type": "article-journal",
+        "volume": "13"
+    },
+    {
+        "DOI": "10.3390/rs12020308",
+        "ISSN": "2072-4292",
+        "URL": "https://www.mdpi.com/2072-4292/12/2/308",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Sawyer",
+                "given": "Virginia"
+            },
+            {
+                "family": "Levy",
+                "given": "Robert C."
+            },
+            {
+                "family": "Mattoo",
+                "given": "Shana"
+            },
+            {
+                "family": "Cureton",
+                "given": "Geoff"
+            },
+            {
+                "family": "Shi",
+                "given": "Yingxi"
+            },
+            {
+                "family": "Remer",
+                "given": "Lorraine A."
+            }
+        ],
+        "container-title": "Remote Sensing",
+        "id": "sawyer2020",
+        "issue": "2",
+        "issued": {
+            "date-parts": [
+                [
+                    2020,
+                    1
+                ]
+            ]
+        },
+        "key": "5MN3LDJA",
+        "language": "en",
+        "libraryid": "2",
+        "number": "2",
+        "page": "308",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "publisher": "Multidisciplinary",
+        "rights": "http://creativecommons.org/licenses/by/3.0/",
+        "source": "www.mdpi.com",
+        "title": "Continuing the MODIS Dark Target Aerosol Time Series with VIIRS",
+        "type": "article-journal",
+        "volume": "12"
     }
 ]
