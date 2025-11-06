@@ -65,9 +65,9 @@
       "RemoteHost": "api.github.com",
       "RemoteRepo": "Just_universal",
       "RemoteUsername": "justlab",
-      "RemoteRef": "55513e45a970b487a3a048300a206711b1ce1f0c",
-      "RemoteSha": "55513e45a970b487a3a048300a206711b1ce1f0c",
-      "Hash": "e8177763aef791824e481bb18365448b"
+      "RemoteRef": "b021a087987fd72d7d3efdcd86b097b3d2bea8d2",
+      "RemoteSha": "b021a087987fd72d7d3efdcd86b097b3d2bea8d2",
+      "Hash": "2610a676108d780fc722c1ece6d08d07"
     },
     "KernSmooth": {
       "Package": "KernSmooth",
@@ -2054,10 +2054,12 @@
     "renv": {
       "Package": "renv",
       "Version": "1.0.4",
-      "OS_type": null,
-      "NeedsCompilation": "no",
+      "Source": "Repository",
       "Repository": "CRAN",
-      "Source": "Repository"
+      "Requirements": [
+        "utils"
+      ],
+      "Hash": "11abaf7c540ff33f94514d50f929bfd1"
     },
     "rgdal": {
       "Package": "rgdal",

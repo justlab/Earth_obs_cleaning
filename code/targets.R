@@ -78,15 +78,16 @@ list(
     tar_target(satellite.files, switch(Wf$satellite.product,
         mcd19a2 =
            {d = get.earthdata(
-                satellite_hdf_root,
-                product = "MCD19A2.061",
+                root.dir = satellite_hdf_root,
+                bbox = st_bbox(st_transform(region.shape, crs.lonlat)),
+                products = "MCD19A2_061",
                 satellites = (if (Wf$satellite %in% c("terra", "aqua"))
                     "terra.and.aqua" else
                     stop()),
                 tiles = satellite.tiles(region.shape),
                 dates = Wf$dates)
             setnames(d, "date", "time")
-            d},
+            setkey(d[, -"product"], satellite, time, tile)[]},
         aodc = get.aodc(Wf$satellite, Wf$dates))),
     tar_target(pred.grid, format = terra.rast.fmt, get.pred.grid(
         Wf$satellite.product,
