@@ -2429,5 +2429,54 @@
         "title": "Continuing the MODIS Dark Target Aerosol Time Series with VIIRS",
         "type": "article-journal",
         "volume": "12"
+    },
+    {
+        "DOI": "10.5194/amt-11-5741-2018",
+        "ISSN": "1867-8548",
+        "URL": "https://amt.copernicus.org/articles/11/5741/2018/",
+        "accessed": {
+            "date-parts": []
+        },
+        "author": [
+            {
+                "family": "Lyapustin",
+                "given": "Alexei"
+            },
+            {
+                "family": "Wang",
+                "given": "Yujie"
+            },
+            {
+                "family": "Korkin",
+                "given": "Sergey"
+            },
+            {
+                "family": "Huang",
+                "given": "Dong"
+            }
+        ],
+        "citationkey": "lyapustinMODISCollectionMAIAC2018",
+        "container-title": "Atmospheric Measurement Techniques",
+        "container-title-short": "Atmos. Meas. Tech.",
+        "id": "lyapustin2018",
+        "issue": "10",
+        "issued": {
+            "date-parts": [
+                [
+                    2018,
+                    10,
+                    18
+                ]
+            ]
+        },
+        "key": "Z8A86Q99",
+        "language": "en",
+        "libraryid": "2",
+        "page": "5741-5765",
+        "providerkey": "2509FBBE-5BB0-44C4-B119-6083A81ED673",
+        "source": "DOI.org (Crossref)",
+        "title": "MODIS Collection 6 MAIAC algorithm",
+        "type": "article-journal",
+        "volume": "11"
     }
 ]
