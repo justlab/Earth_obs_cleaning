@@ -324,13 +324,14 @@ pred.map = function(
             palette = "Spectral", na.value = "transparent") +
         geom_sf(data = bg.sf, fill = NA, size = .1) +
         ggspatial::annotation_scale(data = cbind(
-            data.table(variable = "y.sat.old"),
+            data.table(variable = "y.sat.new"),
             (if (include.quality) list(qualities = "all qualities")))) +
         facet_grid(
             rows = vars(variable),
             cols = (if (include.quality) vars(qualities)),
             labeller = labeller(variable =
-                c(y.sat.old = "Raw", y.sat.new = "Corrected"))) +
+                c(y.sat.old = "Raw", y.sat.new = "Corrected")),
+            as.table = FALSE) +
         coord_sf(expand = F,
             xlim = range(d$lon), ylim = range(d$lat)) +
         theme_void() +
