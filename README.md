@@ -24,6 +24,21 @@ Run a Docker container as described above in step 5 above. (If you installed `re
 
 To run the test workflow, ensure `test.small.daterange` in the configuration file is `TRUE`. Then say `tar_make(cv)` to try cross-validation with a few days of data. This is pretty fast, taking only a few minutes, aside from downloading the data. Use `tar_read` (as in `tar_read(cv)`) to see the results.
 
+Here's how you could interactively make some new predictions for a given range of dates and a given set of points:
+
+```R
+source('code/globals.R')
+source('code/libraries.R')
+source('code/data.R')
+source('code/modeling.R')
+d = new.preds.compact(
+    dt.start = as.POSIXct("2024-07-10"),
+    dt.end = as.POSIXct("2024-07-16"),
+    lonlats = data.frame(
+        lon = c(-74.1, -74.1, -74.2),
+        lat = c(40.7, 40.8, 40.9)))
+```
+
 # License
 
 This program is copyright 2019–2025 Kodi B. Arfer, Allan C. Just, Yang Liu, and Johnathan Rush.

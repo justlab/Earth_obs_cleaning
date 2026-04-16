@@ -288,13 +288,15 @@ dart_full <- function(
        hyperparams = xdc_out$hyperparams,
        model = xgb.save.raw(raw_format = "ubj", xdc_out$model))}
 
-new.preds = function(dt.start, dt.end, cells = NULL, targets = NULL)
+new.preds = function(dt.start, dt.end, cells = NULL, lonlats = NULL, targets = NULL)
   # Make a data table of new predictions for every non-missing
   # satellite value that occurs in the given spacetime chunk.
   # - `dt.start` and `dt.end` specify a range of datetimes to make
   #   predictions for, as `POSIXct` objects.
   # - `cells`, if provided, should be a vector of cell numbers of
-  #   `pred.grid`. Otherwise, we use all cells.
+  #   `pred.grid`. Otherwise, we compute them from the data frame
+  #   `lonlats` (discarding any points with no corresponding cell). If
+  #   that's also missing, we use all cells.
    {if (is.null(targets))
        {message("Reading targets")
         grid = tar_read(pred.grid)
@@ -311,11 +313,19 @@ new.preds = function(dt.start, dt.end, cells = NULL, targets = NULL)
     dt.start = lubridate::with_tz(dt.start, "UTC")
     dt.end = lubridate::with_tz(dt.end, "UTC")
     if (is.null(cells))
-        cells = which(!is.na(drop(grid$tile[])))
+       {if (is.null(lonlats))
+            cells = which(!is.na(drop(grid$tile[])))
+        else
+           {cells = terra::cellFromXY(grid,
+                convert.crs(lonlats, crs.lonlat, terra::crs(grid)))
+            cells = cells[!is.na(cells)]}}
+    else
+        assert(is.null(lonlats))
     if (is.double(cells))
         cells = as.integer(cells)
     assert(is.integer(cells) && all(
         1L <= cells & cells <= terra::ncell(grid)))
+    cells = sort(unique(cells))
     message("Cells: ", scales::comma(length(cells)))
 
     message("Selecting satellite files")
