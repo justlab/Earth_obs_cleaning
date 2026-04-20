@@ -27,7 +27,6 @@ To run the test workflow, ensure `test.small.daterange` in the configuration fil
 Here's how you could interactively make some new predictions for a given range of dates and a given set of points:
 
 ```R
-source('code/globals.R')
 source('code/libraries.R')
 source('code/data.R')
 source('code/modeling.R')
