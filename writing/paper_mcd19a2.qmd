@@ -104,7 +104,7 @@ We used SHAP, generated for the cross-validated predictions, to interpret the co
 
 ### New predictions and comparison with ground monitors
 
-After cross validation, the model was refit with the entire training data set and predictions were generated to correct AOD in new locations (i.e., grid cells without AERONET sites) on demand. The `Earth_obs_cleaning` workflow stores these in Parquet format for efficient data storage and retrieval. To demonstrate that corrected AOD still shows spatial patterns consistent with expectations we generated maps of raw and corrected MAIAC on a typical day (selected as the tile with the most non-missing AOD on the day with the median improvement in MSE for AERONET stations). To show the correction in known high-AOD conditions we plotted the Baltimore, MD area on June 10, 2015 which had substantial subsiding long-range transported Canadian wildfire smoke as previously documented with extensive surface and atmospheric monitoring [@dreessen2016].
+After cross validation, the model was refit with the entire training dataset and predictions were generated to correct AOD in new locations (i.e., grid cells without AERONET sites) on demand. The `Earth_obs_cleaning` workflow stores these in Parquet format for efficient data storage and retrieval. To demonstrate that corrected AOD still shows spatial patterns consistent with expectations we generated maps of raw and corrected MAIAC on a typical day (selected as the tile with the most non-missing AOD on the day with the median improvement in MSE for AERONET stations). To show the correction in known high-AOD conditions we plotted the Baltimore, MD area on June 10, 2015 which had substantial subsiding long-range transported Canadian wildfire smoke as previously documented with extensive surface and atmospheric monitoring [@dreessen2016].
 
 Beyond cross-validation performance, we also sought to evaluate the utility of applying the `Earth_obs_cleaning` workflow for the correlation of satellite AOD with surface measurements of PM~2.5~ from the broad network of regulatory-grade air quality monitors in the Environmental Protection Agency's Air Quality System (AQS). We downloaded all 24-hour measures of PM~2.5~ concentration (using the Federal Reference Method or Federally Equivalent Method; Parameter Code 88101) from all AQS sites within CONUS. We joined each unique monitor with AOD for the overlying grid cell for each overpass occurring in the same day. We then reweighted by the inverse of the number of PM~2.5~\~AOD matchups in each cell-day and calculated the Pearson correlation using either MAIAC AOD or corrected AOD.
 
@@ -116,7 +116,7 @@ Beyond cross-validation performance, we also sought to evaluate the utility of a
 dt <- copy(tar_read(cv)$mDT_wPred)
 ```
 
-After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals from `r uniqueN(dt$site)` AERONET sites in CONUS. The quartiles of the absolute difference from the labeled overpass time (one per 1200 km wide tile) and the time of the matched AERONET observation were `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["25%"]` s, `r tqs["50%"]` s, and `r tqs["75%"]` s. While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian (see @fig-dv-density).
+After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals from `r uniqueN(dt$site)` AERONET sites in CONUS. The quartiles of the absolute difference from the labeled overpass time (one per 1200 km wide tile) and the time of the matched AERONET observation were `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["25%"]` s, `r tqs["50%"]` s, and `r tqs["75%"]` s. While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian (see @fig-dv-density). Summary statistics for every variable in the training data are in the Supplement.
 
 ```{r plot_dv}
 #| label: fig-dv-density
@@ -137,7 +137,7 @@ t1 <- tableGrob(t1, theme=ttheme_minimal(), rows=NULL)  # transform into a table
 p1 + inset_element(t1, left = 0.05, bottom = 0.6, right = 0.25, top = .95)
 ```
 
-@tbl-cv-overall includes the performance metrics for the full cross-validated training data set. `r sdn = \(x) sqrt(mean((x - mean(x))^2)); f = \(x) sprintf("(SD %.03f)", sdn(dt[[x]])); "";` Here **raw** is Collection 6.1 MAIAC AOD 470nm `r f("y.sat")`; **ground** is AERONET AOD interpolated to 470nm `r f("y.ground")`; and **corrected** is MAIAC after applying an XGBoost-modeled correction term `r f("y.ground.pred")`. The ground values are correlated `r dt[, sprintf("%+.03f", cor(y.ground, y.sat))]` with the raw values and `r dt[, sprintf("%+.03f", cor(y.ground, y.ground.pred))]` with the corrected values.
+@tbl-cv-overall includes the performance metrics for the full cross-validated training dataset. `r sdn = \(x) sqrt(mean((x - mean(x))^2)); f = \(x) sprintf("(SD %.03f)", sdn(dt[[x]])); "";` Here **raw** is Collection 6.1 MAIAC AOD 470nm `r f("y.sat")`; **ground** is AERONET AOD interpolated to 470nm `r f("y.ground")`; and **corrected** is MAIAC after applying an XGBoost-modeled correction term `r f("y.ground.pred")`. The ground values are correlated `r dt[, sprintf("%+.03f", cor(y.ground, y.sat))]` with the raw values and `r dt[, sprintf("%+.03f", cor(y.ground, y.ground.pred))]` with the corrected values.
 
 ```{r}
 #| label: tbl-cv-overall
@@ -367,14 +367,14 @@ Our workflow is not a gap-filling method and thus corrected results have the sam
 
 # Supplement
 
-@tbl-ivs shows the distribution of each predictor in the CV.
+@tbl-ivs shows the distribution of each predictor in the cross-validation dataset.
 
 ```{r tbl-ivs}
-#| tbl-cap: !expr 'sprintf("`time.sat` is represented in days since %s.", as.character(min(dt$time.sat), usetz = T))'
+#| tbl-cap: !expr 'sprintf("Summary statistics for the training data. `time.sat` is represented in days since %s.", as.Date(min(dt$time.sat)))'
 flextable(rbindlist(lapply(Wf$features, \(iv)
    {nv = dt[[iv]]
     v = na.omit(nv[!is.na(nv)])
-    r = \(x) round(x, 3)
+    r = \(x) round(x, 2)
     if (iv == "time.sat")
         v = as.numeric(difftime(v, min(v), units = "days"))
     data.table(
