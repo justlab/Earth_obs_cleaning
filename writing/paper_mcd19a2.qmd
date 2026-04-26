@@ -171,12 +171,13 @@ stopifnot(identical(
     sort(unlist(noaa.regions, use.names = F)),
     conus.states.plusdc))
 
-state.noaa.region = factor(
+`NOAA region` = factor(
    sapply(state.abb.plusdc, USE.NAMES = F,
        function(sa) if (sa %in% c("AK", "HI")) NA else
            names(noaa.regions)[which(sapply(noaa.regions, function(r)
                sa %in% r))]),
-   levels = names(noaa.regions))
+   levels = names(noaa.regions),
+   labels = gsub("\\.", " ", names(noaa.regions)))
 
 # Contiguous US state boundaries
 conus = st_transform(crs = crs.us.atlas, get_conus())
@@ -212,19 +213,20 @@ dt[as.data.table(matched, key = "site"), STUSPS := i.STUSPS]
 dt[, .(uniqueN(site), .N), by = STUSPS][order(N, decreasing = T)]
 
 # assign NOAA region from state USPS codes
-dt[, state.noaa.region := factor(
+dt[, `NOAA region` := factor(
    sapply(STUSPS, USE.NAMES = F,
        function(sa) if (sa %in% c("AK", "HI")) NA else
            names(noaa.regions)[which(sapply(noaa.regions, function(r)
                sa %in% r))]),
-   levels = names(noaa.regions))]
+   levels = names(noaa.regions),
+   labels = gsub("\\.", " ", names(noaa.regions)))]
 ```
 
 ```{r}
 #| label: tbl-cv-noaa-regions
 #| tbl-cap: Performance by NOAA climate regions. Sorted by decreasing relative improvement in MSE after correction.
 by.region = (dt
-    [, eval(performance.j), by = state.noaa.region]
+    [, eval(performance.j), by = `NOAA region`]
     [order(`Proportion of raw MSE`)])
 flextable(pretty.table.numbers(by.region))
 ```
@@ -232,15 +234,16 @@ flextable(pretty.table.numbers(by.region))
 ```{r noaa_region_plot, dev='png', dpi=300}
 #| label: fig-cv-noaa-regions
 #| fig-cap: Map of performance (RMSE) by NOAA regions.
-conus$state.noaa.region <- factor(
+conus$`NOAA region` <- factor(
    sapply(conus$STUSPS, USE.NAMES = F,
        function(sa) if (sa %in% c("AK", "HI")) NA else
            names(noaa.regions)[which(sapply(noaa.regions, function(r)
                sa %in% r))]),
-   levels = names(noaa.regions))
-conus <- merge(conus, by.region, by = "state.noaa.region")
-conus_melt <- melt(as.data.table(conus[, c("geometry", "state.noaa.region", "RMSE, raw", "RMSE, corrected")]),
-                   id.vars = c("geometry", "state.noaa.region"))
+   levels = names(noaa.regions),
+   labels = gsub("\\.", " ", names(noaa.regions)))
+conus <- merge(conus, by.region, by = "NOAA region")
+conus_melt <- melt(as.data.table(conus[, c("geometry", "NOAA region", "RMSE, raw", "RMSE, corrected")]),
+                   id.vars = c("geometry", "NOAA region"))
 levels(conus_melt$variable) <- c("MAIAC AOD", "Corrected AOD")
 map_region_rmse <- ggplot(conus_melt, aes(geometry = geometry)) +
   geom_sf(aes(fill = value)) +
