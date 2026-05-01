@@ -105,7 +105,8 @@ get.aqs.obs = function(time.unit, years, grid)
                     value = Sample.Measurement)],
             day = d[
                 Sample.Duration %in% c("24 HOUR", "24-HR BLK AVG") &
-                    Event.Type != "Excluded",
+                    Event.Type != "Excluded" &
+                    !(Method.Code %in% c(236, 238)),
                 .(
                     time = Date.Local,
                     lon = Longitude, lat = Latitude,
@@ -114,7 +115,8 @@ get.aqs.obs = function(time.unit, years, grid)
                 Parameter.Code == parameter.code &
                     Pollutant.Standard == "PM25 Annual 2012" &
                     Required.Day.Count >= min.days.for.annual.aqs &
-                    Completeness.Indicator == "Y",
+                    Completeness.Indicator == "Y" &
+                    Event.Type %in% c("Events Included", "No Events"),
                 .(
                     time = the.year,
                     lon = Longitude, lat = Latitude,
