@@ -76,7 +76,7 @@ get.aqs.obs = function(time.unit, years, grid)
 
     assert(file.exists("code/openssl_workaround.conf"))
     Sys.setenv(OPENSSL_CONF = "code/openssl_workaround.conf")
-    d = rbindlist(lapply(years, function(the.year)
+    d = rbindlist(fill = TRUE, lapply(years, function(the.year)
        {message("AQS ", the.year)
         fname = switch(time.unit,
             hour = sprintf("hourly_%d_%d.zip",
@@ -91,6 +91,11 @@ get.aqs.obs = function(time.unit, years, grid)
             paste0(aqs.url.root, "/", fname),
             file.path("aqs", fname)))))
         setnames(d, str_replace_all(names(d), " ", "."))
+        cols <- c("Date.Local", "Date.of.Last.Change")
+        char_date_cols <- names(d)[names(d) %in% cols & sapply(d, is.character)]
+        if(length(char_date_cols) > 0) {
+          d[, (char_date_cols) := lapply(.SD, as.IDate, format = "%m/%d/%Y"), .SDcols = char_date_cols]
+        }
         switch(time.unit,
             hour = d[,
                 .(
