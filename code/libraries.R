@@ -10,6 +10,7 @@ suppressPackageStartupMessages(
 
 loadNamespace("fst")    # Used for targets with `format = "fst_dt"`
 loadNamespace("quarto") # Used by `tarchetypes::tar_quarto`
+loadNamespace("httr")   # Used by `get.earthdata`.
 
 # These are used by `xgboost.dart.cvtune`.
 loadNamespace("ParamHelpers")

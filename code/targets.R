@@ -23,7 +23,7 @@ terra.rast.fmt = tar_format(
   # None of `terra`'s output formats seems to round-trip properly,
   # so we implement our own.
     read = function(path)
-       {o = qs::qread(path)
+       {o = qs2::qd_read(path)
         r = terra::rast(
             nrows = o$rows,
             ncols = o$cols,
@@ -34,7 +34,7 @@ terra.rast.fmt = tar_format(
         r},
     write = function(object, path)
        {r = object
-        qs::qsave(file = path, list(
+        qs2::qd_save(file = path, list(
             rows = nrow(r),
             cols = ncol(r),
             ext = as.vector(terra::ext(r)),
@@ -170,7 +170,7 @@ list(
                      median.improve.map.data$pred[,
                          .(sat.coords.x, sat.coords.y)],
                      coords = c(1, 2),
-                     crs = st_crs(tar_read(pred.grid))))))),
+                     crs = st_crs(pred.grid)))))),
             st_transform(get_conus(), crs = crs.lonlat))),]),
 
     tar_target(baltimore.map.data, get.baltimore.map.data(
@@ -207,7 +207,7 @@ list(
         agreement.plot(cv$mDT_wPred))),
     tar_target(shap_long, shap.prep(
         shap_contrib = cv$shap_score,
-        X_train = cv$mDT_wPred[, mget(names(cv$shap_score))])),
+        X_train = sapply(cv$mDT_wPred[, mget(names(cv$shap_score))], as.double))),
     tar_file(shap.summary.plot.path, ggsave(
         ipath("shap_summary"), dpi = 300, width = 7, height = 7,
         shap.plot.summary(shap_long))),

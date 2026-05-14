@@ -118,8 +118,7 @@ dt <- copy(tar_read(cv)$mDT_wPred)
 
 After collocation there were `r scales::comma(nrow(dt))` matched AOD retrievals from `r uniqueN(dt$site)` AERONET sites in CONUS. The quartiles of the absolute difference from the labeled overpass time (one per 1200 km wide tile) and the time of the matched AERONET observation were `r tqs = round(quantile(dt[, abs(as.numeric(difftime(units = "secs", time.sat, time.ground)))], c(.25, .5, .75))); tqs["25%"]` s, `r tqs["50%"]` s, and `r tqs["75%"]` s. While the distribution of AOD is skewed, our estimate of retrieval error and the dependent variable for our predictive model, *diff~AOD~*, was fairly symmetric and Gaussian (see @fig-dv-density). Summary statistics for every variable in the training data are in the Supplement.
 
-```{r plot_dv}
-#| label: fig-dv-density
+```{r fig-dv-density}
 #| fig-cap: !expr caption
 caption = with(list(d = dt), sprintf(
     "Histogram of the difference in collocated AOD (n=%s). Not shown: %s %s",
@@ -139,8 +138,7 @@ p1 + inset_element(t1, left = 0.05, bottom = 0.6, right = 0.25, top = .95)
 
 @tbl-cv-overall includes the performance metrics for the full cross-validated training dataset. `r sdn = \(x) sqrt(mean((x - mean(x))^2)); f = \(x) sprintf("(SD %.03f)", sdn(dt[[x]])); "";` Here **raw** is Collection 6.1 MAIAC AOD 470nm `r f("y.sat")`; **ground** is AERONET AOD interpolated to 470nm `r f("y.ground")`; and **corrected** is MAIAC after applying an XGBoost-modeled correction term `r f("y.ground.pred")`. The ground values are correlated `r dt[, sprintf("%+.03f", cor(y.ground, y.sat))]` with the raw values and `r dt[, sprintf("%+.03f", cor(y.ground, y.ground.pred))]` with the corrected values.
 
-```{r}
-#| label: tbl-cv-overall
+```{r tbl-cv-overall}
 #| tbl-cap: Overall performance from cross-validation.
 flextable(pretty.table.numbers(tar_read(cv.summary)[1, -"Year"]))
 ```
@@ -222,8 +220,7 @@ dt[, `NOAA region` := factor(
    labels = gsub("\\.", " ", names(noaa.regions)))]
 ```
 
-```{r}
-#| label: tbl-cv-noaa-regions
+```{r tbl-cv-noaa-regions}
 #| tbl-cap: Performance by NOAA climate regions. Sorted by decreasing relative improvement in MSE after correction.
 by.region = (dt
     [, eval(performance.j), by = `NOAA region`]
@@ -231,8 +228,7 @@ by.region = (dt
 flextable(pretty.table.numbers(by.region))
 ```
 
-```{r noaa_region_plot, dev='png', dpi=300}
-#| label: fig-cv-noaa-regions
+```{r fig-cv-noaa-regions, dev='png', dpi=300}
 #| fig-cap: Map of performance (RMSE) by NOAA regions.
 conus$`NOAA region` <- factor(
    sapply(conus$STUSPS, USE.NAMES = F,
@@ -259,8 +255,7 @@ map_region_rmse
 
 @fig-cv-noaa-regions shows that performance improves in all regions and leads to greater consistency in the RMSE across CONUS with slightly higher RMSE remaining in the Northwest and West regions.
 
-```{r}
-#| label: tbl-cv-month
+```{r tbl-cv-month}
 #| tbl-cap: Performance by month of year.
 result <- dt[,
     keyby = .(Month = month(lubridate::as_datetime(time.sat))),
@@ -269,15 +264,13 @@ result[, Month := month.abb[Month]]
 flextable(pretty.table.numbers(result))
 ```
 
-```{r}
-#| label: tbl-cv-high-aod
+```{r tbl-cv-high-aod}
 #| tbl-cap: Performance for higher versus lower AOD (AERONET \> 0.6).
 by.highaod = dt[, eval(performance.j), by = .(aod_high = y.ground > 0.6)]
 flextable(pretty.table.numbers(by.highaod))
 ```
 
-```{r}
-#| label: tbl-cv-qa-best
+```{r tbl-cv-qa-best}
 #| tbl-cap: Performance by quality flag `qa_best`.
 by.qabest = dt[, eval(performance.j), by = qa_best]
 flextable(pretty.table.numbers(by.qabest))
@@ -293,8 +286,7 @@ We use Nelder-Mead optimization to construct new error envelopes with coverage a
 
 ## Agreement Plots
 
-```{r agreement_plot}
-#| label: fig-agreement-plot
+```{r fig-agreement-plot}
 #| fig-cap: !expr caption
 caption = with(list(d = agreement.plot.data(dt)), sprintf(
     "Agreement plots for satellite-based and AERONET AOD. Straight lines show empirical error envelopes containing 2/3 of retrievals. Not shown: %s %s and %s %s",
@@ -307,14 +299,12 @@ IG(tar_read(agreement.plot.path))
 
 ## SHAP interpretation
 
-```{r shap_summary}
-#| label: fig-shap-summary
+```{r fig-shap-summary}
 #| fig-cap: Summary of SHAP contributions. Predictors ordered by descending mean absolute SHAP (printed along left).
 IG(tar_read(shap.summary.plot.path))
 ```
 
-```{r shap_features}
-#| label: fig-shap-timeseries
+```{r fig-shap-timeseries}
 #| fig-cap: Time series of SHAPs for Column Water Vapor (CWV). SHAPs for observations with missing values for CWV are shown in grey.
 IG(tar_read(shap.features.plot.path))
 ```
@@ -327,8 +317,7 @@ For the model trained on all the data, the selected hyperparameters were `r v = 
 
 @fig-map-median-improve shows a tile on `r tar_read(median.improve.map.data)$date`.
 
-```{r pred.map.median.improve}
-#| label: fig-map-median-improve
+```{r fig-map-median-improve}
 #| fig-cap: !expr caption
 caption = sprintf("Maps of typical MAIAC and Corrected AOD. Day selected as having the median improvement in MSE at AERONET sites. The map is centered on %s.",
     tar_read(median.improve.map.center)$NAME)
@@ -337,8 +326,7 @@ IG(tar_read(pred.map.median.improve.path))
 
 ### Mapping a documented high AOD event
 
-```{r pred.map.baltimore}
-#| label: fig-map-baltimore-smoke
+```{r fig-map-baltimore-smoke}
 #| fig-cap: Maps of MAIAC and Corrected AOD over the Mid-Atlantic US during a documented exceedance event with downmixing of long-range transported smoke from Canadian wildfires.
 IG(tar_read(pred.map.baltimore.path))
 ```
@@ -386,14 +374,12 @@ flextable(rbindlist(lapply(Wf$features, \(iv)
         sd = r(sd(v)))})))
 ```
 
-```{r}
-#| label: tbl-cv-by-year
+```{r tbl-cv-by-year}
 #| tbl-cap: Cross-validation performance by year.
 flextable(pretty.table.numbers(tar_read(cv.summary)[-1]))
 ```
 
-```{r}
-#| label: tbl-cv-overpasses
+```{r tbl-cv-overpasses}
 #| tbl-cap: Cross-validation performance by the number of overpasses in collocation for that site-day.
 dt[, overpasses := .N, by = .(site, lubridate::as_date(time.ground))]
 by.overpasses = dt[, eval(performance.j), keyby = overpasses]

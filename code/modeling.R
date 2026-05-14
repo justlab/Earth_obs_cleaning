@@ -144,10 +144,10 @@ run.k.fold.cv <- function(k_fold, dataXY_df, y_var,
     y_pred_dt[index_test[[i]], y_pred:= rsxgb0$pred.fun(dataXY_df[index_test[[i]],])] # record the prediction
     # predicted SHAP
     shap_pred <- as.data.table(rsxgb0$pred.fun(dataXY_df[index_test[[i]],],
-                                               predcontrib = TRUE, approxcontrib = FALSE))
+                                               type = "contrib"))
 
-    BIAS0[i] <- first(shap_pred$BIAS)
-    shap_pred[, BIAS := NULL]
+    BIAS0[i] <- first(shap_pred[["(Intercept)"]])
+    shap_pred[, "(Intercept)" := NULL]
     shap_score[index_test[[i]],] <- shap_pred # record the SHAP values (for whole model)
   })
   cat("loop finished\n")
@@ -270,9 +270,9 @@ dart_full <- function(
   #rmse_full <- sqrt(mean((preds - data_train[[y_var]])^2))
 
   # SHAP
-  shap_pred <- as.data.table(xdc_out$pred.fun(data_train, predcontrib = TRUE, approxcontrib = FALSE))
-  shap_bias <- first(shap_pred$BIAS)
-  shap_pred[, BIAS := NULL]
+  shap_pred <- as.data.table(xdc_out$pred.fun(data_train, type = "contrib"))
+  shap_bias <- first(shap_pred[["(Intercept)"]])
+  shap_pred[, "(Intercept)" := NULL]
 
   # features ranked by SHAP
   mean_shaps = colMeans(abs(shap_pred))

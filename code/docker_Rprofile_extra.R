@@ -7,6 +7,4 @@ if (interactive())
     .Last <- function() try(savehistory("/data/R_history"))}
 
 if (file.exists("/data/R-packages-installed"))
-   {dir.create("renv", showWarnings = F)
-    invisible(utils::capture.output({renv::load(); renv::restore(prompt = F)}))
-    source("code/globals.R")}
+    source("code/globals.R")
