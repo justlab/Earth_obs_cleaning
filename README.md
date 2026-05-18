@@ -38,6 +38,29 @@ d = new.preds.compact(
         lat = c(40.7, 40.8, 40.9)))
 ```
 
+# VIIRS tiles
+
+VIIRS MAIAC products, referred to as `v19a2` in Earths_obs_cleaning, have a redundant tiling scheme in which multiple tiles can cover the same area. Thus, for `v19a2`, the user must specify the tiles to model in the configuration file, rather than Earths_obs_cleaning choosing tiles automatically to cover the requested region.
+
+To help you choose the tiles you want, here's how you can construct a GeoJSON file for the tile geometry:
+
+```R
+library(data.table)
+library(sf)
+
+d = fread("tiles.csv")[, -c("V1", "South", "North", "West", "East")]
+  # This file can be obtained from https://web.archive.org/web/20260515142741/https://lpdaac.usgs.gov/documents/2436/Zonal_Sinusoidal_Projection_Tile_Definitions.csv
+setnames(d, c("h", "v",
+    "UL_lat", "UR_lat", "LR_lat", "LL_lat", "UL_lon", "UR_lon", "LR_lon", "LL_lon"))
+
+st_write(dsn = "tiles.geojson", cbind(
+    st_as_sf(crs = crs.lonlat, list2DF(list(geometry = apply(simplify = F,
+        d[, .(UL_lon, UL_lat, UR_lon, UR_lat, LR_lon, LR_lat, LL_lon, LL_lat, UL_lon, UL_lat)],
+        1,
+        \(row) st_polygon(list(matrix(row, ncol = 2, byrow = T))))))),
+    d[, .(h, v)]))
+```
+
 # License
 
 This program is copyright 2019–2025 Kodi B. Arfer, Allan C. Just, Yang Liu, and Johnathan Rush.

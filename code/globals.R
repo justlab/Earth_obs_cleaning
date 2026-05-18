@@ -33,6 +33,10 @@ stopifnot(
         Wf$satellite %in% c("terra", "aqua") &&
         Wf$ground.product == "aeronet" ||
     Wf$outcome == "aod" &&
+        Wf$satellite.product == "v19a2" &&
+        Wf$satellite %in% c("suomi", "noaa20") &&
+        Wf$ground.product == "aeronet" ||
+    Wf$outcome == "aod" &&
         Wf$satellite.product == "aodc" &&
         Wf$satellite == "goes16" &&
         Wf$ground.product == "aeronet" ||
@@ -47,6 +51,9 @@ stopifnot(is.character(Wf$region))
 
 Wf$dates = switch(Wf$satellite.product,
     mcd19a2 = c("2000-01-01", "2025-12-31"),
+    v19a2 = switch(Wf$satellite,
+        suomi = c("2012-01-19", "2025-12-31"),
+        noaa20 = c("2018-01-05", "2025-12-31")),
     aodc = c("2020-10-25", "2023-12-31"),
       # "The land spectral surface relationship was updated on October 24, 2020."
       # We start a day later in case of off-by-one issues.
@@ -60,6 +67,7 @@ Wf$time.example = switch(Wf$satellite.product,
   # products) for which the satellite data of interest exists on all
   # tiles.
     mcd19a2 = as.Date("2010-07-03"),
+    v19a2 = as.Date("2018-07-05"),
     aodc = lubridate::as_datetime("2020-11-21 20:27:30 UTC"),
     tropomi = as.Date("2021-08-01"))
 if (!is.null(Wf$test.small.daterange) && Wf$test.small.daterange)
@@ -68,16 +76,18 @@ Wf$years = sort(unique(year(Wf$dates)))
 
 Wf$y.sat = switch(Wf$satellite.product,
     mcd19a2 = "Optical_Depth_047",
+    v19a2 = "Optical_Depth_047",
     aodc = "AOD")
+common.features = c(
+    "AOD_Uncertainty", "cosSZA", "cosVZA", "RelAZ",
+    "Scattering_Angle", "Glint_Angle")
 Wf$features = c(
   # Predictors for modeling.
     "y.sat", "time.sat",
     "y.sat.mean", "y.sat.present",
     switch(Wf$satellite.product,
-        mcd19a2 = c(
-            "qa_best", "AOD_Uncertainty",
-            "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
-            "Column_WV"),
+        mcd19a2 = c(common.features, "qa_best", "Column_WV"),
+        v19a2 = c(common.features, "qa_best"),
         aodc = c(
             "DQF", "seconds.since.midnight")))
 Wf$window.radius = 5L
@@ -106,7 +116,7 @@ daily.sat = function(satellite.product = Wf$satellite.product)
 multipass.sat = function(satellite.product = Wf$satellite.product)
   # Whether the satellite product has more than one overpass in
   # each file.
-    satellite.product == "mcd19a2"
+    satellite.product %in% c("mcd19a2", "v19a2")
 
 # for reporting purpose
 y_var = "diff_AOD"
@@ -119,9 +129,6 @@ vars0 <- c("Date(dd:mm:yyyy)", "Time(hh:mm:ss)", "Day_of_Year","AERONET_Site_Nam
            "Solar_Zenith_Angle(Degrees)", "Precipitable_Water(cm)")
 
 feature.raster.layers = switch(Wf$satellite.product,
-    mcd19a2 = c(
-        "AOD_Uncertainty",
-        "cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle",
-        "Column_WV", "AOD_QA"),
-    aodc = c(
-        "DQF"))
+    mcd19a2 = c(common.features, "AOD_QA", "Column_WV"),
+    v19a2 = c(common.features, "AOD_QA"),
+    aodc = c("DQF"))

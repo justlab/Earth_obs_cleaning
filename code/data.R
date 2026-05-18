@@ -152,14 +152,19 @@ expand.to.overpasses = function(d, satellite.files, the.satellite, satellite.pro
             return()
         orbit.times = str_extract_all(
             jsonlite::fromJSON(terra::describe(options = "json", path))
-                $metadata[[1]]$Orbit_time_stamp,
-            "\\S+")[[1]]
+                $metadata[[1]]
+                [[switch(satellite.product,
+                    mcd19a2 = "Orbit_time_stamp",
+                    v19a2 = "TimeStamp")]],
+            "[0-9A-Z]+")[[1]]
         `[`(
             d[i, .(
                 sat.files.ix,
                 overpass = seq_along(orbit.times),
-                satellite = c(T = "terra", A = "aqua")[
-                    str_sub(orbit.times, -1)],
+                satellite = switch(satellite.product,
+                    mcd19a2 = c(T = "terra", A = "aqua")[
+                        str_sub(orbit.times, -1)],
+                    v19a2 = the.satellite),
                 time.sat = as.POSIXct(tz = "UTC",
                     orbit.times,
                     "%Y%j%H%M"))],
@@ -194,6 +199,9 @@ get.predictors = function(
                 satellite.files[chunk$sat.files.ix[1], path],
                 overpass[1])
             y.sat.values = drop(suppressWarnings(r[[y.sat.name]][]))
+            if (satellite.product == "v19a2")
+              # Apply the scale factor.
+                y.sat.values = y.sat.values * .001
             cbind(
                 terra::xyFromCell(r, cell.local),
                 y.sat.values[cell.local],
@@ -214,11 +222,27 @@ get.predictors = function(
          {if (!identical(e$message, "[readValues] cannot read values"))
               stop(e)})))
 
+    if (satellite.product == "v19a2")
+      # Apply scale factors from the user guide.
+      # https://web.archive.org/web/20260515134950/https://lpdaac.usgs.gov/documents/2268/VNP19_User_Guide_V1.pdf
+       {scale.factors = c(
+            AOD_Uncertainty = .0001,
+            FineModeFraction = .0001,
+            cosSZA = .0001,
+            cosVZA = .0001,
+            RelAZ = .01,
+            Scattering_Angle = .01,
+            Glint_Angle = .01)
+        for (vname in names(scale.factors))
+            if (vname %in% colnames(d))
+                d[, (vname) := get(vname) * scale.factors[vname]]}
+
     if ("time.diff" %in% colnames(d))
         d[, time.diff := NULL]
 
     if ("AOD_QA" %in% colnames(d))
        {# See page 13 of https://web.archive.org/web/20200927141823/https://lpdaac.usgs.gov/documents/110/MCD19_User_Guide_V6.pdf
+        # or page 14 of https://web.archive.org/web/20260515134950/https://lpdaac.usgs.gov/documents/2268/VNP19_User_Guide_V1.pdf
         # Some variables produced here may not be used in training,
         # but may still be used for stratifying CV results.
         bits = function(x, bit.index.lo, bit.index.hi)
@@ -236,7 +260,9 @@ get.predictors = function(
         assert(d[, all(as.integer(qa_adjacent) <= 5L)])
         d[, qa_best := bits(AOD_QA, 8L, 11L) == 0L]
         d[, qa_model := structure(class = "factor",
-            bits(AOD_QA, 13L, 14L) + 1L,
+            1L + switch(satellite.product,
+                mcd19a2 = bits(AOD_QA, 13L, 14L),
+                v19a2 = bits(AOD_QA, 12L, 13L)),
             levels = c("Background", "Smoke", "Dust"))]
         assert(d[, all(as.integer(qa_model) <= 3L)])
         d[, AOD_QA := NULL]}
@@ -261,7 +287,7 @@ get.predictors = function(
 read_satellite_raster = function(
         satellite.product, tile, path, overpass = NA_integer_)
    {r1 = terra::rast(path)
-    if (satellite.product != "mcd19a2")
+    if (!(satellite.product %in% c("mcd19a2", "v19a2")))
         return(r1)
 
     if (multipass.sat(satellite.product))
@@ -283,18 +309,24 @@ read_satellite_raster = function(
     r2 = terra::rast(lapply(
         c("cosSZA", "cosVZA", "RelAZ", "Scattering_Angle", "Glint_Angle"),
         function(vname)
-           {r = terra::rast(paste0(
-                str_replace(terra::sources(r1)[1], ":grid1km:[A-Za-z0-9_]+\\Z",
-                    ":grid5km:"),
-                vname))
+           {p = terra::sources(r1)[1]
+            p2 = switch(satellite.product,
+                mcd19a2 = str_replace(p,
+                    ":grid1km:[^/]+\\Z",
+                    paste0(":grid5km:", vname)),
+                v19a2 = str_replace(p,
+                    "/GRIDS/grid750m/Data_Fields/[^/]+\\Z",
+                    paste0("/GRIDS/grid4km/Data_Fields/", vname)))
+            assert(p2 != p)
+            r = terra::rast(p2)
             if (!is.na(overpass))
                 r = r[[overpass]]
             `names<-`(r, vname)}))
 
     # Combine all the layers.
-    c(
-       r1,
-       terra::disagg(r2, nrow(r1) / nrow(r2)))}
+    if (!identical(terra::res(r1), terra::res(r2)))
+        r2 = terra::disagg(r2, nrow(r1) / nrow(r2))
+    c(r1, r2)}
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## * AERONET
@@ -379,6 +411,7 @@ interpolate_aod <- function(satellite.product, aer_data)
     # exact wavelengths are in micrometers.
     target.wl = switch(satellite.product,
         mcd19a2 = 0.47,
+        v19a2 = 0.47,
         aodc = 0.55,
         stop())
     max.input.wl = 1.0
