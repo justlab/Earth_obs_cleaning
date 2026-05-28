@@ -18,8 +18,7 @@ RUN apt-get clean
 WORKDIR /data/src
 COPY code/docker_Rprofile_extra.R ex
 RUN cat ex >>$R_HOME/etc/Rprofile.site && rm ex
-RUN R -q -e 'install.packages("remotes")'
-RUN R -q -e 'remotes::install_github("rstudio/renv@v1.2.2")'
+RUN R -q -e 'install.packages("http://cran.r-project.org/src/contrib/Archive/renv/renv_1.2.2.tar.gz")'
 
 ENV RENV_PATHS_ROOT=/data/renv
 ENV OMP_NUM_THREADS=1
