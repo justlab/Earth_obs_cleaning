@@ -6,19 +6,21 @@ source('code/data.R')
 source('code/modeling.R')
 source('code/util.R')
 
-make.divisions = \()
+divisions = \()
   # Group all the cells in the study area into sets ("divisions") of roughly
   # equal size.
-   {d = as.data.frame(tar_read(pred.grid)$tile, cells = T, xy = T)
-    setDT(d)
-    d[, cell := as.integer(cell)]
-    d = d[in.sf(x, y, terra::crs(tar_read(pred.grid)), tar_read(region.shape))]
-    d[, c("x", "y") := NULL]
-    setkey(d, tile, cell)
-    d[, division := 1L + ((.I - 1L) %/% 2.5e6L)]
-    setkey(d, division, tile, cell)
-    setcolorder(d)
-    arrow::write_parquet(d, intermediate.path("divisions.parquet"))}
+   {if (!file.exists(intermediate.path("divisions.parquet")))
+       {d = as.data.frame(tar_read(pred.grid)$tile, cells = T, xy = T)
+        setDT(d)
+        d[, cell := as.integer(cell)]
+        d = d[in.sf(x, y, terra::crs(tar_read(pred.grid)), tar_read(region.shape))]
+        d[, c("x", "y") := NULL]
+        setkey(d, tile, cell)
+        d[, division := 1L + ((.I - 1L) %/% 2.5e6L)]
+        setkey(d, division, tile, cell)
+        setcolorder(d)
+        arrow::write_parquet(d, intermediate.path("divisions.parquet"))}
+    arrow::read_parquet(intermediate.path("divisions.parquet"))}
 
 make.preds = \(i.work.unit)
    {divisions = arrow::read_parquet(intermediate.path("divisions.parquet"))
