@@ -22,16 +22,20 @@ divisions = \()
         arrow::write_parquet(d, intermediate.path("divisions.parquet"))}
     arrow::read_parquet(intermediate.path("divisions.parquet"))}
 
-make.preds = \(i.work.unit)
-   {divisions = arrow::read_parquet(intermediate.path("divisions.parquet"))
-    work.unit = `[`(
+work.units = \()
+    `[`(
         CJ(
-            year = 2000 : 2025,
+            year = year(min(Wf$dates)) : year(max(Wf$dates)),
             month = 1 : 12,
-            division = unique(divisions$division)),
-        year > 2000 | month > 2)
-            # Terra begins on 2000-02-24
-    work.unit = as.list(work.unit[i.work.unit])
+            division = unique(divisions()$division)),
+        switch(Wf$satellite,
+            terra = year > 2000 | month > 2,
+                # Terra begins on 2000-02-24
+            aqua = year >= 2002 & (year > 2002 | month > 6)))
+                # Aqua's first light was 2002-06-24
+
+make.preds = \(i.work.unit)
+   {work.unit = as.list(work.units()[i.work.unit])
     message("Making predictions for work unit ", i.work.unit)
     dput(work.unit)
     dt = with(work.unit, lubridate::make_datetime(year, month))
@@ -39,8 +43,8 @@ make.preds = \(i.work.unit)
     d = new.preds.compact(
         dt.start = dt,
         dt.end = lubridate::rollforward(dt, roll_to_first = T),
-        cells = divisions[.(work.unit$division), sort(cell)])
+        cells = divisions()[.(work.unit$division), sort(cell)])
 
-    arrow::write_parquet(d, file.path(data.dir, "output",
+    arrow::write_parquet(d, file.path(data.dir, "output", Wf$satellite,
         with(work.unit, sprintf("%d_%02d_d%d.parquet",
             year, month, division))))}
