@@ -177,8 +177,9 @@ stopifnot(identical(
    levels = names(noaa.regions),
    labels = gsub("\\.", " ", names(noaa.regions)))
 
-# Contiguous US state boundaries
-conus = st_transform(crs = crs.us.atlas, get_conus())
+# Contiguous US state boundaries 
+# using NAD83 / CONUS Albers projection https://epsg.io/5070
+conus = st_transform(crs = 5070, get_conus())
 ```
 
 ```{r get_noaa_regions, include=FALSE}
